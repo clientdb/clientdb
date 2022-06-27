@@ -8,7 +8,7 @@ import { createResolvablePromise } from "./utils/promises";
 import { createPushQueue } from "./utils/pushQueue";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type EntityPersistanceManager<Data, Connections> = {
+export type EntityPersistanceManager<Data, View> = {
   startPersistingChanges(): void;
   destroy(): void;
   persistedItemsLoaded: Promise<void>;
@@ -30,10 +30,10 @@ export const PERSISTANCE_BATCH_FLUSH_TIMEOUT = 50;
  *
  * It also initializes synchronization and persistance.
  */
-export function createEntityPersistanceManager<Data, Connections>(
-  definition: EntityDefinition<Data, Connections>,
+export function createEntityPersistanceManager<Data, View>(
+  definition: EntityDefinition<Data, View>,
   { persistanceDb, store }: PersistanceManagerConfig<Data>
-): EntityPersistanceManager<Data, Connections> {
+): EntityPersistanceManager<Data, View> {
   const persistedItems = createResolvablePromise<void>();
 
   const getPersistanceTable = memoize(async () => {
@@ -151,6 +151,6 @@ export function createEntityPersistanceManager<Data, Connections>(
   };
 }
 
-export type GetEntityClientByDefinition<Data, Connections> = (
-  definition: EntityDefinition<Data, Connections>
-) => EntityPersistanceManager<Data, Connections>;
+export type GetEntityClientByDefinition<Data, View> = (
+  definition: EntityDefinition<Data, View>
+) => EntityPersistanceManager<Data, View>;

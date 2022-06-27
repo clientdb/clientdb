@@ -4,12 +4,12 @@ import { action, computed, extendObservable, makeAutoObservable, runInAction, to
 import { waitForEntityAllAwaitingPushOperations } from "clientdb";
 
 import { EntityDefinition } from "./definition";
-import { DatabaseLinker } from "./entitiesConnections";
 import { EntityStore } from "./store";
 import { EntityChangeSource } from "./types";
 import { CleanupObject, createCleanupObject } from "./utils/cleanup";
 import { typedKeys } from "./utils/object";
 import { assert } from "../utils/assert";
+import { ClientDb } from "./db";
 
 export interface EntityUpdateResult {
   hadChanges: boolean;
@@ -17,7 +17,7 @@ export interface EntityUpdateResult {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-type EntityMethods<Data, Connections> = {
+type EntityMethods<Data, View> = {
   update(data: Partial<Data>, source?: EntityChangeSource): EntityUpdateResult;
   getData(): Data;
   getKey(): string;
@@ -26,31 +26,31 @@ type EntityMethods<Data, Connections> = {
   remove(source?: EntityChangeSource): void;
   isRemoved(): boolean;
   waitForSync(): Promise<void>;
-  definition: EntityDefinition<Data, Connections>;
-  db: DatabaseLinker;
+  definition: EntityDefinition<Data, View>;
+  db: ClientDb;
   cleanup: CleanupObject;
 };
 
-export type Entity<Data, Connections> = Data & Connections & EntityMethods<Data, Connections>;
+export type Entity<Data, View> = Data & View & EntityMethods<Data, View>;
 
-export type EntityByDefinition<Def> = Def extends EntityDefinition<infer Data, infer Connections>
-  ? Entity<Data, Connections>
+export type EntityByDefinition<Def> = Def extends EntityDefinition<infer Data, infer View>
+  ? Entity<Data, View>
   : never;
 
 export interface CreateEntityConfig {
   needsSync: boolean;
 }
 
-interface CreateEntityInput<D, C> {
+interface CreateEntityInput<D, V> {
   data: Partial<D>;
-  definition: EntityDefinition<D, C>;
-  store: EntityStore<D, C>;
-  linker: DatabaseLinker;
+  definition: EntityDefinition<D, V>;
+  store: EntityStore<D, V>;
+  db: ClientDb;
 }
 
-export function createEntity<D, C>({ data, definition, store, linker }: CreateEntityInput<D, C>): Entity<D, C> {
+export function createEntity<D, V>({ data, definition, store, db }: CreateEntityInput<D, V>): Entity<D, V> {
   const { config } = definition;
-  const dataWithDefaults: D = { ...config.getDefaultValues?.(linker), ...data } as D;
+  const dataWithDefaults: D = { ...config.getDefaultValues?.(db), ...data } as D;
 
   const rawDataKeys = typedKeys(dataWithDefaults);
 
@@ -74,13 +74,13 @@ export function createEntity<D, C>({ data, definition, store, linker }: CreateEn
   const cleanupObject = createCleanupObject();
 
   const connections =
-    config.getConnections?.(observableData, {
-      ...linker,
+    config.getView?.(observableData, {
+      ...db,
       updateSelf(data) {
         return entity.update(data, "user");
       },
       cleanup: cleanupObject,
-    }) ?? ({} as C);
+    }) ?? ({} as V);
 
   // Note: we dont want to add connections as {...data, ...connections}. Connections might have getters so it would simply unwrap them.
 
@@ -103,9 +103,9 @@ export function createEntity<D, C>({ data, definition, store, linker }: CreateEn
     Reflect.set(entity, config.updatedAtField, new Date());
   }
 
-  const entityMethods: EntityMethods<D, C> = {
+  const entityMethods: EntityMethods<D, V> = {
     definition,
-    db: linker,
+    db: db,
     cleanup: cleanupObject,
     remove(source) {
       store.removeById(entityMethods.getKey(), source);
@@ -182,7 +182,7 @@ export function createEntity<D, C>({ data, definition, store, linker }: CreateEn
     },
   };
 
-  const entity: Entity<D, C> = extendObservable(observableDataAndConnections, entityMethods, {
+  const entity: Entity<D, V> = extendObservable(observableDataAndConnections, entityMethods, {
     getData: false,
     getKey: false,
     getKeyName: false,

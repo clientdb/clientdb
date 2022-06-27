@@ -20,15 +20,15 @@ type AnyKeyIndexInput<T> = IndexValueInput<T> extends infer U ? U[keyof U] : nev
 
 type MaybeObservableArray<T> = IObservableArray<T> | T[];
 
-function getRemainingItemsAfterApplyingQueryFields<Data, Connections>(
-  currentItems: Entity<Data, Connections>[],
-  store: EntityStore<Data, Connections>,
-  queryObject: FindObjectPartInput<Data & Connections>
+function getRemainingItemsAfterApplyingQueryFields<Data, View>(
+  currentItems: Entity<Data, View>[],
+  store: EntityStore<Data, View>,
+  queryObject: FindObjectPartInput<Data & View>
 ) {
   let passingItems = currentItems;
 
   for (const queryKey of typedKeys(queryObject)) {
-    const queryValue = queryObject[queryKey] as AnyKeyIndexInput<Data & Connections>;
+    const queryValue = queryObject[queryKey] as AnyKeyIndexInput<Data & View>;
     const index = store.getKeyIndex(queryKey);
 
     const itemsMatchingValue = index.find(queryValue);
@@ -41,10 +41,10 @@ function getRemainingItemsAfterApplyingQueryFields<Data, Connections>(
   return passingItems;
 }
 
-export function findInSourceByObjectInput<Data, Connections>(
-  source: MaybeObservableArray<Entity<Data, Connections>>,
-  store: EntityStore<Data, Connections>,
-  queryObject: FindObjectInput<Data & Connections>
+export function findInSourceByObjectInput<Data, View>(
+  source: MaybeObservableArray<Entity<Data, View>>,
+  store: EntityStore<Data, View>,
+  queryObject: FindObjectInput<Data & View>
 ) {
   if (source.length === 0) return [];
 
@@ -53,7 +53,7 @@ export function findInSourceByObjectInput<Data, Connections>(
   const itemsMatchingRootQuery = getRemainingItemsAfterApplyingQueryFields(
     source,
     store,
-    requiredKeysRaw as FindObjectPartInput<Data & Connections>
+    requiredKeysRaw as FindObjectPartInput<Data & View>
   );
 
   if (!itemsMatchingRootQuery.length) {
@@ -81,10 +81,10 @@ export type FindInput<D, C> = FindObjectInput<D & C> | FindFunctionalInput<Entit
 
 export type EntityFindInputByDefinition<Def> = Def extends EntityDefinition<infer D, infer C> ? FindInput<D, C> : never;
 
-export function findInSource<Data, Connections>(
-  source: MaybeObservableArray<Entity<Data, Connections>>,
-  store: EntityStore<Data, Connections>,
-  input: FindInput<Data, Connections>
+export function findInSource<Data, View>(
+  source: MaybeObservableArray<Entity<Data, View>>,
+  store: EntityStore<Data, View>,
+  input: FindInput<Data, View>
 ) {
   if (typeof input === "function") {
     // ! Do not pass filter directly as it will break cache (filter pass 3 arguments)

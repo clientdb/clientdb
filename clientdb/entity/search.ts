@@ -33,19 +33,19 @@ export interface EntitySearchConfig<Data> {
   persistIndex?: boolean;
 }
 
-export interface EntitySearch<Data, Connections> {
-  search(term: string): Entity<Data, Connections>[];
+export interface EntitySearch<Data, View> {
+  search(term: string): Entity<Data, View>[];
   destroy(): void;
 }
 
-export function createEntitySearch<Data, Connections>(
+export function createEntitySearch<Data, View>(
   { fields }: EntitySearchConfig<Data>,
-  store: EntityStore<Data, Connections>
-): EntitySearch<Data, Connections> {
+  store: EntityStore<Data, View>
+): EntitySearch<Data, View> {
   const fieldsList = typedKeys(fields);
   const entityName = store.definition.config.name;
 
-  function prepareEntitySearchTerm(entity: Entity<Data, Connections>): string {
+  function prepareEntitySearchTerm(entity: Entity<Data, View>): string {
     const dataToIndex: Partial<Data> = pick(entity, fieldsList);
 
     const indexedValuesMap = mapValues(dataToIndex, (value, key) => {

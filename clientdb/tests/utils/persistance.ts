@@ -1,22 +1,19 @@
 import { PersistanceAdapterInfo, PersistanceTableAdapter } from "clientdb";
 
-import { TestDogEntity, TestOwnerEntity } from "./entities";
+import { DefaultTestEntities, TestDogEntity, TestOwnerEntity } from "./entities";
 
 export type TablePersistanceMock<D> = Partial<PersistanceTableAdapter<D>>;
 
-type DefaultTestEntities = {
-  owner: TestOwnerEntity;
-  dog: TestDogEntity;
-};
 
-interface PersistanceAdapterMockConfig<EntitiesMap = DefaultTestEntities> {
+
+interface PersistanceAdapterMockConfig {
   tableMocks?: {
-    [key in keyof EntitiesMap]?: TablePersistanceMock<EntitiesMap[key]>;
+    [key in keyof DefaultTestEntities]?: TablePersistanceMock<DefaultTestEntities[key]>;
   };
 }
 
-export function createPersistanceAdapterMock<EntitiesDataMap = DefaultTestEntities>(
-  config?: PersistanceAdapterMockConfig<EntitiesDataMap>
+export function createPersistanceAdapterMock(
+  config?: PersistanceAdapterMockConfig
 ) {
   const mockPersistanceAdapter: PersistanceAdapterInfo = {
     adapter: {
@@ -26,7 +23,7 @@ export function createPersistanceAdapterMock<EntitiesDataMap = DefaultTestEntiti
             //
           },
           async getTable<Data>(name: string) {
-            const typedName = name as keyof EntitiesDataMap;
+            const typedName = name as keyof DefaultTestEntities;
 
             const mockedMethods = config?.tableMocks?.[typedName] as unknown as Partial<PersistanceTableAdapter<Data>>;
 

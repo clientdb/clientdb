@@ -1,17 +1,17 @@
-import { createTestDb } from "./utils";
+import { createTestDb, dog, owner } from "./utils";
 
 describe("clientdb query", () => {
   async function getTestDb() {
     const db = await createTestDb();
 
-    const adam = db.owner.create({ name: "Adam" });
-    const omar = db.owner.create({ name: "Omar" });
+    const adam = db.entity(owner).create({ name: "Adam" });
+    const omar = db.entity(owner).create({ name: "Omar" });
 
-    const adams_rex = db.dog.create({ name: "rex", owner_id: adam.id });
-    const adams_teddy = db.dog.create({ name: "teddy", owner_id: adam.id });
+    const adams_rex = db.entity(dog).create({ name: "rex", owner_id: adam.id });
+    const adams_teddy = db.entity(dog).create({ name: "teddy", owner_id: adam.id });
 
-    const omars_rudy = db.dog.create({ name: "rudy", owner_id: omar.id });
-    const omars_rex = db.dog.create({ name: "rex", owner_id: omar.id });
+    const omars_rudy = db.entity(dog).create({ name: "rudy", owner_id: omar.id });
+    const omars_rex = db.entity(dog).create({ name: "rex", owner_id: omar.id });
 
     return [db, { owners: { adam, omar }, dogs: { adams_rex, adams_teddy, omars_rudy, omars_rex } }] as const;
   }
@@ -19,7 +19,7 @@ describe("clientdb query", () => {
   it("performs simple query", async () => {
     const [db, data] = await getTestDb();
 
-    const query = db.owner.query({ name: "Adam" });
+    const query = db.entity(owner).query({ name: "Adam" });
 
     expect(query.all.length).toBe(1);
     expect(query.all[0]).toBe(data.owners.adam);
@@ -30,17 +30,17 @@ describe("clientdb query", () => {
   it("performs simple query with multiple allowed values", async () => {
     const [db, data] = await getTestDb();
 
-    expect(db.owner.query({ name: ["Adam", "No-one"] }).all).toEqual([data.owners.adam]);
-    expect(db.owner.query({ name: ["Adam", "Omar"] }).all).toEqual([data.owners.adam, data.owners.omar]);
-    expect(db.owner.query({ name: [] }).all).toEqual([]);
-    expect(db.owner.query({ name: ["nope", "dope"] }).all).toEqual([]);
+    expect(db.entity(owner).query({ name: ["Adam", "No-one"] }).all).toEqual([data.owners.adam]);
+    expect(db.entity(owner).query({ name: ["Adam", "Omar"] }).all).toEqual([data.owners.adam, data.owners.omar]);
+    expect(db.entity(owner).query({ name: [] }).all).toEqual([]);
+    expect(db.entity(owner).query({ name: ["nope", "dope"] }).all).toEqual([]);
   });
 
   it("narrows down simple query", async () => {
     const [db, data] = await getTestDb();
 
-    const adamsRex = db.dog.query({ owner_id: data.owners.adam.id }).query({ name: "rex" });
-    const allRex = db.dog.query({ name: "rex" }).query({ name: "rex" });
+    const adamsRex = db.entity(dog).query({ owner_id: data.owners.adam.id }).query({ name: "rex" });
+    const allRex = db.entity(dog).query({ name: "rex" }).query({ name: "rex" });
 
     expect(adamsRex.all.length).toBe(1);
     expect(allRex.all.length).toBe(2);
@@ -52,10 +52,10 @@ describe("clientdb query", () => {
   it("finds by unique index", async () => {
     const [db, data] = await getTestDb();
 
-    expect(db.owner.findByUniqueIndex("name", "Adam")).toBe(data.owners.adam);
+    expect(db.entity(owner).findByUniqueIndex("name", "Adam")).toBe(data.owners.adam);
 
     expect(() => {
-      db.owner.assertFindById("name", "nope");
+      db.entity(owner).assertFindById("name", "nope");
     }).toThrow();
 
     db.destroy();

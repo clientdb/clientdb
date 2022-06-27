@@ -2,7 +2,6 @@ import { AnnotationsMap, IComputedValue } from "mobx";
 
 import { Entity } from "clientdb";
 
-import { DatabaseLinker } from "./entitiesConnections";
 import { EntityUpdateResult } from "./entity";
 import { EntityFilterFunction, SortResult } from "./query";
 import { EntitySearchConfig } from "./search";
@@ -10,10 +9,11 @@ import { EntitySyncConfig } from "./sync";
 import { PartialWithExplicitOptionals } from "./utils/types";
 import { CleanupObject } from "./utils/cleanup";
 import { getHash } from "./utils/hash";
+import { ClientDb } from "./db";
 
-type EntityAccessValidator<Data, Connections> = (entity: Entity<Data, Connections>, linker: DatabaseLinker) => boolean;
+type EntityAccessValidator<Data, View> = (entity: Entity<Data, View>, db: ClientDb) => boolean;
 
-interface DefineEntityConfig<Data, Connections> {
+interface DefineEntityConfig<Data, View> {
   name: string;
   keys: Array<keyof Data>;
   keyField: keyof Data;
@@ -28,7 +28,7 @@ interface DefineEntityConfig<Data, Connections> {
    *
    * Thus for { foo?: Maybe<string> } it would be required to provide { foo: null } as a default instead of {}
    */
-  getDefaultValues?: (linker: DatabaseLinker) => PartialWithExplicitOptionals<Data>;
+  getDefaultValues?: (db: ClientDb) => PartialWithExplicitOptionals<Data>;
   sync: EntitySyncConfig<Data>;
   defaultSort?: (item: Data) => SortResult;
   customObservableAnnotations?: AnnotationsMap<Data, never>;
@@ -39,38 +39,38 @@ interface DefineEntityConfig<Data, Connections> {
    *
    * Aka 'soft permissions'.
    */
-  accessValidator?: EntityAccessValidator<Data, Connections>;
-  getConnections?: EntityDefinitionGetConnections<Data, Connections>;
+  accessValidator?: EntityAccessValidator<Data, View>;
+  getView?: EntityDefinitionGetView<Data, View>;
   search?: EntitySearchConfig<Data>;
-  events?: EntityUserEvents<Data, Connections>;
-  functionalFilterCheck?: (item: Data, filter: EntityFilterFunction<Data, Connections>) => void;
+  events?: EntityUserEvents<Data, View>;
+  functionalFilterCheck?: (item: Data, filter: EntityFilterFunction<Data, View>) => void;
 }
 
-export type EntityUserEvents<Data, Connections> = {
-  itemAdded?: (entity: Entity<Data, Connections>, linker: DatabaseLinker) => void;
-  itemUpdated?: (entity: Entity<Data, Connections>, dataBefore: Data, linker: DatabaseLinker) => void;
-  itemRemoved?: (entity: Entity<Data, Connections>, linker: DatabaseLinker) => void;
+export type EntityUserEvents<Data, View> = {
+  itemAdded?: (entity: Entity<Data, View>, db: ClientDb) => void;
+  itemUpdated?: (entity: Entity<Data, View>, dataBefore: Data, db: ClientDb) => void;
+  itemRemoved?: (entity: Entity<Data, View>, db: ClientDb) => void;
 };
 
-export interface EntityDefinition<Data, Connections> {
-  config: DefineEntityConfig<Data, Connections>;
+export interface EntityDefinition<Data, View> {
+  config: DefineEntityConfig<Data, View>;
   getSchemaHash(): string;
-  addConnections<AddedConnections>(
-    getConnections: EntityDefinitionGetConnections<Data, AddedConnections>
-  ): EntityDefinition<Data, AddedConnections>;
-  addAccessValidation(accessValidator: EntityAccessValidator<Data, Connections>): EntityDefinition<Data, Connections>;
-  addEventHandlers(events: EntityUserEvents<Data, Connections>): EntityDefinition<Data, Connections>;
+  addView<View>(
+    getView: EntityDefinitionGetView<Data, View>
+  ): EntityDefinition<Data, View>;
+  addAccessValidation(accessValidator: EntityAccessValidator<Data, View>): EntityDefinition<Data, View>;
+  addEventHandlers(events: EntityUserEvents<Data, View>): EntityDefinition<Data, View>;
 }
 
-export interface EntityConnectionsLinker<Data> extends DatabaseLinker {
+export interface EntityViewLinker<Data> extends ClientDb {
   updateSelf(data: Partial<Data>): EntityUpdateResult;
   cleanup: CleanupObject;
 }
 
-type EntityDefinitionGetConnections<Data, Connections> = (
+type EntityDefinitionGetView<Data, View> = (
   item: Data,
-  manager: EntityConnectionsLinker<Data>
-) => Connections;
+  manager: EntityViewLinker<Data>
+) => View;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type EntityDataByDefinition<Def extends EntityDefinition<any, any>> = Def extends EntityDefinition<
@@ -81,9 +81,11 @@ export type EntityDataByDefinition<Def extends EntityDefinition<any, any>> = Def
   ? Data
   : never;
 
-export function defineEntity<Data extends {}, Connections extends {} = {}>(
-  config: DefineEntityConfig<Data, Connections>
-): EntityDefinition<Data, Connections> {
+export type AnyEntityDefinition = EntityDefinition<any, any>
+
+export function defineEntity<Data extends {}, View extends {} = {}>(
+  config: DefineEntityConfig<Data, View>
+): EntityDefinition<Data, View> {
   return {
     config,
 
@@ -92,11 +94,11 @@ export function defineEntity<Data extends {}, Connections extends {} = {}>(
       const sortedKeys = [...config.keys].sort();
       return getHash(sortedKeys.join(""));
     },
-    addConnections<AddedConnections>(getConnections: EntityDefinitionGetConnections<Data, AddedConnections>) {
-      return defineEntity<Data, AddedConnections>({ ...config, getConnections } as DefineEntityConfig<
+    addView<View>(getView: EntityDefinitionGetView<Data, View>) {
+      return defineEntity<Data, View>({ ...config, getView } as DefineEntityConfig<
         Data,
-        AddedConnections
-      >) as EntityDefinition<Data, AddedConnections>;
+        View
+      >) as EntityDefinition<Data, View>;
     },
     addAccessValidation(validator) {
       return defineEntity({ ...config, accessValidator: validator });

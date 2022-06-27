@@ -48,7 +48,6 @@ function getDatabaseHash(definitions: EntityDefinition<unknown, unknown>[], name
   return getHash([...hashList, nameSuffix].join(""));
 }
 
-const CACHE_TABLE_NAME = "__cache";
 
 const cacheTableConfig: PersistanceTableConfig = {
   name: "__cache",
@@ -141,7 +140,6 @@ export async function initializePersistance(
     onTerminated,
   });
 
-  const cacheTable = await persistanceDB.getTable(CACHE_TABLE_NAME);
 
   if (existingDatabaseInfo) {
     await allDatabasesInfoSystemTable.updateItem(databaseName, {
@@ -158,5 +156,5 @@ export async function initializePersistance(
     });
   }
 
-  return [persistanceDB, cacheTable] as const;
+  return persistanceDB;
 }

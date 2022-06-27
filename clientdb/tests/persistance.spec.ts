@@ -1,12 +1,11 @@
 import { PERSISTANCE_BATCH_FLUSH_TIMEOUT } from "clientdb/entity/persistance";
 import { wait } from "../entity/utils/promises";
 
-
-import { DefaultEntitiesMap, createTestDb } from "./utils";
+import { createTestDb, owner } from "./utils";
 
 describe("persistance", () => {
   it("populates clientdb with persisted data initially", async () => {
-    const db = await createTestDb<DefaultEntitiesMap>({
+    const db = await createTestDb({
       persistanceMocks: {
         owner: {
           async fetchAllItems() {
@@ -16,7 +15,7 @@ describe("persistance", () => {
       },
     });
 
-    const owners = db.owner.all;
+    const owners = db.entity(owner).all;
 
     expect(owners).toHaveLength(1);
     expect(owners[0].name).toBe("Adam");
@@ -32,7 +31,7 @@ describe("persistance", () => {
       return true;
     });
 
-    const db = await createTestDb<DefaultEntitiesMap>({
+    const db = await createTestDb({
       persistanceMocks: {
         owner: {
           saveItems,
@@ -41,19 +40,19 @@ describe("persistance", () => {
       },
     });
 
-    const owner = db.owner.create({ name: "Adam" });
+    const ownerEnt = db.entity(owner).create({ name: "Adam" });
 
     await wait(PERSISTANCE_BATCH_FLUSH_TIMEOUT + 10);
 
     expect(saveItems).toBeCalledTimes(1);
 
-    owner.update({ name: "Omar" });
+    ownerEnt.update({ name: "Omar" });
 
     await wait(PERSISTANCE_BATCH_FLUSH_TIMEOUT + 10);
 
     expect(saveItems).toBeCalledTimes(2);
 
-    owner.remove();
+    ownerEnt.remove();
 
     await wait(PERSISTANCE_BATCH_FLUSH_TIMEOUT + 10);
 

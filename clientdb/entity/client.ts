@@ -1,10 +1,10 @@
 import { computed, runInAction } from "mobx";
 import { assert } from "../utils/assert";
+import { ClientDb } from "./db";
 
 
 import { PersistanceDB } from "./db/adapter";
 import { EntityDefinition } from "./definition";
-import { DatabaseLinker } from "./entitiesConnections";
 import { Entity, createEntity } from "./entity";
 import { EntityPersistanceManager, createEntityPersistanceManager } from "./persistance";
 import { createEntitySearch } from "./search";
@@ -12,31 +12,31 @@ import { EntityStoreFindMethods, createEntityStore } from "./store";
 import { createEntitySyncManager } from "./sync";
 import { EntityChangeSource } from "./types";
 
-export interface EntityClient<Data, Connections> extends EntityStoreFindMethods<Data, Connections> {
-  all: Entity<Data, Connections>[];
+export interface EntityClient<Data, View> extends EntityStoreFindMethods<Data, View> {
+  all: Entity<Data, View>[];
   hasItems: boolean;
-  search(term: string): Entity<Data, Connections>[];
-  create(input: Partial<Data>, source?: EntityChangeSource): Entity<Data, Connections>;
-  update(id: string, input: Partial<Data>, source?: EntityChangeSource): Entity<Data, Connections>;
-  createOrUpdate(input: Partial<Data>, source?: EntityChangeSource): Entity<Data, Connections>;
+  search(term: string): Entity<Data, View>[];
+  create(input: Partial<Data>, source?: EntityChangeSource): Entity<Data, View>;
+  update(id: string, input: Partial<Data>, source?: EntityChangeSource): Entity<Data, View>;
+  createOrUpdate(input: Partial<Data>, source?: EntityChangeSource): Entity<Data, View>;
   destroy(): void;
-  definition: EntityDefinition<Data, Connections>;
+  definition: EntityDefinition<Data, View>;
   persistanceLoaded: Promise<void>;
   firstSyncLoaded: Promise<void>;
   startSync(): Promise<void>;
   fetchPersistedItems(): Promise<Data[]>;
-  persistanceManager: EntityPersistanceManager<Data, Connections>;
+  persistanceManager: EntityPersistanceManager<Data, View>;
 }
 
 export type EntityClientByDefinition<Def extends EntityDefinition<unknown, unknown>> = Def extends EntityDefinition<
   infer Data,
-  infer Connections
+  infer View
 >
-  ? EntityClient<Data, Connections>
+  ? EntityClient<Data, View>
   : never;
 
 interface EntityClientConfig {
-  linker: DatabaseLinker;
+  db: ClientDb;
   persistanceDb: PersistanceDB;
   disableSync: boolean;
 }
@@ -48,26 +48,26 @@ const truePredicate = () => true;
  *
  * It also initializes synchronization and persistance.
  */
-export function createEntityClient<Data, Connections>(
-  definition: EntityDefinition<Data, Connections>,
-  { linker, persistanceDb, disableSync }: EntityClientConfig
-): EntityClient<Data, Connections> {
-  const store = createEntityStore<Data, Connections>(definition, linker);
+export function createEntityClient<Data, View>(
+  definition: EntityDefinition<Data, View>,
+  { db, persistanceDb, disableSync }: EntityClientConfig
+): EntityClient<Data, View> {
+  const store = createEntityStore<Data, View>(definition, db);
 
   function attachEntityEvents() {
     const cleanupItemAdded = store.events.on("itemAdded", (entity, source) => {
       if (source === "user") {
-        definition.config.events?.itemAdded?.(entity, linker);
+        definition.config.events?.itemAdded?.(entity, db);
       }
     });
     const cleanupItemUpdated = store.events.on("itemUpdated", (entity, dataBefore, source) => {
       if (source === "user") {
-        definition.config.events?.itemUpdated?.(entity, dataBefore, linker);
+        definition.config.events?.itemUpdated?.(entity, dataBefore, db);
       }
     });
     const cleanupItemRemoved = store.events.on("itemRemoved", (entity, source) => {
       if (source === "user") {
-        definition.config.events?.itemRemoved?.(entity, linker);
+        definition.config.events?.itemRemoved?.(entity, db);
       }
     });
 
@@ -93,7 +93,7 @@ export function createEntityClient<Data, Connections>(
   const searchEngine = definition.config.search ? createEntitySearch(definition.config.search, store) : null;
 
   function createEntityWithData(input: Partial<Data>) {
-    return createEntity<Data, Connections>({ data: input, definition, store, linker });
+    return createEntity<Data, View>({ data: input, definition, store, db });
   }
 
   const persistanceManager = createEntityPersistanceManager(definition, {
@@ -101,7 +101,7 @@ export function createEntityClient<Data, Connections>(
     persistanceDb,
   });
 
-  const syncManager = createEntitySyncManager<Data, Connections>(
+  const syncManager = createEntitySyncManager<Data, View>(
     store,
     {
       entitySyncConfig: definition.config.sync,
@@ -121,7 +121,7 @@ export function createEntityClient<Data, Connections>(
         });
       },
     },
-    linker
+    db
   );
 
   let entityEventsCleanup: () => void;
@@ -158,7 +158,7 @@ export function createEntityClient<Data, Connections>(
     return client.all.length > 0;
   });
 
-  const client: EntityClient<Data, Connections> = {
+  const client: EntityClient<Data, View> = {
     definition,
     query,
     findById,
@@ -223,6 +223,6 @@ export function createEntityClient<Data, Connections>(
   return client;
 }
 
-export type GetEntityClientByDefinition<Data, Connections> = (
-  definition: EntityDefinition<Data, Connections>
-) => EntityClient<Data, Connections>;
+export type GetEntityClientByDefinition<Data, View> = (
+  definition: EntityDefinition<Data, View>
+) => EntityClient<Data, View>;

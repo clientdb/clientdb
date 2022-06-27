@@ -1,5 +1,5 @@
 import { createClientDb, defineEntity } from "clientdb";
-import { DatabaseLinker } from "clientdb/entity/entitiesConnections";
+import { ClientDb } from "../entity/db";
 
 import { TestOwnerEntity, createPersistanceAdapterMock, getDefaultCommonData, getSyncConfig } from "./utils";
 
@@ -21,12 +21,13 @@ const owner = defineEntity<TestOwnerEntity>({
 });
 
 function createTestDb() {
-  return createClientDb({ db: createPersistanceAdapterMock() }, { owner });
+  return createClientDb([owner],{ persistance: createPersistanceAdapterMock() });
 }
 
-const mockDbLinker: DatabaseLinker = {
+const mockDbLinker: ClientDb = {
   getContextValue: expect.any(Function),
-  getEntity: expect.any(Function),
+  entity: expect.any(Function),
+  destroy: expect.any(Function),
 };
 
 describe("Event listeners", () => {
@@ -39,7 +40,7 @@ describe("Event listeners", () => {
   it("calls the item added method when item is created", async () => {
     const db = await createTestDb();
 
-    const createdEntity = db.owner.create({ name: "Rasputin" });
+    const createdEntity = db.entity(owner).create({ name: "Rasputin" });
 
     expect(itemAdded).toBeCalledTimes(1);
     expect(itemAdded).toBeCalledWith(createdEntity, expect.objectContaining(mockDbLinker));
@@ -49,7 +50,7 @@ describe("Event listeners", () => {
     const db = await createTestDb();
 
     const nameOnCreation = { name: "Rasputin" };
-    const entity = db.owner.create(nameOnCreation);
+    const entity = db.entity(owner).create(nameOnCreation);
 
     entity.update({ name: "Pedro" });
 
@@ -65,7 +66,7 @@ describe("Event listeners", () => {
     const db = await createTestDb();
 
     const nameOnCreation = { name: "Rasputin" };
-    const entity = db.owner.create(nameOnCreation);
+    const entity = db.entity(owner).create(nameOnCreation);
 
     entity.remove();
 

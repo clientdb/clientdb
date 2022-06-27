@@ -1,11 +1,11 @@
 import { waitForAllSyncToFlush } from "clientdb";
 import { createResolvablePromise, wait } from "../entity/utils/promises";
 
-import { DefaultEntitiesMap, TestOwnerEntity, createTestDb } from "./utils";
+import { DefaultEntitiesMap, TestOwnerEntity, createTestDb, owner } from "./utils";
 
 describe("sync", () => {
   it("will have data from first sync on initial result", async () => {
-    const db = await createTestDb<DefaultEntitiesMap>({
+    const db = await createTestDb({
       syncMocks: {
         owner: {
           pullUpdated: ({ isFirstSync, updateItems }) => {
@@ -17,7 +17,7 @@ describe("sync", () => {
       },
     });
 
-    const owners = db.owner.all;
+    const owners = db.entity(owner).all;
 
     expect(owners).toHaveLength(1);
     expect(owners[0].name).toBe("Adam");
@@ -26,7 +26,7 @@ describe("sync", () => {
 
   it("will not render until initial sync is ready", async () => {
     const firstSyncPromise = createResolvablePromise<void>();
-    const dbPromise = createTestDb<DefaultEntitiesMap>({
+    const dbPromise = createTestDb({
       syncMocks: {
         owner: {
           pullUpdated: ({ updateItems }) => {
@@ -65,7 +65,7 @@ describe("sync", () => {
     const push = jest.fn(async (entity: TestOwnerEntity) => {
       return entity;
     });
-    const db = await createTestDb<DefaultEntitiesMap>({
+    const db = await createTestDb({
       syncMocks: {
         owner: {
           push,
@@ -73,7 +73,7 @@ describe("sync", () => {
       },
     });
 
-    db.owner.create({ name: "Adam" });
+    db.entity(owner).create({ name: "Adam" });
 
     await waitForAllSyncToFlush();
     expect(push).toBeCalledTimes(1);
@@ -86,7 +86,7 @@ describe("sync", () => {
       await pushWait.promise;
       return false;
     });
-    const db = await createTestDb<DefaultEntitiesMap>({
+    const db = await createTestDb({
       syncMocks: {
         owner: {
           remove,
@@ -94,21 +94,21 @@ describe("sync", () => {
       },
     });
 
-    const owner = db.owner.create({ name: "Adam" });
+    const ownerEnt = db.entity(owner).create({ name: "Adam" });
 
-    expect(db.owner.all).toHaveLength(1);
+    expect(db.entity(owner).all).toHaveLength(1);
 
-    await owner.waitForSync();
+    await ownerEnt.waitForSync();
 
-    owner.remove();
+    ownerEnt.remove();
 
-    expect(db.owner.all).toHaveLength(0);
+    expect(db.entity(owner).all).toHaveLength(0);
 
     pushWait.resolve();
 
     await waitForAllSyncToFlush();
 
-    expect(db.owner.all).toHaveLength(1);
+    expect(db.entity(owner).all).toHaveLength(1);
 
     db.destroy();
   });
@@ -117,7 +117,7 @@ describe("sync", () => {
     const push = jest.fn(async (entity: TestOwnerEntity) => {
       return { ...entity, name: "From Server" };
     });
-    const db = await createTestDb<DefaultEntitiesMap>({
+    const db = await createTestDb({
       syncMocks: {
         owner: {
           push,
@@ -125,10 +125,10 @@ describe("sync", () => {
       },
     });
 
-    const owner = db.owner.create({ name: "Adam" });
+    const ownerEnt = db.entity(owner).create({ name: "Adam" });
 
     await waitForAllSyncToFlush();
-    expect(owner.name).toBe("From Server");
+    expect(ownerEnt.name).toBe("From Server");
     db.destroy();
   });
 
@@ -136,7 +136,7 @@ describe("sync", () => {
     const push = jest.fn(async (entity: TestOwnerEntity) => {
       return { ...entity, name: "From Server" };
     });
-    const db = await createTestDb<DefaultEntitiesMap>({
+    const db = await createTestDb({
       syncMocks: {
         owner: {
           push,
@@ -144,10 +144,10 @@ describe("sync", () => {
       },
     });
 
-    const owner = db.owner.create({ name: "Adam" });
+    const ownerEnt = db.entity(owner).create({ name: "Adam" });
 
     await waitForAllSyncToFlush();
-    expect(owner.name).toBe("From Server");
+    expect(ownerEnt.name).toBe("From Server");
     db.destroy();
   });
 });

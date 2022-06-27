@@ -1,17 +1,17 @@
-import { createTestDb, runObserved } from "./utils";
+import { createTestDb, dog, owner, runObserved } from "./utils";
 
 describe("clientdb query", () => {
   async function getTestDb() {
     const db = await createTestDb();
 
-    const adam = db.owner.create({ name: "Adam" });
-    const omar = db.owner.create({ name: "Omar" });
+    const adam = db.entity(owner).create({ name: "Adam" });
+    const omar = db.entity(owner).create({ name: "Omar" });
 
-    const adams_rex = db.dog.create({ name: "rex", owner_id: adam.id });
-    const adams_teddy = db.dog.create({ name: "teddy", owner_id: adam.id });
+    const adams_rex = db.entity(dog).create({ name: "rex", owner_id: adam.id });
+    const adams_teddy = db.entity(dog).create({ name: "teddy", owner_id: adam.id });
 
-    const omars_rudy = db.dog.create({ name: "rudy", owner_id: omar.id });
-    const omars_rex = db.dog.create({ name: "rex", owner_id: omar.id });
+    const omars_rudy = db.entity(dog).create({ name: "rudy", owner_id: omar.id });
+    const omars_rex = db.entity(dog).create({ name: "rex", owner_id: omar.id });
 
     return [db, { owners: { adam, omar }, dogs: { adams_rex, adams_teddy, omars_rudy, omars_rex } }] as const;
   }
@@ -23,7 +23,7 @@ describe("clientdb query", () => {
       return owner.name === "Adam";
     });
 
-    const query = db.owner.query(queryFunction);
+    const query = db.entity(owner).query(queryFunction);
 
     // Query fn is only cached as long as being observed.
     runObserved(() => {
@@ -32,11 +32,11 @@ describe("clientdb query", () => {
 
       expect(query.all).toHaveLength(1);
 
-      expect(queryFunction).toBeCalledTimes(db.owner.all.length);
+      expect(queryFunction).toBeCalledTimes(db.entity(owner).all.length);
 
       expect(query.all).toHaveLength(1);
 
-      expect(queryFunction).toBeCalledTimes(db.owner.all.length);
+      expect(queryFunction).toBeCalledTimes(db.entity(owner).all.length);
     });
 
     db.destroy();
@@ -49,8 +49,8 @@ describe("clientdb query", () => {
       owners: { adam, omar },
     } = data;
 
-    expect(db.owner.sort({ sort: (owner) => owner.name, direction: "asc" }).all).toEqual([omar, adam]);
-    expect(db.owner.sort({ sort: (owner) => owner.name, direction: "desc" }).all).toEqual([adam, omar]);
+    expect(db.entity(owner).sort({ sort: (owner) => owner.name, direction: "asc" }).all).toEqual([omar, adam]);
+    expect(db.entity(owner).sort({ sort: (owner) => owner.name, direction: "desc" }).all).toEqual([adam, omar]);
 
     db.destroy();
   });
@@ -62,14 +62,14 @@ describe("clientdb query", () => {
       owners: { adam, omar },
     } = data;
 
-    const allOwnersQuery = db.owner.query(() => true);
+    const allOwnersQuery = db.entity(owner).query(() => true);
 
     expect(allOwnersQuery.hasItems).toBe(true);
     expect(allOwnersQuery.first).toBe(adam);
     expect(allOwnersQuery.last).toBe(omar);
     expect(allOwnersQuery.count).toBe(2);
 
-    const emptyQuery = db.owner.query(() => false);
+    const emptyQuery = db.entity(owner).query(() => false);
 
     expect(emptyQuery.hasItems).toBe(false);
     expect(emptyQuery.first).toBe(null);

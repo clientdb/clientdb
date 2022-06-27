@@ -3,7 +3,6 @@ import { IObservableArray, observable, runInAction } from "mobx";
 
 
 import { EntityDefinition } from "./definition";
-import { DatabaseLinker } from "./entitiesConnections";
 import { Entity } from "./entity";
 import { FindInput } from "./find";
 import {
@@ -21,81 +20,78 @@ import { MessageOrError, assert } from "../utils/assert";
 import { areArraysShallowEqual } from "./utils/arrays";
 import { createCleanupObject } from "./utils/cleanup";
 import { deepMemoize } from "./utils/deepMap";
+import { ClientDb } from "./db";
 
-export interface EntityStoreFindMethods<Data, Connections> {
+export interface EntityStoreFindMethods<Data, View> {
   query: (
-    filter: FindInput<Data, Connections>,
-    sort?: EntityQuerySortFunction<Data, Connections>
-  ) => EntityQuery<Data, Connections>;
+    filter: FindInput<Data, View>,
+    sort?: EntityQuerySortFunction<Data, View>
+  ) => EntityQuery<Data, View>;
 
-  sort: (sort: EntityQuerySortInput<Data, Connections>) => EntityQuery<Data, Connections>;
-  // findAllByIndexValue<K extends keyof IndexQueryInput<Data & Connections>>(
-  //   key: K,
-  //   value: IndexQueryInput<Data & Connections>[K]
-  // ): IObservableArray<Entity<Data, Connections>>;
-  findByUniqueIndex<K extends IndexableKey<Data & Connections>>(
+  sort: (sort: EntityQuerySortInput<Data, View>) => EntityQuery<Data, View>;
+  findByUniqueIndex<K extends IndexableKey<Data & View>>(
     key: K,
-    value: IndexableData<Data & Connections>[K]
-  ): Entity<Data, Connections> | null;
-  assertFindByUniqueIndex<K extends IndexableKey<Data & Connections>>(
+    value: IndexableData<Data & View>[K]
+  ): Entity<Data, View> | null;
+  assertFindByUniqueIndex<K extends IndexableKey<Data & View>>(
     key: K,
-    value: IndexableData<Data & Connections>[K]
-  ): Entity<Data, Connections>;
+    value: IndexableData<Data & View>[K]
+  ): Entity<Data, View>;
 
-  findById(id: string): Entity<Data, Connections> | null;
-  assertFindById(id: string, error?: MessageOrError): Entity<Data, Connections>;
+  findById(id: string): Entity<Data, View> | null;
+  assertFindById(id: string, error?: MessageOrError): Entity<Data, View>;
   removeById(id: string, source?: EntityChangeSource): boolean;
 
-  find(filter: FindInput<Data, Connections>): Entity<Data, Connections>[];
-  findFirst(filter: FindInput<Data, Connections>): Entity<Data, Connections> | null;
+  find(filter: FindInput<Data, View>): Entity<Data, View>[];
+  findFirst(filter: FindInput<Data, View>): Entity<Data, View> | null;
 }
 
-export interface EntityStore<Data, Connections> extends EntityStoreFindMethods<Data, Connections> {
-  items: IObservableArray<Entity<Data, Connections>>;
-  sortItems(items: Entity<Data, Connections>[]): Entity<Data, Connections>[];
-  add(input: Entity<Data, Connections>, source?: EntityChangeSource): Entity<Data, Connections>;
-  events: EntityStoreEventsEmmiter<Data, Connections>;
-  definition: EntityDefinition<Data, Connections>;
+export interface EntityStore<Data, View> extends EntityStoreFindMethods<Data, View> {
+  items: IObservableArray<Entity<Data, View>>;
+  sortItems(items: Entity<Data, View>[]): Entity<Data, View>[];
+  add(input: Entity<Data, View>, source?: EntityChangeSource): Entity<Data, View>;
+  events: EntityStoreEventsEmmiter<Data, View>;
+  definition: EntityDefinition<Data, View>;
   destroy: () => void;
-  getKeyIndex<K extends IndexableKey<Data & Connections>>(key: K): QueryIndex<Data, Connections, K>;
+  getKeyIndex<K extends IndexableKey<Data & View>>(key: K): QueryIndex<Data, View, K>;
 }
 
 export type EntityStoreFromDefinition<Definition extends EntityDefinition<unknown, unknown>> =
-  Definition extends EntityDefinition<infer Data, infer Connections> ? EntityStore<Data, Connections> : never;
+  Definition extends EntityDefinition<infer Data, infer View> ? EntityStore<Data, View> : never;
 
-type EntityStoreEvents<Data, Connections> = {
-  itemAdded: [Entity<Data, Connections>, EntityChangeSource];
-  itemUpdated: [entity: Entity<Data, Connections>, dataBefore: Data, source: EntityChangeSource];
-  itemWillUpdate: [entity: Entity<Data, Connections>, input: Partial<Data>, source: EntityChangeSource];
-  itemRemoved: [Entity<Data, Connections>, EntityChangeSource];
+type EntityStoreEvents<Data, View> = {
+  itemAdded: [Entity<Data, View>, EntityChangeSource];
+  itemUpdated: [entity: Entity<Data, View>, dataBefore: Data, source: EntityChangeSource];
+  itemWillUpdate: [entity: Entity<Data, View>, input: Partial<Data>, source: EntityChangeSource];
+  itemRemoved: [Entity<Data, View>, EntityChangeSource];
 };
 
-export type EntityStoreEventsEmmiter<Data, Connections> = EventsEmmiter<EntityStoreEvents<Data, Connections>>;
+export type EntityStoreEventsEmmiter<Data, View> = EventsEmmiter<EntityStoreEvents<Data, View>>;
 
 /**
  * Store is inner 'registry' of all items of given entity. It is like 'raw' database with no extra logic (like syncing)
  */
-export function createEntityStore<Data, Connections>(
-  definition: EntityDefinition<Data, Connections>,
-  linker: DatabaseLinker
-): EntityStore<Data, Connections> {
-  type StoreEntity = Entity<Data, Connections>;
+export function createEntityStore<Data, View>(
+  definition: EntityDefinition<Data, View>,
+  db: ClientDb
+): EntityStore<Data, View> {
+  type StoreEntity = Entity<Data, View>;
 
   const { config } = definition;
   /**
    * Keep 2 'versions' of items list. Array and id<>item map for quick 'by id' access.
    */
   const items = observable.array<StoreEntity>([]);
-  const itemsMap = observable.object<Record<string, Entity<Data, Connections>>>({});
+  const itemsMap = observable.object<Record<string, Entity<Data, View>>>({});
 
   const getIsEntityAccessable =
     config.accessValidator &&
     cachedComputed(function getIsEntityAccessable(entity: StoreEntity) {
-      return config.accessValidator!(entity, linker);
+      return config.accessValidator!(entity, db);
     });
 
   const getRootSource = cachedComputed(
-    function getSourceForQueryInput(): Entity<Data, Connections>[] {
+    function getSourceForQueryInput(): Entity<Data, View>[] {
       let output = items as StoreEntity[];
 
       if (config.accessValidator) {
@@ -116,14 +112,14 @@ export function createEntityStore<Data, Connections>(
   });
 
   // Allow listening to CRUD updates in the store
-  const events = createMobxAwareEventsEmmiter<EntityStoreEvents<Data, Connections>>(config.name);
+  const events = createMobxAwareEventsEmmiter<EntityStoreEvents<Data, View>>(config.name);
 
   const queryIndexes = new Map<
-    keyof Data | keyof Connections,
-    QueryIndex<Data, Connections, IndexableKey<Data & Connections>>
+    keyof Data | keyof View,
+    QueryIndex<Data, View, IndexableKey<Data & View>>
   >();
 
-  function getEntityId(entity: Entity<Data, Connections>) {
+  function getEntityId(entity: Entity<Data, View>) {
     const id = `${entity[config.keyField]}`;
 
     return id;
@@ -132,7 +128,7 @@ export function createEntityStore<Data, Connections>(
   const cleanups = createCleanupObject();
 
   const createOrReuseQuery = deepMemoize(
-    function createOrReuseQuery(filter?: FindInput<Data, Connections>, sort?: EntityQuerySortInput<Data, Connections>) {
+    function createOrReuseQuery(filter?: FindInput<Data, View>, sort?: EntityQuerySortInput<Data, View>) {
       const resolvedSort = resolveSortInput(sort) ?? undefined;
 
       return createEntityQuery(getRootSource, { filter: filter, sort: resolvedSort }, store);
@@ -150,7 +146,7 @@ export function createEntityStore<Data, Connections>(
     return entity;
   });
 
-  const store: EntityStore<Data, Connections> = {
+  const store: EntityStore<Data, View> = {
     definition,
     events,
     items,

@@ -1,22 +1,22 @@
 import { runInAction } from "mobx";
 
 
-import { DatabaseLinker } from "./entitiesConnections";
 import { Entity } from "./entity";
 import { EntityStore } from "./store";
 import { getChangedData } from "./utils/getChangedData";
 import { createPushQueue } from "./utils/pushQueue";
 import { createResolvablePromise } from "./utils/promises";
 import { runUntracked } from "./utils/mobx";
+import { ClientDb } from "./db";
 
-interface UpdatesSyncManager<Data> extends DatabaseLinker {
+interface UpdatesSyncManager<Data> extends ClientDb {
   updateItems(items: Data[], isReloadNeeded?: boolean): void;
   lastSyncDate: Date;
   isFirstSync: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface RemovesSyncManager<Data> extends DatabaseLinker {
+interface RemovesSyncManager<Data> extends ClientDb {
   removeItems(idsToRemove: string[], lastUpdateDate?: Date): void;
   lastSyncDate: Date;
 }
@@ -31,10 +31,10 @@ export interface EntitySyncConfig<Data> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     entityToSync: Entity<Data, any>,
     changedData: Partial<Data>,
-    utils: DatabaseLinker
+    db: ClientDb
   ) => Promise<Data | false>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  remove?: (entityToSync: Entity<Data, any>, utils: DatabaseLinker) => Promise<boolean>;
+  remove?: (entityToSync: Entity<Data, any>, db: ClientDb) => Promise<boolean>;
   pullRemoves?: (manager: RemovesSyncManager<Data>) => SyncCleanup | void;
 }
 
@@ -56,8 +56,8 @@ const pushQueue = createPushQueue();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const awaitingPushOperationsMap = new WeakMap<Entity<any, any>, Set<Promise<unknown>>>();
 
-function addAwaitingOperationToEntity<Data, Connections>(
-  entity: Entity<Data, Connections>,
+function addAwaitingOperationToEntity<Data, View>(
+  entity: Entity<Data, View>,
   operationPromise: Promise<unknown>
 ) {
   let currentlyAwaiting = awaitingPushOperationsMap.get(entity);
@@ -76,7 +76,7 @@ function addAwaitingOperationToEntity<Data, Connections>(
   return operationPromise;
 }
 
-export async function waitForEntityAllAwaitingPushOperations<Data, Connections>(entity: Entity<Data, Connections>) {
+export async function waitForEntityAllAwaitingPushOperations<Data, View>(entity: Entity<Data, View>) {
   const awaitingOperations = awaitingPushOperationsMap.get(entity);
 
   if (!awaitingOperations) {
@@ -93,10 +93,10 @@ export async function waitForAllSyncToFlush() {
 /**
  * Sync manager sets manages running sync operations and repeating them after previous sync.
  */
-export function createEntitySyncManager<Data, Connections>(
-  store: EntityStore<Data, Connections>,
+export function createEntitySyncManager<Data, View>(
+  store: EntityStore<Data, View>,
   config: EntitySyncManagerConfig<Data>,
-  linker: DatabaseLinker
+  db: ClientDb
 ): EntitySyncManager<Data> {
   const syncConfig = store.definition.config.sync;
 
@@ -104,12 +104,12 @@ export function createEntitySyncManager<Data, Connections>(
 
   // Watch for all local changes and as a side effect - push them to remote.
   function initializePushSync() {
-    async function handleEntityCreatedOrUpdatedByUser(entity: Entity<Data, Connections>, changedData: Partial<Data>) {
+    async function handleEntityCreatedOrUpdatedByUser(entity: Entity<Data, View>, changedData: Partial<Data>) {
       if (!store.definition.config.sync.push) {
         return;
       }
 
-      const entityDataFromServer = await store.definition.config.sync.push?.(entity, changedData, linker);
+      const entityDataFromServer = await store.definition.config.sync.push?.(entity, changedData, db);
 
       if (!entityDataFromServer) {
         console.warn(`Sync push failed`);
@@ -129,7 +129,7 @@ export function createEntitySyncManager<Data, Connections>(
       }
 
       try {
-        const result = await pushQueue.add(() => config.entitySyncConfig.remove?.(entity, linker));
+        const result = await pushQueue.add(() => config.entitySyncConfig.remove?.(entity, db));
         if (result !== true) {
           restoreEntity();
           // TODO: Handle restore local entity in case of failure
@@ -197,7 +197,7 @@ export function createEntitySyncManager<Data, Connections>(
     let maybeCleanup: void | SyncCleanup | undefined;
 
      maybeCleanup = syncConfig.pullUpdated?.({
-      ...linker,
+      ...db,
       lastSyncDate: getLastSyncDate(),
       isFirstSync,
       updateItems(items, isReloadNeeded) {
@@ -237,7 +237,7 @@ export function createEntitySyncManager<Data, Connections>(
       lastRemoveSyncDate = getLastSyncDate();
     }
     const maybeCleanup = syncConfig.pullRemoves?.({
-      ...linker,
+      ...db,
       lastSyncDate: lastRemoveSyncDate,
       removeItems(itemsIds, lastUpdateDate = new Date()) {
         if (!itemsIds.length) return;

@@ -1,13 +1,11 @@
-import { find, forEach, mapValues } from "lodash";
 import { runInAction } from "mobx";
 
 
-import { createEntityClient, EntityClient, EntityClientByDefinition } from "./entity/client";
+import { createEntityClient, EntityClient } from "./entity/client";
 import { DbContext, DbContextInstance } from "./entity/context";
+import { ClientDb } from "./entity/db";
 import { PersistanceAdapterInfo } from "./entity/db/adapter";
 import { EntityDefinition } from "./entity/definition";
-import { DatabaseLinker } from "./entity/entitiesConnections";
-import { EntitiesMap } from "./entity/entitiesMap";
 import { initializePersistance } from "./entity/initializePersistance";
 import { assert } from "./utils/assert";
 import { IS_CLIENT } from "./utils/client";
@@ -15,86 +13,87 @@ import { IS_CLIENT } from "./utils/client";
 export * from "./entity/index";
 
 interface ClientDbConfig {
-  db: PersistanceAdapterInfo;
+  persistance: PersistanceAdapterInfo;
   contexts?: DbContextInstance<unknown>[];
   disableSync?: boolean;
   onDestroyRequest?: () => void;
 }
 
-type EntitiesClientsMap<Entities extends EntitiesMap> = {
-  // If you're brave - go for it! You've been warned.
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  [key in keyof Entities]: EntityClientByDefinition<Entities[key]>;
-};
 
-type ClientDbExtra = {
-  destroy: () => void;
-  linker: DatabaseLinker;
-};
 
-type ClientDb<Entities extends EntitiesMap> = ClientDbExtra & EntitiesClientsMap<Entities>;
-
-export async function createClientDb<Entities extends EntitiesMap>(
-  { db, contexts, onDestroyRequest, disableSync = false }: ClientDbConfig,
-  definitionsMap: Entities
-): Promise<ClientDb<Entities>> {
-  const definitions = Object.values(definitionsMap);
+export async function createClientDb(
+  definitions: Array<EntityDefinition<any, any>>,
+  { persistance, contexts, onDestroyRequest, disableSync = false }: ClientDbConfig,
+): Promise<ClientDb> {
 
   assert(IS_CLIENT, "Client DB can only be created on client side");
 
-  const [persistanceDb, cacheTable] = await initializePersistance(
+  const persistanceDb = await initializePersistance(
     definitions as EntityDefinition<unknown, unknown>[],
-    db,
+    persistance,
     onDestroyRequest
   );
 
-  const databaseLinker: DatabaseLinker = {
-    getEntity<Data, Connections>(definition: EntityDefinition<Data, Connections>): EntityClient<Data, Connections> {
-      const foundClient = find(entityClients, (client: EntityClient<unknown, unknown>) => {
-        return (client as EntityClient<Data, Connections>).definition === definition;
-      });
+  const clientsLookup = new Map<EntityDefinition<any, any>, EntityClient<any, any>>();
 
-      if (!foundClient) {
-        throw new Error(
-          `no client for given definition (${definition.config.name}) in this db. Make sure it is added to entities map when creating client db`
-        );
-      }
+  const clientdb: ClientDb = {
+    entity: getEntityClient,
+    getContextValue,
+    destroy,
+  }
 
-      return foundClient as EntityClient<Data, Connections>;
-    },
-    getContextValue<V>(context: DbContext<V>) {
-      if (!contexts) {
-        throw new Error(`No context are defined for this db`);
-      }
-
-      const correspondingContextInstance = contexts.find((contextInstance) => contextInstance.context === context);
-
-      if (!correspondingContextInstance) {
-        throw new Error(`No context in this db matching requested one`);
-      }
-
-      return correspondingContextInstance.value as V;
-    },
-  };
-
-  const entityClients = mapValues(definitionsMap, (definition) => {
+  const entityClients = definitions.map(definition => {
     const entityClient = createEntityClient(definition, {
-      linker: databaseLinker,
+      db: clientdb,
       persistanceDb,
       disableSync,
     });
 
     return entityClient;
-  }) as EntitiesClientsMap<Entities>;
+  })
+
+  for (const client of entityClients) {
+    clientsLookup.set(client.definition, client);
+  }
+
+
+  function getEntityClient<Data, View>(definition: EntityDefinition<Data, View>): EntityClient<Data, View> {
+    const client = clientsLookup.get(definition);
+    
+
+    if (!client) {
+      throw new Error(
+        `no client for given definition (${definition.config.name}) in this db. Make sure it is added to entities map when creating client db`
+      );
+    }
+
+    return client as EntityClient<Data, View>;
+  }
+
+  function getContextValue<V>(context: DbContext<V>) {
+    if (!contexts) {
+      throw new Error(`No context are defined for this db`);
+    }
+
+    const correspondingContextInstance = contexts.find((contextInstance) => contextInstance.context === context);
+
+    if (!correspondingContextInstance) {
+      throw new Error(`No context in this db matching requested one`);
+    }
+
+    return correspondingContextInstance.value as V;
+  }
+
+
+ 
 
   function destroy() {
     // ! close indexeddb connection so in case new clientdb is created for same name - it will be able to connect.
     persistanceDb.close();
     runInAction(() => {
-      forEach(entityClients, (client: EntityClient<unknown, unknown>) => {
+      entityClients.forEach(client => {
         client.destroy();
-      });
+      })
     });
   }
 
@@ -106,7 +105,7 @@ export async function createClientDb<Entities extends EntitiesMap>(
    */
   async function loadPersistedData() {
     const persistedDataWithClient = await Promise.all(
-      Object.values<EntityClient<unknown, unknown>>(entityClients).map(async (client) => {
+      entityClients.map(async (client) => {
         const persistedData = await client.persistanceManager.fetchPersistedItems();
 
         return { persistedData, client };
@@ -131,13 +130,13 @@ export async function createClientDb<Entities extends EntitiesMap>(
   if (!disableSync) {
     // Start sync at once when all persistance data is loaded
     persistanceLoadedPromise.then(() => {
-      forEach(entityClients, (client: EntityClient<unknown, unknown>) => {
+      entityClients.forEach((client: EntityClient<unknown, unknown>) => {
         client.startSync();
       });
     });
 
     const firstSyncPromise = Promise.all(
-      Object.values<EntityClient<unknown, unknown>>(entityClients).map((client) => client.firstSyncLoaded)
+      entityClients.map((client) => client.firstSyncLoaded)
     );
 
     await Promise.all([persistanceLoadedPromise, firstSyncPromise]);
@@ -145,10 +144,7 @@ export async function createClientDb<Entities extends EntitiesMap>(
     await persistanceLoadedPromise;
   }
 
-  const clientDbMethods: ClientDbExtra = {
-    destroy,
-    linker: databaseLinker,
-  };
+ 
 
-  return { ...entityClients, ...clientDbMethods };
+  return clientdb;
 }

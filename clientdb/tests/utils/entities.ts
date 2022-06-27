@@ -14,6 +14,11 @@ export interface TestDogEntity extends CommonData {
   owner_id: string;
 }
 
+export type DefaultTestEntities = {
+  owner: TestOwnerEntity;
+  dog: TestDogEntity;
+};
+
 let id = 0;
 
 export function getDefaultCommonData(): CommonData {
@@ -43,10 +48,10 @@ export const owner = defineEntity<TestOwnerEntity>({
     },
   },
   getDefaultValues: getDefaultCommonData,
-}).addConnections((ownerData, { getEntity }) => {
+}).addView((ownerData, { entity }) => {
   return {
     get dogs() {
-      return getEntity(dog).query({ owner_id: ownerData.id });
+      return entity(dog).query({ owner_id: ownerData.id });
     },
   };
 });
@@ -58,10 +63,10 @@ export const dog = defineEntity<TestDogEntity>({
   name: "dog",
   sync: getSyncConfig<TestDogEntity>(),
   getDefaultValues: getDefaultCommonData,
-}).addConnections((dogData, { getEntity }) => {
+}).addView((dogData, { entity }) => {
   return {
     get owner() {
-      return getEntity(owner).assertFindById(dogData.owner_id);
+      return entity(owner).assertFindById(dogData.owner_id);
     },
   };
 });
