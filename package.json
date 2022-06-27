@@ -1,0 +1,16 @@
+{
+
+  "name": "@clientdb/root",
+  "version": "0.1.0",
+  "license": "MIT",
+  "private": true,
+  "workspaces": [
+    "clientdb"
+  ],
+  "dependencies": {
+    "mobx": "6.6.1"
+  },
+  "scripts": {
+    "core": "yarn workspace clientdb"
+  }
+}
