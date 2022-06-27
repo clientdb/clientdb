@@ -1,6 +1,5 @@
 import { runInAction } from "mobx";
 
-
 import { Entity } from "./entity";
 import { EntityStore } from "./store";
 import { getChangedData } from "./utils/getChangedData";
@@ -54,7 +53,10 @@ interface EntitySyncManager<Data> {
 const pushQueue = createPushQueue();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const awaitingPushOperationsMap = new WeakMap<Entity<any, any>, Set<Promise<unknown>>>();
+const awaitingPushOperationsMap = new WeakMap<
+  Entity<any, any>,
+  Set<Promise<unknown>>
+>();
 
 function addAwaitingOperationToEntity<Data, View>(
   entity: Entity<Data, View>,
@@ -76,7 +78,9 @@ function addAwaitingOperationToEntity<Data, View>(
   return operationPromise;
 }
 
-export async function waitForEntityAllAwaitingPushOperations<Data, View>(entity: Entity<Data, View>) {
+export async function waitForEntityAllAwaitingPushOperations<Data, View>(
+  entity: Entity<Data, View>
+) {
   const awaitingOperations = awaitingPushOperationsMap.get(entity);
 
   if (!awaitingOperations) {
@@ -104,12 +108,19 @@ export function createEntitySyncManager<Data, View>(
 
   // Watch for all local changes and as a side effect - push them to remote.
   function initializePushSync() {
-    async function handleEntityCreatedOrUpdatedByUser(entity: Entity<Data, View>, changedData: Partial<Data>) {
+    async function handleEntityCreatedOrUpdatedByUser(
+      entity: Entity<Data, View>,
+      changedData: Partial<Data>
+    ) {
       if (!store.definition.config.sync.push) {
         return;
       }
 
-      const entityDataFromServer = await store.definition.config.sync.push?.(entity, changedData, db);
+      const entityDataFromServer = await store.definition.config.sync.push?.(
+        entity,
+        changedData,
+        db
+      );
 
       if (!entityDataFromServer) {
         console.warn(`Sync push failed`);
@@ -119,7 +130,7 @@ export function createEntitySyncManager<Data, View>(
       // After pushing entity to remote, always treat 'server' version as 'official' and make sure our local version is equal.
       entity.update(entityDataFromServer, "sync");
     }
-    const cancelRemoves = store.events.on("itemRemoved", async (entity, source) => {
+    const cancelRemoves = store.events.on("removed", async (entity, source) => {
       if (source !== "user") return;
 
       if (!config.entitySyncConfig.remove) return;
@@ -129,7 +140,9 @@ export function createEntitySyncManager<Data, View>(
       }
 
       try {
-        const result = await pushQueue.add(() => config.entitySyncConfig.remove?.(entity, db));
+        const result = await pushQueue.add(() =>
+          config.entitySyncConfig.remove?.(entity, db)
+        );
         if (result !== true) {
           restoreEntity();
           // TODO: Handle restore local entity in case of failure
@@ -139,22 +152,27 @@ export function createEntitySyncManager<Data, View>(
       }
     });
 
-    const cancelUpdates = store.events.on("itemUpdated", async (entity, dataBefore, source) => {
-      if (source !== "user") return;
+    const cancelUpdates = store.events.on(
+      "updated",
+      async (entity, dataBefore, source) => {
+        if (source !== "user") return;
 
-      const changedData = getChangedData(entity.getData(), dataBefore);
+        const changedData = getChangedData(entity.getData(), dataBefore);
 
-      try {
-        await addAwaitingOperationToEntity(
-          entity,
-          pushQueue.add(() => handleEntityCreatedOrUpdatedByUser(entity, changedData))
-        );
-      } catch (error) {
-        entity.update(dataBefore, "sync");
+        try {
+          await addAwaitingOperationToEntity(
+            entity,
+            pushQueue.add(() =>
+              handleEntityCreatedOrUpdatedByUser(entity, changedData)
+            )
+          );
+        } catch (error) {
+          entity.update(dataBefore, "sync");
+        }
       }
-    });
+    );
 
-    const cancelCreates = store.events.on("itemAdded", async (entity, source) => {
+    const cancelCreates = store.events.on("created", async (entity, source) => {
       if (source !== "user") return;
       try {
         await addAwaitingOperationToEntity(
@@ -179,10 +197,10 @@ export function createEntitySyncManager<Data, View>(
 
     runUntracked(() => {
       store.items.forEach((item) => {
-        const nextItemUpdatedAt = item.getUpdatedAt();
+        const nextupdatedAt = item.getUpdatedAt();
 
-        if (nextItemUpdatedAt > initialDate) {
-          initialDate = nextItemUpdatedAt;
+        if (nextupdatedAt > initialDate) {
+          initialDate = nextupdatedAt;
         }
       });
     });
@@ -196,7 +214,7 @@ export function createEntitySyncManager<Data, View>(
   function startNextUpdatesSync() {
     let maybeCleanup: void | SyncCleanup | undefined;
 
-     maybeCleanup = syncConfig.pullUpdated?.({
+    maybeCleanup = syncConfig.pullUpdated?.({
       ...db,
       lastSyncDate: getLastSyncDate(),
       isFirstSync,
@@ -210,7 +228,6 @@ export function createEntitySyncManager<Data, View>(
           maybeCleanup?.();
         }
 
-        
         runInAction(() => {
           config.onItemsData(items);
         });

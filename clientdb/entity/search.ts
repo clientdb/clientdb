@@ -16,7 +16,9 @@ interface EntitySearchFieldDetailedConfig<Value> {
   boost?: number;
 }
 
-type EntitySearchFieldConfig<Value> = true | EntitySearchFieldDetailedConfig<Value>;
+type EntitySearchFieldConfig<Value> =
+  | true
+  | EntitySearchFieldDetailedConfig<Value>;
 
 function isDetailedEntitySearchFieldConfig<Value>(
   config: EntitySearchFieldConfig<Value>
@@ -52,8 +54,14 @@ export function createEntitySearch<Data, View>(
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const fieldConfig = fields[key as keyof Data]!;
 
-      if (!isDetailedEntitySearchFieldConfig(fieldConfig) || !fieldConfig.extract) {
-        assert(typeof value === "string", `Only string values can be indexed if no convert function is provided`);
+      if (
+        !isDetailedEntitySearchFieldConfig(fieldConfig) ||
+        !fieldConfig.extract
+      ) {
+        assert(
+          typeof value === "string",
+          `Only string values can be indexed if no convert function is provided`
+        );
         return value as string;
       }
 
@@ -96,17 +104,17 @@ export function createEntitySearch<Data, View>(
   }
 
   const listenToUpdatesIfNeeded = memoize(() => {
-    const cancelAdd = store.events.on("itemAdded", (entity) => {
+    const cancelAdd = store.events.on("created", (entity) => {
       index.add(entity.getKey(), prepareEntitySearchTerm(entity));
       trackUpdate();
     });
 
-    const cancelDelete = store.events.on("itemRemoved", (entity) => {
+    const cancelDelete = store.events.on("removed", (entity) => {
       trackUpdate();
       index.remove(entity.getKey());
     });
 
-    const cancelUpdate = store.events.on("itemUpdated", (entity) => {
+    const cancelUpdate = store.events.on("updated", (entity) => {
       index.update(entity.getKey(), prepareEntitySearchTerm(entity));
       trackUpdate();
     });
@@ -135,7 +143,6 @@ export function createEntitySearch<Data, View>(
       // We simply read this value to let mobx know to re-compute if there is change in the index
       status.updatesCount;
       const foundIds = index.search(input, { limit: 20, suggest: true });
-
 
       return (
         foundIds

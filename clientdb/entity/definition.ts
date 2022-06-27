@@ -11,7 +11,10 @@ import { CleanupObject } from "./utils/cleanup";
 import { getHash } from "./utils/hash";
 import { ClientDb } from "./db";
 
-type EntityAccessValidator<Data, View> = (entity: Entity<Data, View>, db: ClientDb) => boolean;
+type EntityAccessValidator<Data, View> = (
+  entity: Entity<Data, View>,
+  db: ClientDb
+) => boolean;
 
 interface DefineEntityConfig<Data, View> {
   name: string;
@@ -42,14 +45,21 @@ interface DefineEntityConfig<Data, View> {
   accessValidator?: EntityAccessValidator<Data, View>;
   getView?: EntityDefinitionGetView<Data, View>;
   search?: EntitySearchConfig<Data>;
-  events?: EntityUserEvents<Data, View>;
-  functionalFilterCheck?: (item: Data, filter: EntityFilterFunction<Data, View>) => void;
+  events?: EntityEvents<Data, View>;
+  functionalFilterCheck?: (
+    item: Data,
+    filter: EntityFilterFunction<Data, View>
+  ) => void;
 }
 
-export type EntityUserEvents<Data, View> = {
-  itemAdded?: (entity: Entity<Data, View>, db: ClientDb) => void;
-  itemUpdated?: (entity: Entity<Data, View>, dataBefore: Data, db: ClientDb) => void;
-  itemRemoved?: (entity: Entity<Data, View>, db: ClientDb) => void;
+export type EntityEvents<Data, View> = {
+  created?: (entity: Entity<Data, View>, db: ClientDb) => void;
+  updated?: (
+    entity: Entity<Data, View>,
+    dataBefore: Data,
+    db: ClientDb
+  ) => void;
+  removed?: (entity: Entity<Data, View>, db: ClientDb) => void;
 };
 
 export interface EntityDefinition<Data, View> {
@@ -58,8 +68,12 @@ export interface EntityDefinition<Data, View> {
   addView<View>(
     getView: EntityDefinitionGetView<Data, View>
   ): EntityDefinition<Data, View>;
-  addAccessValidation(accessValidator: EntityAccessValidator<Data, View>): EntityDefinition<Data, View>;
-  addEventHandlers(events: EntityUserEvents<Data, View>): EntityDefinition<Data, View>;
+  addAccessValidation(
+    accessValidator: EntityAccessValidator<Data, View>
+  ): EntityDefinition<Data, View>;
+  addEventHandlers(
+    events: EntityEvents<Data, View>
+  ): EntityDefinition<Data, View>;
 }
 
 export interface EntityViewLinker<Data> extends ClientDb {
@@ -73,15 +87,16 @@ type EntityDefinitionGetView<Data, View> = (
 ) => View;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type EntityDataByDefinition<Def extends EntityDefinition<any, any>> = Def extends EntityDefinition<
-  infer Data,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  any
->
-  ? Data
-  : never;
+export type EntityDataByDefinition<Def extends EntityDefinition<any, any>> =
+  Def extends EntityDefinition<
+    infer Data,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    any
+  >
+    ? Data
+    : never;
 
-export type AnyEntityDefinition = EntityDefinition<any, any>
+export type AnyEntityDefinition = EntityDefinition<any, any>;
 
 export function defineEntity<Data extends {}, View extends {} = {}>(
   config: DefineEntityConfig<Data, View>
@@ -95,10 +110,10 @@ export function defineEntity<Data extends {}, View extends {} = {}>(
       return getHash(sortedKeys.join(""));
     },
     addView<View>(getView: EntityDefinitionGetView<Data, View>) {
-      return defineEntity<Data, View>({ ...config, getView } as DefineEntityConfig<
-        Data,
-        View
-      >) as EntityDefinition<Data, View>;
+      return defineEntity<Data, View>({
+        ...config,
+        getView,
+      } as DefineEntityConfig<Data, View>) as EntityDefinition<Data, View>;
     },
     addAccessValidation(validator) {
       return defineEntity({ ...config, accessValidator: validator });

@@ -1,13 +1,15 @@
 import { runInAction } from "mobx";
 import { IS_DEV } from "./dev";
 
-
 type EventHandler<T extends unknown[]> = (...args: T) => void;
 
 type Unsubscribe = () => void;
 
 export type EventsEmmiter<EventsMap extends Record<string, unknown[]>> = {
-  on<N extends keyof EventsMap>(name: N, handler: EventHandler<EventsMap[N]>): Unsubscribe;
+  on<N extends keyof EventsMap>(
+    name: N,
+    handler: EventHandler<EventsMap[N]>
+  ): Unsubscribe;
   emit<N extends keyof EventsMap>(name: N, ...data: EventsMap[N]): void;
   destroy(): void;
 };
@@ -19,15 +21,18 @@ const DEV_DEBUG_EVENTS = false;
  * informing all subscribers. If more than 1 emit was called in one action - will batch informing all of them in one runInAction call.
  *
  * It can prevent UI tering or a lot of reaction calls, eg:
- * when entity store is created, it will call 'itemAdded' for every single item inside one loop. Normally each event emitted would trigger all listeners to react instantly (Eg. index updaters)
+ * when entity store is created, it will call 'created' for every single item inside one loop. Normally each event emitted would trigger all listeners to react instantly (Eg. index updaters)
  * with this emitter - subscribers will be informed in one batch after all items are added.
  *
  * Note: I'm not 100% sure if there is any race-condition risk related to this approach.
  */
-export function createMobxAwareEventsEmmiter<EventsMap extends Record<string, unknown[]>>(
-  debug?: string
-): EventsEmmiter<EventsMap> {
-  const subscribersMap = new Map<keyof EventsMap, Set<EventHandler<unknown[]>>>();
+export function createMobxAwareEventsEmmiter<
+  EventsMap extends Record<string, unknown[]>
+>(debug?: string): EventsEmmiter<EventsMap> {
+  const subscribersMap = new Map<
+    keyof EventsMap,
+    Set<EventHandler<unknown[]>>
+  >();
 
   // Keep pending events in observable array - we'll listen to this array and flush it instantly (in mobx world - instantly after last 'action' call is finished)
   // TODO: seems it was bad idea - some check test 'observes deletes via query' -> autoRun was called twice as there was tearing between store items array and index array
@@ -61,7 +66,9 @@ export function createMobxAwareEventsEmmiter<EventsMap extends Record<string, un
 
   // });
 
-  function getHandlersForEvent<N extends keyof EventsMap>(name: N): Set<EventHandler<EventsMap[N]>> {
+  function getHandlersForEvent<N extends keyof EventsMap>(
+    name: N
+  ): Set<EventHandler<EventsMap[N]>> {
     const existingSet = subscribersMap.get(name);
 
     if (existingSet) return existingSet;
@@ -73,7 +80,10 @@ export function createMobxAwareEventsEmmiter<EventsMap extends Record<string, un
     return newSet;
   }
 
-  function on<N extends keyof EventsMap>(name: N, handler: EventHandler<EventsMap[N]>) {
+  function on<N extends keyof EventsMap>(
+    name: N,
+    handler: EventHandler<EventsMap[N]>
+  ) {
     const listeners = getHandlersForEvent(name);
 
     listeners.add(handler);

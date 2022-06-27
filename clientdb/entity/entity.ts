@@ -1,5 +1,12 @@
 import { isEqual, pick } from "lodash";
-import { action, computed, extendObservable, makeAutoObservable, runInAction, toJS } from "mobx";
+import {
+  action,
+  computed,
+  extendObservable,
+  makeAutoObservable,
+  runInAction,
+  toJS,
+} from "mobx";
 
 import { waitForEntityAllAwaitingPushOperations } from "clientdb";
 
@@ -33,7 +40,10 @@ type EntityMethods<Data, View> = {
 
 export type Entity<Data, View> = Data & View & EntityMethods<Data, View>;
 
-export type EntityByDefinition<Def> = Def extends EntityDefinition<infer Data, infer View>
+export type EntityByDefinition<Def> = Def extends EntityDefinition<
+  infer Data,
+  infer View
+>
   ? Entity<Data, View>
   : never;
 
@@ -48,16 +58,26 @@ interface CreateEntityInput<D, V> {
   db: ClientDb;
 }
 
-export function createEntity<D, V>({ data, definition, store, db }: CreateEntityInput<D, V>): Entity<D, V> {
+export function createEntity<D, V>({
+  data,
+  definition,
+  store,
+  db,
+}: CreateEntityInput<D, V>): Entity<D, V> {
   const { config } = definition;
-  const dataWithDefaults: D = { ...config.getDefaultValues?.(db), ...data } as D;
+  const dataWithDefaults: D = {
+    ...config.getDefaultValues?.(db),
+    ...data,
+  } as D;
 
   const rawDataKeys = typedKeys(dataWithDefaults);
 
   for (const requiredKey of config.keys ?? []) {
     assert(
       rawDataKeys.includes(requiredKey),
-      `Required field "${requiredKey as string}" is missing when creating new entity ${definition.config.name}`
+      `Required field "${
+        requiredKey as string
+      }" is missing when creating new entity ${definition.config.name}`
     );
   }
 
@@ -84,7 +104,10 @@ export function createEntity<D, V>({ data, definition, store, db }: CreateEntity
 
   // Note: we dont want to add connections as {...data, ...connections}. Connections might have getters so it would simply unwrap them.
 
-  const observableDataAndConnections = extendObservable(observableData, connections);
+  const observableDataAndConnections = extendObservable(
+    observableData,
+    connections
+  );
 
   function touchUpdatedAt() {
     // We dont know weather updated at is kept as date, string, or number stamp. Let's try to keep the type the same
@@ -129,7 +152,11 @@ export function createEntity<D, V>({ data, definition, store, db }: CreateEntity
 
       if (isNaN(updatedAt.getTime())) {
         console.error({ entity });
-        throw new Error(`Incorrect updated at value for key "${config.updatedAtField as string}"`);
+        throw new Error(
+          `Incorrect updated at value for key "${
+            config.updatedAtField as string
+          }"`
+        );
       }
 
       return updatedAt;
@@ -171,7 +198,7 @@ export function createEntity<D, V>({ data, definition, store, db }: CreateEntity
         touchUpdatedAt();
       });
 
-      store.events.emit("itemUpdated", entity, dataBeforeUpdate, source);
+      store.events.emit("updated", entity, dataBeforeUpdate, source);
 
       return {
         hadChanges: true,
@@ -182,17 +209,21 @@ export function createEntity<D, V>({ data, definition, store, db }: CreateEntity
     },
   };
 
-  const entity: Entity<D, V> = extendObservable(observableDataAndConnections, entityMethods, {
-    getData: false,
-    getKey: false,
-    getKeyName: false,
-    getUpdatedAt: false,
-    definition: false,
-    waitForSync: false,
-    remove: action,
-    update: action,
-    db: false,
-  });
+  const entity: Entity<D, V> = extendObservable(
+    observableDataAndConnections,
+    entityMethods,
+    {
+      getData: false,
+      getKey: false,
+      getKeyName: false,
+      getUpdatedAt: false,
+      definition: false,
+      waitForSync: false,
+      remove: action,
+      update: action,
+      db: false,
+    }
+  );
 
   return entity;
 }

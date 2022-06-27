@@ -1,6 +1,11 @@
 import { set } from "lodash";
-import { IObservableArray, ObservableMap, observable, observe, runInAction } from "mobx";
-
+import {
+  IObservableArray,
+  ObservableMap,
+  observable,
+  observe,
+  runInAction,
+} from "mobx";
 
 import { Entity } from "clientdb";
 import { Thunk, resolveThunk } from "./utils/thunk";
@@ -9,14 +14,25 @@ import { EntityStore } from "./store";
 import { computedArray } from "./utils/computedArray";
 import { createCleanupObject } from "./utils/cleanup";
 
-export type Primitive = string | number | bigint | boolean | symbol | null | undefined;
+export type Primitive =
+  | string
+  | number
+  | bigint
+  | boolean
+  | symbol
+  | null
+  | undefined;
 
 export type IndexableData<T> = {
   [key in keyof T]: T[key] extends Primitive ? T[key] : never;
 };
 
 export type IndexableKey<T> = keyof IndexableData<T>;
-export type IndexFindInput<D, C, K extends IndexableKey<D & C>> = IndexValueInput<IndexableData<D & C>[K]>;
+export type IndexFindInput<
+  D,
+  C,
+  K extends IndexableKey<D & C>
+> = IndexValueInput<IndexableData<D & C>[K]>;
 
 export type IndexValueInput<T> = Thunk<T | T[]>;
 
@@ -28,7 +44,11 @@ export interface QueryIndex<D, C, K extends IndexableKey<D & C>> {
 /**
  * Will get existing value or create new one from observable map.
  */
-function observableMapGetOrCreate<K, V>(map: ObservableMap<K, V>, key: K, getter: () => V): V {
+function observableMapGetOrCreate<K, V>(
+  map: ObservableMap<K, V>,
+  key: K,
+  getter: () => V
+): V {
   if (map.has(key)) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return map.get(key)!;
@@ -44,10 +64,11 @@ function observableMapGetOrCreate<K, V>(map: ObservableMap<K, V>, key: K, getter
 /**
  * Will create unique key index for entity store that will automatically add/update/delete items from the index on changes.
  */
-export function createQueryFieldIndex<D, C, K extends keyof IndexableData<D & C>>(
-  key: K,
-  store: EntityStore<D, C>
-): QueryIndex<D, C, K> {
+export function createQueryFieldIndex<
+  D,
+  C,
+  K extends keyof IndexableData<D & C>
+>(key: K, store: EntityStore<D, C>): QueryIndex<D, C, K> {
   type TargetEntity = Entity<D, C>;
   type TargetValue = IndexableData<TargetEntity>[K];
   type TargetValueInput = IndexValueInput<TargetValue>;
@@ -61,7 +82,10 @@ export function createQueryFieldIndex<D, C, K extends keyof IndexableData<D & C>
    *   bar: entity2
    * }
    */
-  const observableIndex = observable.map<TargetValue, IObservableArray<TargetEntity>>({});
+  const observableIndex = observable.map<
+    TargetValue,
+    IObservableArray<TargetEntity>
+  >({});
 
   function getCurrentIndexValue(entity: TargetEntity): TargetValue {
     return entity[key] as TargetValue;
@@ -70,19 +94,31 @@ export function createQueryFieldIndex<D, C, K extends keyof IndexableData<D & C>
   /**
    * Map keeping info to what index 'page' item currently belongs to
    */
-  const currentItemIndexMap = new WeakMap<TargetEntity, IObservableArray<Entity<D, C>>>();
+  const currentItemIndexMap = new WeakMap<
+    TargetEntity,
+    IObservableArray<Entity<D, C>>
+  >();
 
   try {
-    set(window, `__index.${store.definition.config.name}.${key.toString()}`, { observableIndex });
+    set(window, `__index.${store.definition.config.name}.${key.toString()}`, {
+      observableIndex,
+    });
   } catch (error) {
     //
   }
 
-  function updateItemIndexWithValue(entity: TargetEntity, indexValue: TargetValue) {
+  function updateItemIndexWithValue(
+    entity: TargetEntity,
+    indexValue: TargetValue
+  ) {
     // Item might already be indexed somewhere
     const currentIndexList = currentItemIndexMap.get(entity);
     // Get where it should be indexed now
-    const targetIndexList = observableMapGetOrCreate(observableIndex, indexValue, () => observable.array());
+    const targetIndexList = observableMapGetOrCreate(
+      observableIndex,
+      indexValue,
+      () => observable.array()
+    );
 
     // There is no need to do anything - indexed value did not change
     if (currentIndexList === targetIndexList) return;
@@ -107,7 +143,9 @@ export function createQueryFieldIndex<D, C, K extends keyof IndexableData<D & C>
     const currentIndexList = currentItemIndexMap.get(entity);
 
     if (!currentIndexList) {
-      console.warn("bad state - trying to remove item from index, but item is not in any index");
+      console.warn(
+        "bad state - trying to remove item from index, but item is not in any index"
+      );
       return;
     }
 
@@ -136,7 +174,9 @@ export function createQueryFieldIndex<D, C, K extends keyof IndexableData<D & C>
    */
 
   // Let's check if index key is built-in key or derieved prop
-  const isBasedOnBuiltInKey = store.definition.config.keys.includes(key as keyof D);
+  const isBasedOnBuiltInKey = store.definition.config.keys.includes(
+    key as keyof D
+  );
 
   /**
    * Built in key syncing
@@ -150,9 +190,9 @@ export function createQueryFieldIndex<D, C, K extends keyof IndexableData<D & C>
     });
 
     // On raw update/remove/add events simply update index or remove item from index
-    cleanup.next = store.events.on("itemAdded", updateItemIndex);
-    cleanup.next = store.events.on("itemUpdated", updateItemIndex);
-    cleanup.next = store.events.on("itemRemoved", removeItemFromIndex);
+    cleanup.next = store.events.on("created", updateItemIndex);
+    cleanup.next = store.events.on("updated", updateItemIndex);
+    cleanup.next = store.events.on("removed", removeItemFromIndex);
   }
 
   /**
@@ -207,8 +247,11 @@ export function createQueryFieldIndex<D, C, K extends keyof IndexableData<D & C>
     });
 
     // We only need added/removed item
-    cleanup.next = store.events.on("itemAdded", registerEntityForDerievedChanges);
-    cleanup.next = store.events.on("itemRemoved", stopWatchingEntityForDerievedChange);
+    cleanup.next = store.events.on("created", registerEntityForDerievedChanges);
+    cleanup.next = store.events.on(
+      "removed",
+      stopWatchingEntityForDerievedChange
+    );
   }
 
   if (isBasedOnBuiltInKey) {

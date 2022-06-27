@@ -1,11 +1,16 @@
 import { createClientDb, defineEntity } from "clientdb";
 import { ClientDb } from "../entity/db";
 
-import { TestOwnerEntity, createPersistanceAdapterMock, getDefaultCommonData, getSyncConfig } from "./utils";
+import {
+  TestOwnerEntity,
+  createPersistanceAdapterMock,
+  getDefaultCommonData,
+  getSyncConfig,
+} from "./utils";
 
-const itemAdded = jest.fn();
-const itemUpdated = jest.fn();
-const itemRemoved = jest.fn();
+const created = jest.fn();
+const updated = jest.fn();
+const removed = jest.fn();
 
 const owner = defineEntity<TestOwnerEntity>({
   keyField: "id",
@@ -15,13 +20,15 @@ const owner = defineEntity<TestOwnerEntity>({
   sync: getSyncConfig<TestOwnerEntity>(),
   getDefaultValues: getDefaultCommonData,
 }).addEventHandlers({
-  itemAdded,
-  itemUpdated,
-  itemRemoved,
+  created,
+  updated,
+  removed,
 });
 
 function createTestDb() {
-  return createClientDb([owner],{ persistance: createPersistanceAdapterMock() });
+  return createClientDb([owner], {
+    persistance: createPersistanceAdapterMock(),
+  });
 }
 
 const mockDbLinker: ClientDb = {
@@ -32,9 +39,9 @@ const mockDbLinker: ClientDb = {
 
 describe("Event listeners", () => {
   beforeEach(() => {
-    itemAdded.mockReset();
-    itemUpdated.mockReset();
-    itemRemoved.mockReset();
+    created.mockReset();
+    updated.mockReset();
+    removed.mockReset();
   });
 
   it("calls the item added method when item is created", async () => {
@@ -42,8 +49,11 @@ describe("Event listeners", () => {
 
     const createdEntity = db.entity(owner).create({ name: "Rasputin" });
 
-    expect(itemAdded).toBeCalledTimes(1);
-    expect(itemAdded).toBeCalledWith(createdEntity, expect.objectContaining(mockDbLinker));
+    expect(created).toBeCalledTimes(1);
+    expect(created).toBeCalledWith(
+      createdEntity,
+      expect.objectContaining(mockDbLinker)
+    );
   });
 
   it("calls the item updated method when item is updated", async () => {
@@ -54,8 +64,8 @@ describe("Event listeners", () => {
 
     entity.update({ name: "Pedro" });
 
-    expect(itemUpdated).toBeCalledTimes(1);
-    expect(itemUpdated).toBeCalledWith(
+    expect(updated).toBeCalledTimes(1);
+    expect(updated).toBeCalledWith(
       entity,
       expect.objectContaining(nameOnCreation),
       expect.objectContaining(mockDbLinker)
@@ -70,7 +80,10 @@ describe("Event listeners", () => {
 
     entity.remove();
 
-    expect(itemRemoved).toBeCalledTimes(1);
-    expect(itemRemoved).toBeCalledWith(entity, expect.objectContaining(mockDbLinker));
+    expect(removed).toBeCalledTimes(1);
+    expect(removed).toBeCalledWith(
+      entity,
+      expect.objectContaining(mockDbLinker)
+    );
   });
 });

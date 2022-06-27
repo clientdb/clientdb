@@ -1,6 +1,5 @@
 import { memoize, throttle } from "lodash";
 
-
 import { PersistanceDB } from "./db/adapter";
 import { EntityDefinition } from "./definition";
 import { EntityStore } from "./store";
@@ -37,7 +36,9 @@ export function createEntityPersistanceManager<Data, View>(
   const persistedItems = createResolvablePromise<void>();
 
   const getPersistanceTable = memoize(async () => {
-    const persistanceTablePromise = persistanceDb.getTable<Data>(definition.config.name);
+    const persistanceTablePromise = persistanceDb.getTable<Data>(
+      definition.config.name
+    );
 
     if (!persistanceTablePromise) return null;
 
@@ -76,14 +77,18 @@ export function createEntityPersistanceManager<Data, View>(
 
     const flushQueue = () => {
       if (batchSaveQueue.size && batchRemoveQueue.size) {
-        throw new Error("Incorrect state - both save and remove at once - cannot guarantee proper order");
+        throw new Error(
+          "Incorrect state - both save and remove at once - cannot guarantee proper order"
+        );
       }
 
       if (batchSaveQueue.size) {
         const saveItems = Array.from(batchSaveQueue);
         batchSaveQueue.clear();
 
-        persistanceExecuteQueue.add(() => persistanceTable.saveItems(saveItems));
+        persistanceExecuteQueue.add(() =>
+          persistanceTable.saveItems(saveItems)
+        );
       }
 
       if (batchRemoveQueue.size) {
@@ -91,17 +96,23 @@ export function createEntityPersistanceManager<Data, View>(
 
         batchRemoveQueue.clear();
 
-        persistanceExecuteQueue.add(() => persistanceTable.removeItems(removeItems));
+        persistanceExecuteQueue.add(() =>
+          persistanceTable.removeItems(removeItems)
+        );
       }
     };
 
-    const throttledFlushQueue = throttle(flushQueue, PERSISTANCE_BATCH_FLUSH_TIMEOUT, {
-      leading: false,
-      trailing: true,
-    });
+    const throttledFlushQueue = throttle(
+      flushQueue,
+      PERSISTANCE_BATCH_FLUSH_TIMEOUT,
+      {
+        leading: false,
+        trailing: true,
+      }
+    );
 
     // Persist all changes locally
-    const cancelAdded = store.events.on("itemAdded", (entity) => {
+    const cancelAdded = store.events.on("created", (entity) => {
       if (batchRemoveQueue.size) {
         flushQueue();
       }
@@ -109,7 +120,7 @@ export function createEntityPersistanceManager<Data, View>(
       throttledFlushQueue();
     });
 
-    const cancelUpdated = store.events.on("itemUpdated", (entity) => {
+    const cancelUpdated = store.events.on("updated", (entity) => {
       if (batchRemoveQueue.size) {
         flushQueue();
       }
@@ -117,7 +128,7 @@ export function createEntityPersistanceManager<Data, View>(
       throttledFlushQueue();
     });
 
-    const cancelRemoved = store.events.on("itemRemoved", (entity) => {
+    const cancelRemoved = store.events.on("removed", (entity) => {
       if (batchSaveQueue.size) {
         flushQueue();
       }

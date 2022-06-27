@@ -1,7 +1,6 @@
 import { sortBy } from "lodash";
 import { IObservableArray, observable, runInAction } from "mobx";
 
-
 import { EntityDefinition } from "./definition";
 import { Entity } from "./entity";
 import { FindInput } from "./find";
@@ -12,9 +11,17 @@ import {
   createEntityQuery,
   resolveSortInput,
 } from "./query";
-import { IndexableData, IndexableKey, QueryIndex, createQueryFieldIndex } from "./queryIndex";
+import {
+  IndexableData,
+  IndexableKey,
+  QueryIndex,
+  createQueryFieldIndex,
+} from "./queryIndex";
 import { EntityChangeSource } from "./types";
-import { EventsEmmiter, createMobxAwareEventsEmmiter } from "./utils/eventManager";
+import {
+  EventsEmmiter,
+  createMobxAwareEventsEmmiter,
+} from "./utils/eventManager";
 import { cachedComputed } from ".";
 import { MessageOrError, assert } from "../utils/assert";
 import { areArraysShallowEqual } from "./utils/arrays";
@@ -46,27 +53,46 @@ export interface EntityStoreFindMethods<Data, View> {
   findFirst(filter: FindInput<Data, View>): Entity<Data, View> | null;
 }
 
-export interface EntityStore<Data, View> extends EntityStoreFindMethods<Data, View> {
+export interface EntityStore<Data, View>
+  extends EntityStoreFindMethods<Data, View> {
   items: IObservableArray<Entity<Data, View>>;
   sortItems(items: Entity<Data, View>[]): Entity<Data, View>[];
-  add(input: Entity<Data, View>, source?: EntityChangeSource): Entity<Data, View>;
+  add(
+    input: Entity<Data, View>,
+    source?: EntityChangeSource
+  ): Entity<Data, View>;
   events: EntityStoreEventsEmmiter<Data, View>;
   definition: EntityDefinition<Data, View>;
   destroy: () => void;
-  getKeyIndex<K extends IndexableKey<Data & View>>(key: K): QueryIndex<Data, View, K>;
+  getKeyIndex<K extends IndexableKey<Data & View>>(
+    key: K
+  ): QueryIndex<Data, View, K>;
 }
 
-export type EntityStoreFromDefinition<Definition extends EntityDefinition<unknown, unknown>> =
-  Definition extends EntityDefinition<infer Data, infer View> ? EntityStore<Data, View> : never;
+export type EntityStoreFromDefinition<
+  Definition extends EntityDefinition<unknown, unknown>
+> = Definition extends EntityDefinition<infer Data, infer View>
+  ? EntityStore<Data, View>
+  : never;
 
 type EntityStoreEvents<Data, View> = {
-  itemAdded: [Entity<Data, View>, EntityChangeSource];
-  itemUpdated: [entity: Entity<Data, View>, dataBefore: Data, source: EntityChangeSource];
-  itemWillUpdate: [entity: Entity<Data, View>, input: Partial<Data>, source: EntityChangeSource];
-  itemRemoved: [Entity<Data, View>, EntityChangeSource];
+  created: [Entity<Data, View>, EntityChangeSource];
+  updated: [
+    entity: Entity<Data, View>,
+    dataBefore: Data,
+    source: EntityChangeSource
+  ];
+  itemWillUpdate: [
+    entity: Entity<Data, View>,
+    input: Partial<Data>,
+    source: EntityChangeSource
+  ];
+  removed: [Entity<Data, View>, EntityChangeSource];
 };
 
-export type EntityStoreEventsEmmiter<Data, View> = EventsEmmiter<EntityStoreEvents<Data, View>>;
+export type EntityStoreEventsEmmiter<Data, View> = EventsEmmiter<
+  EntityStoreEvents<Data, View>
+>;
 
 /**
  * Store is inner 'registry' of all items of given entity. It is like 'raw' database with no extra logic (like syncing)
@@ -112,7 +138,9 @@ export function createEntityStore<Data, View>(
   });
 
   // Allow listening to CRUD updates in the store
-  const events = createMobxAwareEventsEmmiter<EntityStoreEvents<Data, View>>(config.name);
+  const events = createMobxAwareEventsEmmiter<EntityStoreEvents<Data, View>>(
+    config.name
+  );
 
   const queryIndexes = new Map<
     keyof Data | keyof View,
@@ -128,10 +156,17 @@ export function createEntityStore<Data, View>(
   const cleanups = createCleanupObject();
 
   const createOrReuseQuery = deepMemoize(
-    function createOrReuseQuery(filter?: FindInput<Data, View>, sort?: EntityQuerySortInput<Data, View>) {
+    function createOrReuseQuery(
+      filter?: FindInput<Data, View>,
+      sort?: EntityQuerySortInput<Data, View>
+    ) {
       const resolvedSort = resolveSortInput(sort) ?? undefined;
 
-      return createEntityQuery(getRootSource, { filter: filter, sort: resolvedSort }, store);
+      return createEntityQuery(
+        getRootSource,
+        { filter: filter, sort: resolvedSort },
+        store
+      );
     },
     { checkEquality: true }
   );
@@ -168,7 +203,7 @@ export function createEntityStore<Data, View>(
       runInAction(() => {
         items.push(entity);
         itemsMap[id] = entity;
-        events.emit("itemAdded", entity, source);
+        events.emit("created", entity, source);
       });
 
       return entity;
@@ -194,7 +229,12 @@ export function createEntityStore<Data, View>(
 
       if (!results.length) return null;
 
-      if (results.length > 1) console.warn(`Store has multiple items for unique index value ${key as string}:${value as string}.`);
+      if (results.length > 1)
+        console.warn(
+          `Store has multiple items for unique index value ${key as string}:${
+            value as string
+          }.`
+        );
 
       const result = results[0];
 
@@ -205,7 +245,12 @@ export function createEntityStore<Data, View>(
     assertFindByUniqueIndex(key, value) {
       const entity = store.findByUniqueIndex(key, value);
 
-      assert(entity, `Assertion error for assertFindByUniqueIndex for key ${key as string} and value ${value as string}`);
+      assert(
+        entity,
+        `Assertion error for assertFindByUniqueIndex for key ${
+          key as string
+        } and value ${value as string}`
+      );
 
       return entity;
     },
@@ -220,7 +265,7 @@ export function createEntityStore<Data, View>(
         entity.cleanup.clean();
         didRemove = items.remove(entity);
         delete itemsMap[id];
-        events.emit("itemRemoved", entity, source);
+        events.emit("removed", entity, source);
       });
 
       return didRemove;

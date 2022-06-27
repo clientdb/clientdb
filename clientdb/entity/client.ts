@@ -2,23 +2,33 @@ import { computed, runInAction } from "mobx";
 import { assert } from "../utils/assert";
 import { ClientDb } from "./db";
 
-
 import { PersistanceDB } from "./db/adapter";
 import { EntityDefinition } from "./definition";
 import { Entity, createEntity } from "./entity";
-import { EntityPersistanceManager, createEntityPersistanceManager } from "./persistance";
+import {
+  EntityPersistanceManager,
+  createEntityPersistanceManager,
+} from "./persistance";
 import { createEntitySearch } from "./search";
 import { EntityStoreFindMethods, createEntityStore } from "./store";
 import { createEntitySyncManager } from "./sync";
 import { EntityChangeSource } from "./types";
 
-export interface EntityClient<Data, View> extends EntityStoreFindMethods<Data, View> {
+export interface EntityClient<Data, View>
+  extends EntityStoreFindMethods<Data, View> {
   all: Entity<Data, View>[];
   hasItems: boolean;
   search(term: string): Entity<Data, View>[];
   create(input: Partial<Data>, source?: EntityChangeSource): Entity<Data, View>;
-  update(id: string, input: Partial<Data>, source?: EntityChangeSource): Entity<Data, View>;
-  createOrUpdate(input: Partial<Data>, source?: EntityChangeSource): Entity<Data, View>;
+  update(
+    id: string,
+    input: Partial<Data>,
+    source?: EntityChangeSource
+  ): Entity<Data, View>;
+  createOrUpdate(
+    input: Partial<Data>,
+    source?: EntityChangeSource
+  ): Entity<Data, View>;
   destroy(): void;
   definition: EntityDefinition<Data, View>;
   persistanceLoaded: Promise<void>;
@@ -28,10 +38,9 @@ export interface EntityClient<Data, View> extends EntityStoreFindMethods<Data, V
   persistanceManager: EntityPersistanceManager<Data, View>;
 }
 
-export type EntityClientByDefinition<Def extends EntityDefinition<unknown, unknown>> = Def extends EntityDefinition<
-  infer Data,
-  infer View
->
+export type EntityClientByDefinition<
+  Def extends EntityDefinition<unknown, unknown>
+> = Def extends EntityDefinition<infer Data, infer View>
   ? EntityClient<Data, View>
   : never;
 
@@ -55,26 +64,29 @@ export function createEntityClient<Data, View>(
   const store = createEntityStore<Data, View>(definition, db);
 
   function attachEntityEvents() {
-    const cleanupItemAdded = store.events.on("itemAdded", (entity, source) => {
+    const cleanupcreated = store.events.on("created", (entity, source) => {
       if (source === "user") {
-        definition.config.events?.itemAdded?.(entity, db);
+        definition.config.events?.created?.(entity, db);
       }
     });
-    const cleanupItemUpdated = store.events.on("itemUpdated", (entity, dataBefore, source) => {
-      if (source === "user") {
-        definition.config.events?.itemUpdated?.(entity, dataBefore, db);
+    const cleanupupdated = store.events.on(
+      "updated",
+      (entity, dataBefore, source) => {
+        if (source === "user") {
+          definition.config.events?.updated?.(entity, dataBefore, db);
+        }
       }
-    });
-    const cleanupItemRemoved = store.events.on("itemRemoved", (entity, source) => {
+    );
+    const cleanupremoved = store.events.on("removed", (entity, source) => {
       if (source === "user") {
-        definition.config.events?.itemRemoved?.(entity, db);
+        definition.config.events?.removed?.(entity, db);
       }
     });
 
     return function cleanup() {
-      cleanupItemAdded();
-      cleanupItemUpdated();
-      cleanupItemRemoved();
+      cleanupcreated();
+      cleanupupdated();
+      cleanupremoved();
     };
   }
 
@@ -90,7 +102,9 @@ export function createEntityClient<Data, View>(
     findFirst,
   } = store;
 
-  const searchEngine = definition.config.search ? createEntitySearch(definition.config.search, store) : null;
+  const searchEngine = definition.config.search
+    ? createEntitySearch(definition.config.search, store)
+    : null;
 
   function createEntityWithData(input: Partial<Data>) {
     return createEntity<Data, View>({ data: input, definition, store, db });
@@ -170,7 +184,10 @@ export function createEntityClient<Data, View>(
     findFirst,
     sort,
     search(term) {
-      assert(searchEngine, `No search configuration is provided for entity ${definition.config.name}`);
+      assert(
+        searchEngine,
+        `No search configuration is provided for entity ${definition.config.name}`
+      );
 
       return searchEngine.search(term);
     },
