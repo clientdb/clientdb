@@ -27,8 +27,8 @@ export interface EntityUpdateResult {
 type EntityMethods<Data, View> = {
   update(data: Partial<Data>, source?: EntityChangeSource): EntityUpdateResult;
   getData(): Data;
-  getKey(): string;
-  getKeyName(): string;
+  getId(): string;
+  getIdPropName(): string;
   getUpdatedAt(): Date;
   remove(source?: EntityChangeSource): void;
   isRemoved(): boolean;
@@ -53,26 +53,16 @@ export interface CreateEntityConfig {
 
 interface CreateEntityInput<D, V> {
   data: Partial<D>;
-  definition: EntityDefinition<D, V>;
   store: EntityStore<D, V>;
-  db: ClientDb;
 }
 
-export function createEntity<D, V>({
-  data,
-  definition,
-  store,
-  db,
-}: CreateEntityInput<D, V>): Entity<D, V> {
-  const { config } = definition;
-  const dataWithDefaults: D = {
-    ...config.getDefaultValues?.(db),
-    ...data,
-  } as D;
+function assertDataHasAllFields<D>(
+  data: D,
+  definition: EntityDefinition<D, any>
+) {
+  const rawDataKeys = typedKeys(data);
 
-  const rawDataKeys = typedKeys(dataWithDefaults);
-
-  for (const requiredKey of config.keys ?? []) {
+  for (const requiredKey of definition.config.keys ?? []) {
     assert(
       rawDataKeys.includes(requiredKey),
       `Required field "${
@@ -80,8 +70,36 @@ export function createEntity<D, V>({
       }" is missing when creating new entity ${definition.config.name}`
     );
   }
+}
 
-  const initialKey = data[config.keyField];
+function fillDataDefaults<D>(data: Partial<D>, store: EntityStore<D, any>): D {
+  const { definition, db } = store;
+
+  const { config } = definition;
+
+  if (!definition.config.getDefaultValues) {
+    return data as D;
+  }
+  const dataWithDefaults = {
+    ...config.getDefaultValues?.(db),
+    ...data,
+  } as D;
+
+  return dataWithDefaults;
+}
+
+export function createEntity<D, V>({
+  data,
+  store,
+}: CreateEntityInput<D, V>): Entity<D, V> {
+  const { definition, db } = store;
+
+  const { config } = definition;
+  const dataWithDefaults = fillDataDefaults(data, store);
+
+  assertDataHasAllFields(dataWithDefaults, definition);
+
+  const initialKey = data[config.idField];
 
   const observableData = makeAutoObservable<D & object>(
     dataWithDefaults as D & object,
@@ -93,7 +111,7 @@ export function createEntity<D, V>({
 
   const cleanupObject = createCleanupObject();
 
-  const connections =
+  const view =
     config.getView?.(observableData, {
       ...db,
       updateSelf(data) {
@@ -102,12 +120,8 @@ export function createEntity<D, V>({
       cleanup: cleanupObject,
     }) ?? ({} as V);
 
-  // Note: we dont want to add connections as {...data, ...connections}. Connections might have getters so it would simply unwrap them.
-
-  const observableDataAndConnections = extendObservable(
-    observableData,
-    connections
-  );
+  // Note: we dont want to add view as {...data, ...connections}. Connections might have getters so it would simply unwrap them.
+  const observableDataAndView = extendObservable(observableData, view);
 
   function touchUpdatedAt() {
     // We dont know weather updated at is kept as date, string, or number stamp. Let's try to keep the type the same
@@ -131,19 +145,19 @@ export function createEntity<D, V>({
     db: db,
     cleanup: cleanupObject,
     remove(source) {
-      store.removeById(entityMethods.getKey(), source);
+      store.removeById(entityMethods.getId(), source);
     },
     isRemoved() {
-      return !store.findById(entityMethods.getKey());
+      return !store.findById(entityMethods.getId());
     },
     waitForSync() {
       return waitForEntityAllAwaitingPushOperations(entity);
     },
-    getKey() {
-      return `${entity[config.keyField]}`;
+    getId() {
+      return `${entity[config.idField]}`;
     },
-    getKeyName() {
-      return config.keyField as string;
+    getIdPropName() {
+      return config.idField as string;
     },
     getUpdatedAt() {
       const rawInfo = entity[config.updatedAtField];
@@ -163,7 +177,7 @@ export function createEntity<D, V>({
     },
     getData() {
       const rawObject = toJS(entity);
-      return pick(rawObject, rawDataKeys);
+      return pick(rawObject, definition.config.keys);
     },
     update(input, source: EntityChangeSource = "user"): EntityUpdateResult {
       const changedKeys = typedKeys(input).filter((keyToUpdate) => {
@@ -210,12 +224,12 @@ export function createEntity<D, V>({
   };
 
   const entity: Entity<D, V> = extendObservable(
-    observableDataAndConnections,
+    observableDataAndView,
     entityMethods,
     {
       getData: false,
-      getKey: false,
-      getKeyName: false,
+      getId: false,
+      getIdPropName: false,
       getUpdatedAt: false,
       definition: false,
       waitForSync: false,

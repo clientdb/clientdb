@@ -1,20 +1,22 @@
 import { sortBy } from "lodash";
 import { IObservableArray } from "mobx";
 
-
 import { EntityDefinition } from "./definition";
 import { Entity } from "./entity";
 import { FindInput, findInSource } from "./find";
 import { EntityStore } from "./store";
+import { areArraysShallowEqual } from "./utils/arrays";
 import { cachedComputed } from "./utils/cachedComputed";
 import { cachedComputedWithoutArgs } from "./utils/cachedComputedWithoutArgs";
-import { areArraysShallowEqual } from "./utils/arrays";
-import { createDeepMap } from "./utils/deepMap";
-import { createReuseValueGroup } from "./utils/createEqualReuser";
+import { deepMemoize } from "./utils/deepMap";
 
-export type EntityFilterFunction<Data, View> = (item: Entity<Data, View>) => boolean;
+export type EntityFilterFunction<Data, View> = (
+  item: Entity<Data, View>
+) => boolean;
 
-export type EntityQuerySortFunction<Data, View> = (item: Entity<Data, View>) => SortResult;
+export type EntityQuerySortFunction<Data, View> = (
+  item: Entity<Data, View>
+) => SortResult;
 
 export type EntitySortDirection = "asc" | "desc";
 
@@ -27,7 +29,14 @@ export type EntityQuerySortInput<Data, View> =
   | EntityQuerySortFunction<Data, View>
   | EntityQuerySortConfig<Data, View>;
 
-export type SortResult = string | number | boolean | Date | null | void | undefined;
+export type SortResult =
+  | string
+  | number
+  | boolean
+  | Date
+  | null
+  | void
+  | undefined;
 
 export type EntityQueryConfig<Data, View> = {
   filter?: FindInput<Data, View>;
@@ -35,7 +44,12 @@ export type EntityQueryConfig<Data, View> = {
   name?: string;
 };
 
-export type EntityQueryByDefinition<Def> = Def extends EntityDefinition<infer D, infer C> ? EntityQuery<D, C> : never;
+export type EntityQueryByDefinition<Def> = Def extends EntityDefinition<
+  infer D,
+  infer V
+>
+  ? EntityQuery<D, V>
+  : never;
 
 export function resolveSortInput<Data, View>(
   sort?: EntityQuerySortInput<Data, View>
@@ -56,6 +70,7 @@ export type EntityQuery<Data, View> = {
   first: Entity<Data, View> | null;
   last: Entity<Data, View> | null;
   hasItems: boolean;
+  isEmpty: boolean;
   count: number;
   findById(id: string): Entity<Data, View> | null;
   query: (
@@ -69,16 +84,18 @@ export type EntityQuery<Data, View> = {
  * Query keeps track of all items passing given query filter and sorter.
  *
  * It will automatically update results if 'source list' changes.
+ *
+ * It is also lazy - it will not calculate results until they are needed.
  */
 export function createEntityQuery<Data, View>(
   // Might be plain array or any observable array. This allows creating nested queries of previously created queries
   // It is getter as source value might be computed value, so we want to observe getting it (especially in nested queries)
   getSource: () => MaybeObservableArray<Entity<Data, View>>,
-  config: EntityQueryConfig<Data, View>,
+  queryConfig: EntityQueryConfig<Data, View>,
   store: EntityStore<Data, View>
 ): EntityQuery<Data, View> {
   const { definition } = store;
-  const { filter, sort, name: queryName } = config;
+  const { filter, sort, name: queryName } = queryConfig;
 
   const {
     config: { functionalFilterCheck },
@@ -147,6 +164,8 @@ export function createEntityQuery<Data, View>(
       let items = getSource();
 
       if (!items.length) {
+        // It is important we return empty array instead of items. items might be directly array of index of some property and this index items might change.
+        // If it changes - we should re-compute query instead of directly using it as items in it might not match this query filter
         return [];
       }
 
@@ -177,7 +196,10 @@ export function createEntityQuery<Data, View>(
 
       return store.sortItems(items);
     },
-    { name: `${queryKeyBase}.passingSortedItems`, equals: areArraysShallowEqual }
+    {
+      name: `${queryKeyBase}.passingSortedItems`,
+      equals: areArraysShallowEqual,
+    }
   );
 
   const hasItemsComputed = cachedComputedWithoutArgs(
@@ -187,10 +209,16 @@ export function createEntityQuery<Data, View>(
     { name: `${queryKeyBase}.hasItems` }
   );
 
-  const countComputed = cachedComputedWithoutArgs(() => passingItems.get().length, { name: `${queryKeyBase}.count` });
-  const firstComputed = cachedComputedWithoutArgs(() => passingSortedItems.get()[0] ?? null, {
-    name: `${queryKeyBase}.first`,
-  });
+  const countComputed = cachedComputedWithoutArgs(
+    () => passingItems.get().length,
+    { name: `${queryKeyBase}.count` }
+  );
+  const firstComputed = cachedComputedWithoutArgs(
+    () => passingSortedItems.get()[0] ?? null,
+    {
+      name: `${queryKeyBase}.first`,
+    }
+  );
   const lastComputed = cachedComputedWithoutArgs(
     () => {
       const all = passingSortedItems.get();
@@ -207,7 +235,7 @@ export function createEntityQuery<Data, View>(
       const record: Record<string, Entity<Data, View>> = {};
 
       for (const item of all) {
-        record[item.getKey()] = item;
+        record[item.getId()] = item;
       }
 
       return record;
@@ -222,22 +250,30 @@ export function createEntityQuery<Data, View>(
     { name: `${queryKeyBase}.getById` }
   );
 
-  const reuseQueriesMap = createDeepMap<EntityQuery<Data, View>>();
+  const createOrReuseQuery = deepMemoize(
+    function createOrReuseQuery(
+      filter?: FindInput<Data, View>,
+      sort?: EntityQuerySortInput<Data, View>
+    ) {
+      const resolvedSort = resolveSortInput(sort) ?? undefined;
 
-  function createOrReuseQuery(filter?: FindInput<Data, View>, sort?: EntityQuerySortInput<Data, View>) {
-    const resolvedSort = resolveSortInput(sort) ?? undefined;
-    const query = reuseQueriesMap.getOrCreate([reuseQueryFilter(filter), reuseQuerySort(resolvedSort)], () => {
-      const query = createEntityQuery(passingItems.get, { filter, sort: resolvedSort }, store);
+      const query = createEntityQuery(
+        passingItems.get,
+        { filter, sort: resolvedSort },
+        store
+      );
 
       return query;
-    });
-
-    return query;
-  }
+    },
+    { checkEquality: true }
+  );
 
   return {
     get hasItems() {
       return hasItemsComputed.get();
+    },
+    get isEmpty() {
+      return !hasItemsComputed.get();
     },
     get count() {
       return countComputed.get();
@@ -262,6 +298,3 @@ export function createEntityQuery<Data, View>(
     },
   };
 }
-
-export const reuseQueryFilter = createReuseValueGroup();
-export const reuseQuerySort = createReuseValueGroup();

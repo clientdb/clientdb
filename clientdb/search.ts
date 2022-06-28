@@ -88,7 +88,7 @@ export function createEntitySearch<Data, View>(
   function populateIndex() {
     runUntracked(() => {
       store.items.forEach((entity) => {
-        index.add(entity.getKey(), prepareEntitySearchTerm(entity));
+        index.add(entity.getId(), prepareEntitySearchTerm(entity));
       });
     });
   }
@@ -105,17 +105,17 @@ export function createEntitySearch<Data, View>(
 
   const listenToUpdatesIfNeeded = memoize(() => {
     const cancelAdd = store.events.on("created", (entity) => {
-      index.add(entity.getKey(), prepareEntitySearchTerm(entity));
+      index.add(entity.getId(), prepareEntitySearchTerm(entity));
       trackUpdate();
     });
 
     const cancelDelete = store.events.on("removed", (entity) => {
       trackUpdate();
-      index.remove(entity.getKey());
+      index.remove(entity.getId());
     });
 
     const cancelUpdate = store.events.on("updated", (entity) => {
-      index.update(entity.getKey(), prepareEntitySearchTerm(entity));
+      index.update(entity.getId(), prepareEntitySearchTerm(entity));
       trackUpdate();
     });
 

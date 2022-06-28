@@ -7,3 +7,8 @@ export function runObserved<T>(callback: () => T) {
 
   dispose();
 }
+
+export function autorunOnce(callback: () => void) {
+  const stop = autorun(callback);
+  stop();
+}

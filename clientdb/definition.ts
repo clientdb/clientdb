@@ -11,15 +11,15 @@ import { CleanupObject } from "./utils/cleanup";
 import { getHash } from "./utils/hash";
 import { PartialWithExplicitOptionals } from "./utils/types";
 
-type EntityAccessValidator<Data, View> = (
+type EntityRootFilter<Data, View> = (
   entity: Entity<Data, View>,
   db: ClientDb
 ) => boolean;
 
-interface DefineEntityConfig<Data, View> {
+interface EntityConfig<Data, View> {
   name: string;
   keys: Array<keyof Data>;
-  keyField: keyof Data;
+  idField: keyof Data;
   updatedAtField: keyof Data;
   uniqueIndexes?: Array<keyof Data>;
   /**
@@ -42,7 +42,7 @@ interface DefineEntityConfig<Data, View> {
    *
    * Aka 'soft permissions'.
    */
-  accessValidator?: EntityAccessValidator<Data, View>;
+  rootFilter?: EntityRootFilter<Data, View>;
   getView?: EntityDefinitionGetView<Data, View>;
   search?: EntitySearchConfig<Data>;
   events?: EntityEvents<Data, View>;
@@ -63,13 +63,13 @@ export type EntityEvents<Data, View> = {
 };
 
 export interface EntityDefinition<Data, View> {
-  config: DefineEntityConfig<Data, View>;
+  config: EntityConfig<Data, View>;
   getSchemaHash(): string;
   addView<View>(
     getView: EntityDefinitionGetView<Data, View>
   ): EntityDefinition<Data, View>;
-  addAccessValidation(
-    accessValidator: EntityAccessValidator<Data, View>
+  addRootFilter(
+    accessValidator: EntityRootFilter<Data, View>
   ): EntityDefinition<Data, View>;
   addEventHandlers(
     events: EntityEvents<Data, View>
@@ -99,7 +99,7 @@ export type EntityDataByDefinition<Def extends EntityDefinition<any, any>> =
 export type AnyEntityDefinition = EntityDefinition<any, any>;
 
 export function defineEntity<Data extends {}, View extends {} = {}>(
-  config: DefineEntityConfig<Data, View>
+  config: EntityConfig<Data, View>
 ): EntityDefinition<Data, View> {
   return {
     config,
@@ -113,10 +113,10 @@ export function defineEntity<Data extends {}, View extends {} = {}>(
       return defineEntity<Data, View>({
         ...config,
         getView,
-      } as DefineEntityConfig<Data, View>) as EntityDefinition<Data, View>;
+      } as EntityConfig<Data, View>) as EntityDefinition<Data, View>;
     },
-    addAccessValidation(validator) {
-      return defineEntity({ ...config, accessValidator: validator });
+    addRootFilter(validator) {
+      return defineEntity({ ...config, rootFilter: validator });
     },
     addEventHandlers(events) {
       return defineEntity({ ...config, events });

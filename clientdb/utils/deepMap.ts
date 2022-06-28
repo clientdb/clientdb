@@ -1,4 +1,4 @@
-import { EqualValueReuser, createReuseValueGroup } from "./createEqualReuser";
+import { EqualValueReuser, createValueReuser } from "./createEqualReuser";
 
 const targetSymbol = { symbol: Symbol("target") };
 const equalReuserSymbol = { symbol: Symbol("equalReuserSymbol") };
@@ -31,12 +31,15 @@ type AnyMap = Map<unknown, unknown>;
  *   return 42;
  * }); // 42
  */
-export function createDeepMap<V>({ checkEquality = false, useWeakMap = false }: Options = {}) {
+export function createDeepMap<V>({
+  checkEquality = false,
+  useWeakMap = false,
+}: Options = {}) {
   const MapToUse = useWeakMap ? WeakMap : Map;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const root = new MapToUse<any, unknown>();
   if (checkEquality) {
-    root.set(equalReuserSymbol, createReuseValueGroup());
+    root.set(equalReuserSymbol, createValueReuser());
   }
 
   function getFinalTargetMap(path: unknown[]) {
@@ -45,7 +48,9 @@ export function createDeepMap<V>({ checkEquality = false, useWeakMap = false }: 
     for (let part of path) {
       if (part === undefined) part = undefinedSymbol;
       if (checkEquality) {
-        const currentReuser = currentTarget.get(equalReuserSymbol) as EqualValueReuser;
+        const currentReuser = currentTarget.get(
+          equalReuserSymbol
+        ) as EqualValueReuser;
         part = currentReuser(part);
       }
 
@@ -57,7 +62,7 @@ export function createDeepMap<V>({ checkEquality = false, useWeakMap = false }: 
       const nestedMap = new MapToUse();
 
       if (checkEquality) {
-        nestedMap.set(equalReuserSymbol, createReuseValueGroup());
+        nestedMap.set(equalReuserSymbol, createValueReuser());
       }
 
       currentTarget.set(part, nestedMap);
@@ -106,7 +111,10 @@ export function createDeepMap<V>({ checkEquality = false, useWeakMap = false }: 
 /**
  * Lodash memoize is based on serialization and is only using first arguments as cache keys
  */
-export function deepMemoize<A extends unknown[], R>(callback: (...args: A) => R, options?: Options) {
+export function deepMemoize<A extends unknown[], R>(
+  callback: (...args: A) => R,
+  options?: Options
+) {
   const deepMap = createDeepMap<R>(options);
 
   return function getMemoized(...args: A): R {
@@ -114,7 +122,9 @@ export function deepMemoize<A extends unknown[], R>(callback: (...args: A) => R,
   };
 }
 
-export function weakMemoize<A extends object[], R>(callback: (...args: A) => R) {
+export function weakMemoize<A extends object[], R>(
+  callback: (...args: A) => R
+) {
   const deepMap = createDeepMap<R>({ useWeakMap: true });
 
   return function getMemoized(...args: A): R {

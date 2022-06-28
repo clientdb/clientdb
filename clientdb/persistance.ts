@@ -14,9 +14,9 @@ export type EntityPersistanceManager<Data, View> = {
   fetchPersistedItems(): Promise<Data[]>;
 };
 
-interface PersistanceManagerConfig<Data> {
+interface PersistanceManagerConfig<Data, View> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  store: EntityStore<Data, any>;
+  store: EntityStore<Data, View>;
   persistanceDb: PersistanceDB;
 }
 
@@ -31,7 +31,7 @@ export const PERSISTANCE_BATCH_FLUSH_TIMEOUT = 50;
  */
 export function createEntityPersistanceManager<Data, View>(
   definition: EntityDefinition<Data, View>,
-  { persistanceDb, store }: PersistanceManagerConfig<Data>
+  { persistanceDb, store }: PersistanceManagerConfig<Data, View>
 ): EntityPersistanceManager<Data, View> {
   const persistedItems = createResolvablePromise<void>();
 
@@ -132,7 +132,7 @@ export function createEntityPersistanceManager<Data, View>(
       if (batchSaveQueue.size) {
         flushQueue();
       }
-      batchRemoveQueue.add(entity.getKey());
+      batchRemoveQueue.add(entity.getId());
       throttledFlushQueue();
     });
 

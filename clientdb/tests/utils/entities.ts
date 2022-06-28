@@ -37,7 +37,7 @@ function getSyncConfig<T>(): EntitySyncConfig<T> {
 }
 
 export const owner = defineEntity<TestOwnerEntity>({
-  keyField: "id",
+  idField: "id",
   keys: ["id", "name", "updatedAt"],
   updatedAtField: "updatedAt",
   name: "owner",
@@ -53,11 +53,14 @@ export const owner = defineEntity<TestOwnerEntity>({
     get dogs() {
       return entity(dog).query({ owner_id: ownerData.id });
     },
+    get dogsCount() {
+      return entity(dog).query({ owner_id: ownerData.id }).count;
+    },
   };
 });
 
 export const dog = defineEntity<TestDogEntity>({
-  keyField: "id",
+  idField: "id",
   keys: ["id", "name", "updatedAt", "owner_id"],
   updatedAtField: "updatedAt",
   name: "dog",

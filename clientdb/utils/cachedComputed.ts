@@ -1,15 +1,21 @@
 import {
   CachedComputedOptions,
   cachedComputedWithoutArgs,
-  LazyComputed,
+  CachedComputed,
 } from "./cachedComputedWithoutArgs";
 import { createDeepMap } from "./deepMap";
 import { IS_DEV } from "./dev";
 
+function isArrayMethodInlineCall(...args: any[]) {
+  if (!args[2] || !Array.isArray(args[2])) return false;
+  if (typeof args[1] !== "number") return false;
+
+  return true;
+}
+
 /**
  * Creates 'lazy computed', but with possibility of using multiple arguments
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function cachedComputed<A extends any[], T>(
   getter: (...args: A) => T,
   options: CachedComputedOptions<T> = {}
@@ -18,8 +24,9 @@ export function cachedComputed<A extends any[], T>(
   const getterName = getter.name || undefined;
 
   // TODO: cleanup map entries after lazy is disposed
-  const map = createDeepMap<LazyComputed<T>>();
-  function getComputed(...args: A) {
+  const map = createDeepMap<CachedComputed<T>>();
+
+  function getComputedForArgs(...args: A) {
     return map.getOrCreate(args, () =>
       cachedComputedWithoutArgs(() => getter(...args), {
         name: getterName,
@@ -29,12 +36,25 @@ export function cachedComputed<A extends any[], T>(
   }
 
   function getValue(...args: A) {
-    if (IS_DEV && args[2] && Array.isArray(args[2])) {
+    /**
+     * This is guard for breaking cache by calling array methods inline.
+     *
+     * eg. const cachedIsItemBig = cachedComputed(item => item.isBig);
+     *
+     * and then doing things like
+     * array.filter(cachedIsItemBig) instead of array.filter(item => cachedIsItemBig(item))
+     *
+     * those 2 seem exactly the same and it is very easy to not notice it, but in first case, 'cachedIsItemBig' will actually be called with 3 arguments instead of 1
+     * as array.filter, or similar methods (map, etc) call with (item, index, arrayItself).
+     *
+     * We had performance regressions multiple times because of forgetting about it, so here is a warning for exactly this case.
+     */
+    if (IS_DEV && isArrayMethodInlineCall(...args)) {
       console.warn(
-        `You might be using cached computed directly as filter function. It will break caching. Use items.filter(item => cached(item)) instead of items.filter(cached)`
+        `You might be using cached computed directly as array filter function or other array method. It will break caching. Use items.filter(item => cachedFunction(item)) instead of items.filter(cachedFunction)`
       );
     }
-    return getComputed(...args).get();
+    return getComputedForArgs(...args).get();
   }
 
   return getValue;

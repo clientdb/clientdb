@@ -18,26 +18,38 @@ import { isPrimitive } from "./primitive";
  * a === b // ! false
  *
  */
-export function createReuseValueGroup() {
-  const values = new Set<unknown>();
+export function createValueReuser() {
+  const values: unknown[] = [];
 
-  function getOrReuse<T>(value: T): T {
-    if (isPrimitive(value)) {
-      return value;
+  function getOrReuse<T>(targetValue: T): T {
+    if (isPrimitive(targetValue)) {
+      return targetValue;
     }
 
-    for (const existingValue of values) {
-      if (isPlainObjectEqual(existingValue, value)) {
+    if (values.includes(targetValue)) {
+      return targetValue;
+    }
+
+    for (const [index, existingValue] of values.entries()) {
+      if (isPlainObjectEqual(existingValue, targetValue)) {
+        /**
+         * Move existing value to start of array so it will be found faster next time
+         */
+        if (index === 0) return existingValue as T;
+
+        const currentFirstValue = values[0];
+        values[0] = existingValue;
+        values[index] = currentFirstValue;
         return existingValue as T;
       }
     }
 
-    values.add(value);
+    values.unshift(targetValue);
 
-    return value;
+    return targetValue;
   }
 
   return getOrReuse;
 }
 
-export type EqualValueReuser = ReturnType<typeof createReuseValueGroup>;
+export type EqualValueReuser = ReturnType<typeof createValueReuser>;

@@ -13,15 +13,7 @@ import { Thunk, resolveThunk } from "./utils/thunk";
 import { EntityStore } from "./store";
 import { computedArray } from "./utils/computedArray";
 import { createCleanupObject } from "./utils/cleanup";
-
-export type Primitive =
-  | string
-  | number
-  | bigint
-  | boolean
-  | symbol
-  | null
-  | undefined;
+import { Primitive } from "./utils/primitive";
 
 export type IndexableData<T> = {
   [key in keyof T]: T[key] extends Primitive ? T[key] : never;
@@ -30,15 +22,15 @@ export type IndexableData<T> = {
 export type IndexableKey<T> = keyof IndexableData<T>;
 export type IndexFindInput<
   D,
-  C,
-  K extends IndexableKey<D & C>
-> = IndexValueInput<IndexableData<D & C>[K]>;
+  V,
+  K extends IndexableKey<D & V>
+> = IndexValueInput<IndexableData<D & V>[K]>;
 
 export type IndexValueInput<T> = Thunk<T | T[]>;
 
-export interface QueryIndex<D, C, K extends IndexableKey<D & C>> {
+export interface QueryIndex<D, V, K extends IndexableKey<D & V>> {
   destroy(): void;
-  find(value: IndexFindInput<D, C, K>): Entity<D, C>[];
+  find(value: IndexFindInput<D, V, K>): Entity<D, V>[];
 }
 
 /**
@@ -66,10 +58,10 @@ function observableMapGetOrCreate<K, V>(
  */
 export function createQueryFieldIndex<
   D,
-  C,
-  K extends keyof IndexableData<D & C>
->(key: K, store: EntityStore<D, C>): QueryIndex<D, C, K> {
-  type TargetEntity = Entity<D, C>;
+  V,
+  K extends keyof IndexableData<D & V>
+>(key: K, store: EntityStore<D, V>): QueryIndex<D, V, K> {
+  type TargetEntity = Entity<D, V>;
   type TargetValue = IndexableData<TargetEntity>[K];
   type TargetValueInput = IndexValueInput<TargetValue>;
 
@@ -96,7 +88,7 @@ export function createQueryFieldIndex<
    */
   const currentItemIndexMap = new WeakMap<
     TargetEntity,
-    IObservableArray<Entity<D, C>>
+    IObservableArray<Entity<D, V>>
   >();
 
   try {

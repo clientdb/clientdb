@@ -2,7 +2,7 @@ import { IComputedValueOptions, Reaction, createAtom } from "mobx";
 
 import { createSharedInterval, sharedDefer } from "./sharedDefer";
 
-export type LazyComputed<T> = {
+export type CachedComputed<T> = {
   get(): T;
   dispose(): void;
 };
@@ -36,8 +36,8 @@ const sharedDisopseInterval = createSharedInterval(CACHED_COMPUTED_ALIVE_TIME);
 export function cachedComputedWithoutArgs<T>(
   getter: () => T,
   options: CachedComputedOptions<T> = {}
-): LazyComputed<T> {
-  const { name = "LazyComputed", equals, debugId } = options;
+): CachedComputed<T> {
+  const { name = "CachedComputed", equals, debugId } = options;
 
   // return computed(getter, options);
 

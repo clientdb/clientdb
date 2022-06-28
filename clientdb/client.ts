@@ -50,8 +50,6 @@ interface EntityClientConfig {
   disableSync: boolean;
 }
 
-const truePredicate = () => true;
-
 /**
  * Client is 'public api' surface for entity.
  *
@@ -106,8 +104,8 @@ export function createEntityClient<Data, View>(
     ? createEntitySearch(definition.config.search, store)
     : null;
 
-  function createEntityWithData(input: Partial<Data>) {
-    return createEntity<Data, View>({ data: input, definition, store, db });
+  function createStoreEntity(input: Partial<Data>) {
+    return createEntity<Data, View>({ data: input, store });
   }
 
   const persistanceManager = createEntityPersistanceManager(definition, {
@@ -192,13 +190,13 @@ export function createEntityClient<Data, View>(
       return searchEngine.search(term);
     },
     get all() {
-      return client.query(truePredicate).all;
+      return store.all;
     },
     get hasItems() {
       return hasItemsComputed.get();
     },
     create(input, source = "user") {
-      const newEntity = createEntityWithData(input);
+      const newEntity = createStoreEntity(input);
       return store.add(newEntity, source);
     },
     update(id, input, source = "user") {
@@ -213,12 +211,12 @@ export function createEntityClient<Data, View>(
       return entity;
     },
     createOrUpdate(input, source = "user") {
-      const id = `${input[definition.config.keyField]}`;
+      const id = `${input[definition.config.idField]}`;
       if (client.findById(id)) {
         return client.update(id, input, source);
       }
 
-      const newEntity = createEntityWithData(input);
+      const newEntity = createStoreEntity(input);
       return store.add(newEntity, source);
     },
     startSync,

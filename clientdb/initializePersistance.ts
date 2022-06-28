@@ -1,5 +1,8 @@
-
-import { PersistanceAdapter, PersistanceAdapterInfo, PersistanceTableConfig } from "./db/adapter";
+import {
+  PersistanceAdapter,
+  PersistanceAdapterInfo,
+  PersistanceTableConfig,
+} from "./db/adapter";
 import { EntityDefinition } from "./definition";
 import { getHash } from "./utils/hash";
 
@@ -42,12 +45,14 @@ const SYSTEM_DB_VERSION = 1;
 /**
  * Will calculate schema hash for all entity definitions combined.
  */
-function getDatabaseHash(definitions: EntityDefinition<unknown, unknown>[], nameSuffix = ""): string {
+function getDatabaseHash(
+  definitions: EntityDefinition<unknown, unknown>[],
+  nameSuffix = ""
+): string {
   const hashList = definitions.map((definition) => definition.getSchemaHash());
 
   return getHash([...hashList, nameSuffix].join(""));
 }
-
 
 const cacheTableConfig: PersistanceTableConfig = {
   name: "__cache",
@@ -57,10 +62,17 @@ const cacheTableConfig: PersistanceTableConfig = {
 /**
  * Will create persistance table info from entity definition
  */
-function getTablesConfigFromDefinitions(definitions: EntityDefinition<unknown, unknown>[]): PersistanceTableConfig[] {
-  const entitiesTables = definitions.map((definition): PersistanceTableConfig => {
-    return { name: definition.config.name, keyField: definition.config.keyField };
-  });
+function getTablesConfigFromDefinitions(
+  definitions: EntityDefinition<unknown, unknown>[]
+): PersistanceTableConfig[] {
+  const entitiesTables = definitions.map(
+    (definition): PersistanceTableConfig => {
+      return {
+        name: definition.config.name,
+        keyField: definition.config.idField,
+      };
+    }
+  );
 
   return [...entitiesTables, cacheTableConfig];
 }
@@ -68,15 +80,26 @@ function getTablesConfigFromDefinitions(definitions: EntityDefinition<unknown, u
 /**
  * Will open and return 'system' table holding info about all existing databases.
  */
-async function openLocalDatabasesInfoTable({ openDB }: PersistanceAdapter, onTerminated?: () => void) {
+async function openLocalDatabasesInfoTable(
+  { openDB }: PersistanceAdapter,
+  onTerminated?: () => void
+) {
   const databasesListDb = await openDB({
     name: DATABASES_DB_NAME,
     version: SYSTEM_DB_VERSION,
-    tables: [{ name: DATABASES_DB_TABLE, keyField: "name" as keyof StoragePersistanceDatabaseInfo }],
+    tables: [
+      {
+        name: DATABASES_DB_TABLE,
+        keyField: "name" as keyof StoragePersistanceDatabaseInfo,
+      },
+    ],
     onTerminated,
   });
 
-  const databasesListTable = await databasesListDb.getTable<StoragePersistanceDatabaseInfo>(DATABASES_DB_TABLE);
+  const databasesListTable =
+    await databasesListDb.getTable<StoragePersistanceDatabaseInfo>(
+      DATABASES_DB_TABLE
+    );
 
   return databasesListTable;
 }
@@ -108,10 +131,14 @@ export async function initializePersistance(
   const databaseHash = getDatabaseHash(definitions, key);
   const databaseName = getStorageDatabaseName(databaseHash);
 
-  const allDatabasesInfoSystemTable = await openLocalDatabasesInfoTable(adapter, onTerminated);
+  const allDatabasesInfoSystemTable = await openLocalDatabasesInfoTable(
+    adapter,
+    onTerminated
+  );
   const existingDatabases = await allDatabasesInfoSystemTable.fetchAllItems();
 
-  const existingDatabaseInfo = existingDatabases.find((dbInfo) => dbInfo.name === databaseName) ?? null;
+  const existingDatabaseInfo =
+    existingDatabases.find((dbInfo) => dbInfo.name === databaseName) ?? null;
 
   const entityTablesInfo = getTablesConfigFromDefinitions(definitions);
 
@@ -139,7 +166,6 @@ export async function initializePersistance(
     tables: entityTablesInfo,
     onTerminated,
   });
-
 
   if (existingDatabaseInfo) {
     await allDatabasesInfoSystemTable.updateItem(databaseName, {

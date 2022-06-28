@@ -22,7 +22,8 @@ import {
   EventsEmmiter,
   createMobxAwareEventsEmmiter,
 } from "./utils/eventManager";
-import { cachedComputed } from ".";
+import { cachedComputed } from "./utils/cachedComputed";
+import { cachedComputedWithoutArgs } from "./utils/cachedComputedWithoutArgs";
 import { MessageOrError, assert } from "./utils/assert";
 import { areArraysShallowEqual } from "./utils/arrays";
 import { createCleanupObject } from "./utils/cleanup";
@@ -51,10 +52,13 @@ export interface EntityStoreFindMethods<Data, View> {
 
   find(filter: FindInput<Data, View>): Entity<Data, View>[];
   findFirst(filter: FindInput<Data, View>): Entity<Data, View> | null;
+
+  readonly all: Entity<Data, View>[];
 }
 
 export interface EntityStore<Data, View>
   extends EntityStoreFindMethods<Data, View> {
+  db: ClientDb;
   items: IObservableArray<Entity<Data, View>>;
   sortItems(items: Entity<Data, View>[]): Entity<Data, View>[];
   add(
@@ -64,7 +68,7 @@ export interface EntityStore<Data, View>
   events: EntityStoreEventsEmmiter<Data, View>;
   definition: EntityDefinition<Data, View>;
   destroy: () => void;
-  getKeyIndex<K extends IndexableKey<Data & View>>(
+  getPropIndex<K extends IndexableKey<Data & View>>(
     key: K
   ): QueryIndex<Data, View, K>;
 }
@@ -111,16 +115,16 @@ export function createEntityStore<Data, View>(
   const itemsMap = observable.object<Record<string, Entity<Data, View>>>({});
 
   const getIsEntityAccessable =
-    config.accessValidator &&
+    config.rootFilter &&
     cachedComputed(function getIsEntityAccessable(entity: StoreEntity) {
-      return config.accessValidator!(entity, db);
+      return config.rootFilter!(entity, db);
     });
 
   const getRootSource = cachedComputed(
     function getSourceForQueryInput(): Entity<Data, View>[] {
       let output = items as StoreEntity[];
 
-      if (config.accessValidator) {
+      if (config.rootFilter) {
         output = output.filter((entity) => getIsEntityAccessable!(entity));
       }
 
@@ -137,18 +141,22 @@ export function createEntityStore<Data, View>(
     return sortBy(items, config.defaultSort);
   });
 
+  const allItems = cachedComputedWithoutArgs(() => {
+    return sortItems(getRootSource());
+  });
+
   // Allow listening to CRUD updates in the store
   const events = createMobxAwareEventsEmmiter<EntityStoreEvents<Data, View>>(
     config.name
   );
 
-  const queryIndexes = new Map<
+  const propIndexMap = new Map<
     keyof Data | keyof View,
     QueryIndex<Data, View, IndexableKey<Data & View>>
   >();
 
   function getEntityId(entity: Entity<Data, View>) {
-    const id = `${entity[config.keyField]}`;
+    const id = `${entity[config.idField]}`;
 
     return id;
   }
@@ -182,23 +190,33 @@ export function createEntityStore<Data, View>(
   });
 
   const store: EntityStore<Data, View> = {
+    get all() {
+      return allItems.get();
+    },
+    db,
     definition,
     events,
     items,
     sortItems,
-    getKeyIndex(key) {
-      const existingIndex = queryIndexes.get(key);
+    getPropIndex(key) {
+      const existingIndex = propIndexMap.get(key);
 
       if (existingIndex) return existingIndex;
 
       const newIndex = createQueryFieldIndex(key, store);
 
-      queryIndexes.set(key, newIndex);
+      propIndexMap.set(key, newIndex);
 
       return newIndex;
     },
     add(entity, source = "user") {
       const id = getEntityId(entity);
+
+      if (itemsMap[id]) {
+        throw new Error(
+          `Cannot create entity "${definition.config.name}" with id ${id} because it already exists`
+        );
+      }
 
       runInAction(() => {
         items.push(entity);
@@ -225,7 +243,7 @@ export function createEntityStore<Data, View>(
       return store.query(filter).first;
     },
     findByUniqueIndex(key, value) {
-      const results = store.getKeyIndex(key).find(value);
+      const results = store.getPropIndex(key).find(value);
 
       if (!results.length) return null;
 
@@ -279,7 +297,7 @@ export function createEntityStore<Data, View>(
     destroy() {
       runInAction(() => {
         cleanups.clean();
-        queryIndexes.forEach((queryIndex) => {
+        propIndexMap.forEach((queryIndex) => {
           queryIndex.destroy();
         });
         events.destroy();
