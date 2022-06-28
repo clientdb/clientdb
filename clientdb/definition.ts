@@ -1,15 +1,15 @@
-import { AnnotationsMap, IComputedValue } from "mobx";
+import { AnnotationsMap } from "mobx";
 
-import { Entity } from "clientdb";
+import { Entity } from "./entity";
 
+import { ClientDb } from "./db";
 import { EntityUpdateResult } from "./entity";
 import { EntityFilterFunction, SortResult } from "./query";
 import { EntitySearchConfig } from "./search";
 import { EntitySyncConfig } from "./sync";
-import { PartialWithExplicitOptionals } from "./utils/types";
 import { CleanupObject } from "./utils/cleanup";
 import { getHash } from "./utils/hash";
-import { ClientDb } from "./db";
+import { PartialWithExplicitOptionals } from "./utils/types";
 
 type EntityAccessValidator<Data, View> = (
   entity: Entity<Data, View>,

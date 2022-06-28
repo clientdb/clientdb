@@ -1,7 +1,12 @@
 import { waitForAllSyncToFlush } from "clientdb";
-import { createResolvablePromise, wait } from "../entity/utils/promises";
+import { createResolvablePromise, wait } from "../utils/promises";
 
-import { DefaultEntitiesMap, TestOwnerEntity, createTestDb, owner } from "./utils";
+import {
+  DefaultEntitiesMap,
+  TestOwnerEntity,
+  createTestDb,
+  owner,
+} from "./utils";
 
 describe("sync", () => {
   it("will have data from first sync on initial result", async () => {

@@ -1,6 +1,6 @@
 import { memoize, throttle } from "lodash";
 
-import { PersistanceDB } from "./db/adapter";
+import { PersistanceDB } from "./persistanceAdapter";
 import { EntityDefinition } from "./definition";
 import { EntityStore } from "./store";
 import { createResolvablePromise } from "./utils/promises";
@@ -161,7 +161,3 @@ export function createEntityPersistanceManager<Data, View>(
     fetchPersistedItems: fetchPersistedItems,
   };
 }
-
-export type GetEntityClientByDefinition<Data, View> = (
-  definition: EntityDefinition<Data, View>
-) => EntityPersistanceManager<Data, View>;

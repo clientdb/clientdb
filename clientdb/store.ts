@@ -23,7 +23,7 @@ import {
   createMobxAwareEventsEmmiter,
 } from "./utils/eventManager";
 import { cachedComputed } from ".";
-import { MessageOrError, assert } from "../utils/assert";
+import { MessageOrError, assert } from "./utils/assert";
 import { areArraysShallowEqual } from "./utils/arrays";
 import { createCleanupObject } from "./utils/cleanup";
 import { deepMemoize } from "./utils/deepMap";

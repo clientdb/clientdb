@@ -1,5 +1,4 @@
-import { createClientDb, defineEntity } from "clientdb";
-import { ClientDb } from "../entity/db";
+import { createClientDb, defineEntity, ClientDb } from "clientdb";
 
 import {
   TestOwnerEntity,

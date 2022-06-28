@@ -1,6 +1,6 @@
 import { runInAction } from "mobx";
+import { assert } from "./assert";
 
-import { assert } from "../../utils/assert";
 import { IS_DEV } from "./dev";
 import { ResolvablePromise, wait, createResolvablePromise } from "./promises";
 
@@ -21,7 +21,10 @@ export function createPushQueue() {
    * ".add" returns a promise of 'when will this task be completed'. As it is different promise to task itself, we need to keep track of it.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const taskFlushedPromisesMap = new WeakMap<Task<unknown>, ResolvablePromise<any>>();
+  const taskFlushedPromisesMap = new WeakMap<
+    Task<unknown>,
+    ResolvablePromise<any>
+  >();
 
   // TODO: Let's discuss scenario of failed attempts - should we replay?
 
@@ -37,7 +40,10 @@ export function createPushQueue() {
    *
    * In a way like CMD+Z undo works - you first undo last actions.
    */
-  function rejectAllAndReset(failedTask: Task<unknown>, failedTaskError: unknown) {
+  function rejectAllAndReset(
+    failedTask: Task<unknown>,
+    failedTaskError: unknown
+  ) {
     const tasksFromNewest = Array.from(queue).reverse();
 
     // Run in action so all fails are flushed to UI at once.

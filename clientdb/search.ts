@@ -6,7 +6,7 @@ import { Entity } from "clientdb";
 
 import { EntityStore } from "./store";
 import { computedArray } from "./utils/computedArray";
-import { assert } from "../utils/assert";
+import { assert } from "./utils/assert";
 import { typedKeys } from "./utils/object";
 import { isNotNullish } from "./utils/nullish";
 import { runUntracked } from "./utils/mobx";

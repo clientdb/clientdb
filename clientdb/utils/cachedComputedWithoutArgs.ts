@@ -1,6 +1,5 @@
 import { IComputedValueOptions, Reaction, createAtom } from "mobx";
 
-
 import { createSharedInterval, sharedDefer } from "./sharedDefer";
 
 export type LazyComputed<T> = {
@@ -8,7 +7,7 @@ export type LazyComputed<T> = {
   dispose(): void;
 };
 
-export const KEEP_ALIVE_TIME_AFTER_UNOBSERVED = 15 * 1000;
+export const CACHED_COMPUTED_ALIVE_TIME = 15 * 1000;
 
 /**
  * Normally we keep not used computed alive for KEEP_ALIVE_TIME_AFTER_UNOBSERVED time.
@@ -24,7 +23,7 @@ export interface CachedComputedOptions<T> extends IComputedValueOptions<T> {
   debugId?: string;
 }
 
-const sharedDisopseInterval = createSharedInterval(KEEP_ALIVE_TIME_AFTER_UNOBSERVED);
+const sharedDisopseInterval = createSharedInterval(CACHED_COMPUTED_ALIVE_TIME);
 
 /**
  * This is computed that connect advantages of both 'keepAlive' true and false of normal computed:
@@ -34,9 +33,11 @@ const sharedDisopseInterval = createSharedInterval(KEEP_ALIVE_TIME_AFTER_UNOBSER
  *
  * It provided 'dispose' method, but will also dispose itself automatically if not used for longer than KEEP_ALIVE_TIME_AFTER_UNOBSERVED
  */
-export function cachedComputedWithoutArgs<T>(getter: () => T, options: CachedComputedOptions<T> = {}): LazyComputed<T> {
+export function cachedComputedWithoutArgs<T>(
+  getter: () => T,
+  options: CachedComputedOptions<T> = {}
+): LazyComputed<T> {
   const { name = "LazyComputed", equals, debugId } = options;
-
 
   // return computed(getter, options);
 

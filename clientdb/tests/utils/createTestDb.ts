@@ -1,37 +1,45 @@
-import { createClientDb } from "clientdb";
-import { AnyEntityDefinition, EntityDataByDefinition } from "clientdb/entity/definition";
-import { typedKeys } from "../../entity/utils/object";
+import { AnyEntityDefinition, createClientDb } from "clientdb";
+import { typedKeys } from "../../utils/object";
 
 import { DefaultTestEntities, dog, owner } from "./entities";
-import { createPersistanceAdapterMock, TablePersistanceMock } from "./persistance";
+import {
+  createPersistanceAdapterMock,
+  TablePersistanceMock,
+} from "./persistance";
 import { EntitySyncConfigMock } from "./sync";
 
 type TestDbConfig = {
-  entities?: AnyEntityDefinition[]
+  entities?: AnyEntityDefinition[];
   syncMocks?: {
-    [key in keyof DefaultTestEntities]?: EntitySyncConfigMock<DefaultTestEntities[key]>;
+    [key in keyof DefaultTestEntities]?: EntitySyncConfigMock<
+      DefaultTestEntities[key]
+    >;
   };
   persistanceMocks?: {
-    [key in keyof DefaultTestEntities]?: TablePersistanceMock<DefaultTestEntities[key]>;
+    [key in keyof DefaultTestEntities]?: TablePersistanceMock<
+      DefaultTestEntities[key]
+    >;
   };
 };
 
-export function createTestDb( config?: TestDbConfig) {
-  const persistance = createPersistanceAdapterMock({ tableMocks: config?.persistanceMocks });
+export function createTestDb(config?: TestDbConfig) {
+  const persistance = createPersistanceAdapterMock({
+    tableMocks: config?.persistanceMocks,
+  });
 
   if (!config?.entities) {
-    if (!config) config = {}
+    if (!config) config = {};
 
-    config.entities = [dog,owner]
+    config.entities = [dog, owner];
   }
-
 
   if (config?.syncMocks) {
     typedKeys(config.syncMocks).forEach((entityName) => {
       const syncMock = config?.syncMocks?.[entityName];
 
-      const entityConfig = config?.entities?.find(entity => entity.config.name === entityName)?.config
-
+      const entityConfig = config?.entities?.find(
+        (entity) => entity.config.name === entityName
+      )?.config;
 
       if (entityConfig && syncMock) {
         entityConfig.sync = { ...entityConfig.sync, ...syncMock };
@@ -39,5 +47,5 @@ export function createTestDb( config?: TestDbConfig) {
     });
   }
 
-  return createClientDb( config.entities!, { persistance });
+  return createClientDb(config.entities!, { persistance });
 }

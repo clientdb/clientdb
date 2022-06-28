@@ -15,7 +15,7 @@ import { EntityStore } from "./store";
 import { EntityChangeSource } from "./types";
 import { CleanupObject, createCleanupObject } from "./utils/cleanup";
 import { typedKeys } from "./utils/object";
-import { assert } from "../utils/assert";
+import { assert } from "./utils/assert";
 import { ClientDb } from "./db";
 
 export interface EntityUpdateResult {

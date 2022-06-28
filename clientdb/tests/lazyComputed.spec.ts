@@ -1,9 +1,9 @@
 import { ObservableMap, autorun, observable, runInAction } from "mobx";
 
 import {
-  KEEP_ALIVE_TIME_AFTER_UNOBSERVED,
+  CACHED_COMPUTED_ALIVE_TIME,
   cachedComputedWithoutArgs,
-} from "clientdb/entity/utils/cachedComputedWithoutArgs";
+} from "clientdb";
 
 import { runObserved } from "./utils";
 
@@ -118,7 +118,9 @@ describe("lazyComputed", () => {
 
     const meanings = new ObservableMap();
     meanings.set("life", -2);
-    const realMeaning = cachedComputedWithoutArgs(() => meanings.get("life") + 2);
+    const realMeaning = cachedComputedWithoutArgs(
+      () => meanings.get("life") + 2
+    );
 
     let values: number[] = [];
     const watcher = () => {
@@ -137,7 +139,7 @@ describe("lazyComputed", () => {
 
     autorun(watcher);
 
-    jest.advanceTimersByTime(KEEP_ALIVE_TIME_AFTER_UNOBSERVED);
+    jest.advanceTimersByTime(CACHED_COMPUTED_ALIVE_TIME);
 
     runInAction(() => {
       meanings.set("life", 1335);

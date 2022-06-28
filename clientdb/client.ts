@@ -1,8 +1,8 @@
 import { computed, runInAction } from "mobx";
-import { assert } from "../utils/assert";
+import { assert } from "./utils/assert";
 import { ClientDb } from "./db";
 
-import { PersistanceDB } from "./db/adapter";
+import { PersistanceDB } from "./persistanceAdapter";
 import { EntityDefinition } from "./definition";
 import { Entity, createEntity } from "./entity";
 import {

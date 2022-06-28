@@ -1,5 +1,5 @@
-import { PERSISTANCE_BATCH_FLUSH_TIMEOUT } from "clientdb/entity/persistance";
-import { wait } from "../entity/utils/promises";
+import { PERSISTANCE_BATCH_FLUSH_TIMEOUT } from "clientdb/persistance";
+import { wait } from "../utils/promises";
 
 import { createTestDb, owner } from "./utils";
 
