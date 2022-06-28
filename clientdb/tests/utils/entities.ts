@@ -48,6 +48,7 @@ export const owner = defineEntity<TestOwnerEntity>({
       name: true,
     },
   },
+  defaultSort: (owner) => owner.name,
   getDefaultValues: getDefaultCommonData,
 }).addView((ownerData, { db: { entity } }) => {
   return {
