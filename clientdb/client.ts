@@ -88,8 +88,7 @@ export function createEntityClient<Data, View>(
     };
   }
 
-  const { query, findById, assertFindById, removeById, sort, find, findFirst } =
-    store;
+  const { query, findById, removeById, sort, find, findFirst } = store;
 
   const searchEngine = definition.config.search
     ? createEntitySearch(definition.config.search, store)
@@ -165,7 +164,6 @@ export function createEntityClient<Data, View>(
     definition,
     query,
     findById,
-    assertFindById,
     removeById,
     find,
     findFirst,

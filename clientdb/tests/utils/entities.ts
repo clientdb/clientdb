@@ -7,6 +7,7 @@ interface CommonData {
 
 export interface TestOwnerEntity extends CommonData {
   name: string;
+  hide: boolean;
 }
 
 export interface TestDogEntity extends CommonData {
@@ -49,17 +50,21 @@ export const owner = defineEntity<TestOwnerEntity>({
     },
   },
   defaultSort: (owner) => owner.name,
-  getDefaultValues: getDefaultCommonData,
-}).addView((ownerData, { db: { entity } }) => {
-  return {
-    get dogs() {
-      return entity(dog).query({ owner_id: ownerData.id });
-    },
-    get dogsCount() {
-      return entity(dog).query({ owner_id: ownerData.id }).count;
-    },
-  };
-});
+  getDefaultValues: () => {
+    return { ...getDefaultCommonData(), hide: false };
+  },
+})
+  .addView((ownerData, { db: { entity } }) => {
+    return {
+      get dogs() {
+        return entity(dog).query({ owner_id: ownerData.id });
+      },
+      get dogsCount() {
+        return entity(dog).query({ owner_id: ownerData.id }).count;
+      },
+    };
+  })
+  .addRootFilter((owner) => !owner.hide);
 
 export const dog = defineEntity<TestDogEntity>({
   idField: "id",
@@ -71,7 +76,7 @@ export const dog = defineEntity<TestDogEntity>({
 }).addView((dogData, { db: { entity } }) => {
   return {
     get owner() {
-      return entity(owner).assertFindById(dogData.owner_id);
+      return entity(owner).findById(dogData.owner_id)!;
     },
   };
 });

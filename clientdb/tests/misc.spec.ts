@@ -26,20 +26,6 @@ describe("clientdb misc", () => {
     ] as const;
   }
 
-  it("asserts by id", async () => {
-    const [db, data] = await getTestDb();
-
-    expect(() => {
-      db.entity(owner).assertFindById("no-id", "no item");
-    }).toThrow();
-
-    expect(() => {
-      db.entity(owner).assertFindById(data.owners.adam.id, "no item");
-    }).not.toThrow();
-
-    db.destroy();
-  });
-
   it("removes item", async () => {
     const [db, data] = await getTestDb();
 
@@ -102,5 +88,23 @@ describe("clientdb misc", () => {
 
     expect(data.owners.adam.update({ name: "Adam" }).hadChanges).toBe(false);
     expect(data.owners.adam.update({ name: "Adam2" }).hadChanges).toBe(true);
+  });
+
+  it("will exclude items not passing root filter", async () => {
+    const [db, data] = await getTestDb();
+
+    const owners = db.entity(owner);
+
+    data.owners.adam.update({ hide: true });
+
+    expect(owners.all).toEqual([data.owners.omar]);
+    expect(owners.findById(data.owners.adam.id)).toBeNull();
+    expect(owners.query({ name: "Adam" }).count).toBe(0);
+
+    data.owners.adam.update({ hide: false });
+
+    expect(owners.all).toEqual([data.owners.adam, data.owners.omar]);
+    expect(owners.findById(data.owners.adam.id)).not.toBeNull();
+    expect(owners.query({ name: "Adam" }).count).toBe(1);
   });
 });

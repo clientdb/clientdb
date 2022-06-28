@@ -1,35 +1,33 @@
 import { sortBy } from "lodash";
 import { IObservableArray, observable, runInAction } from "mobx";
 
+import { ClientDb } from "./db";
 import { EntityDefinition } from "./definition";
 import { Entity } from "./entity";
 import { FindInput } from "./find";
 import {
+  createEntityQuery,
   EntityQuery,
   EntityQuerySortFunction,
   EntityQuerySortInput,
-  createEntityQuery,
   resolveSortInput,
 } from "./query";
 import {
-  IndexableData,
-  IndexableKey,
-  QueryIndex,
   createQueryFieldIndex,
+  IndexableKey,
   IndexFindInput,
+  QueryIndex,
 } from "./queryIndex";
 import { EntityChangeSource } from "./types";
-import {
-  EventsEmmiter,
-  createMobxAwareEventsEmmiter,
-} from "./utils/eventManager";
+import { areArraysShallowEqual } from "./utils/arrays";
 import { cachedComputed } from "./utils/cachedComputed";
 import { cachedComputedWithoutArgs } from "./utils/cachedComputedWithoutArgs";
-import { MessageOrError, assert } from "./utils/assert";
-import { areArraysShallowEqual } from "./utils/arrays";
 import { createCleanupObject } from "./utils/cleanup";
 import { deepMemoize } from "./utils/deepMap";
-import { ClientDb } from "./db";
+import {
+  createMobxAwareEventsEmmiter,
+  EventsEmmiter,
+} from "./utils/eventManager";
 
 export interface EntityStoreFindMethods<Data, View> {
   query: (
@@ -40,7 +38,6 @@ export interface EntityStoreFindMethods<Data, View> {
   sort: (sort: EntityQuerySortInput<Data, View>) => EntityQuery<Data, View>;
 
   findById(id: string): Entity<Data, View> | null;
-  assertFindById(id: string, error?: MessageOrError): Entity<Data, View>;
   removeById(id: string, source?: EntityChangeSource): boolean;
 
   find(filter: FindInput<Data, View>): Entity<Data, View>[];
@@ -246,13 +243,6 @@ export function createEntityStore<Data, View>(
     },
     findById(id) {
       return findById(id);
-    },
-    assertFindById(id, error) {
-      const item = store.findById(id);
-
-      assert(item, error ?? `No item found for id ${id}`);
-
-      return item;
     },
     find(filter) {
       return store.query(filter).all;
