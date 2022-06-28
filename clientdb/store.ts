@@ -16,6 +16,7 @@ import {
   IndexableKey,
   QueryIndex,
   createQueryFieldIndex,
+  IndexFindInput,
 } from "./queryIndex";
 import { EntityChangeSource } from "./types";
 import {
@@ -79,7 +80,7 @@ type EntityStoreEvents<Data, View> = {
     dataBefore: Data,
     source: EntityChangeSource
   ];
-  itemWillUpdate: [
+  willUpdate: [
     entity: Entity<Data, View>,
     input: Partial<Data>,
     source: EntityChangeSource
@@ -182,6 +183,28 @@ export function createEntityStore<Data, View>(
     return entity;
   });
 
+  function assertEntityNotBreakingUniqueIndex(entity: StoreEntity) {
+    if (!definition.config.uniqueProps) return;
+
+    for (const uniquePropName of definition.config.uniqueProps) {
+      const index = store.getPropIndex(uniquePropName);
+      const propValue = entity[uniquePropName] as unknown as IndexFindInput<
+        Data,
+        View,
+        keyof Data
+      >;
+      const existingEntities = index.find(propValue);
+
+      if (existingEntities.length > 0) {
+        throw new Error(
+          `Entity "${
+            definition.config.name
+          }" with unique property "${uniquePropName.toString()}"="${propValue?.toString()}" already exists`
+        );
+      }
+    }
+  }
+
   const store: EntityStore<Data, View> = {
     get all() {
       return allItems.get();
@@ -207,9 +230,11 @@ export function createEntityStore<Data, View>(
 
       if (itemsMap[id]) {
         throw new Error(
-          `Cannot create entity "${definition.config.name}" with id ${id} because it already exists`
+          `Cannot create entity "${definition.config.name}" with id "${id}" because it already exists`
         );
       }
+
+      assertEntityNotBreakingUniqueIndex(entity);
 
       runInAction(() => {
         items.push(entity);

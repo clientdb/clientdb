@@ -10,7 +10,7 @@ import {
 
 import { waitForEntityAllAwaitingPushOperations } from "clientdb";
 
-import { EntityDefinition } from "./definition";
+import { EntityDefinition, EntityViewLinker } from "./definition";
 import { EntityStore } from "./store";
 import { EntityChangeSource } from "./types";
 import { CleanupObject, createCleanupObject } from "./utils/cleanup";
@@ -111,14 +111,15 @@ export function createEntity<D, V>({
 
   const cleanupObject = createCleanupObject();
 
-  const view =
-    config.getView?.(observableData, {
-      ...db,
-      updateSelf(data) {
-        return entity.update(data, "user");
-      },
-      cleanup: cleanupObject,
-    }) ?? ({} as V);
+  const viewLinker: EntityViewLinker<D> = {
+    db,
+    updateSelf(data) {
+      return entity.update(data, "user");
+    },
+    cleanup: cleanupObject,
+  };
+
+  const view = config.getView?.(observableData, viewLinker) ?? ({} as V);
 
   // Note: we dont want to add view as {...data, ...connections}. Connections might have getters so it would simply unwrap them.
   const observableDataAndView = extendObservable(observableData, view);
@@ -189,6 +190,12 @@ export function createEntity<D, V>({
         return !isEqual(value, existingValue);
       });
 
+      if (changedKeys.includes(config.idField)) {
+        throw new Error(
+          `Cannot update id field of entity "${definition.config.name}"`
+        );
+      }
+
       // No changes will be made, return early
       if (!changedKeys.length)
         return {
@@ -200,7 +207,7 @@ export function createEntity<D, V>({
 
       const undoData = pick(dataBeforeUpdate, changedKeys);
 
-      store.events.emit("itemWillUpdate", entity, input, source);
+      store.events.emit("willUpdate", entity, input, source);
 
       runInAction(() => {
         changedKeys.forEach((keyToUpdate) => {

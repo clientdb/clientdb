@@ -21,7 +21,7 @@ interface EntityConfig<Data, View> {
   keys: Array<keyof Data>;
   idField: keyof Data;
   updatedAtField: keyof Data;
-  uniqueIndexes?: Array<keyof Data>;
+  uniqueProps?: Array<keyof Data>;
   /**
    * We require optional values (null and undefined) to be explicitly provided.
    *
@@ -76,14 +76,15 @@ export interface EntityDefinition<Data, View> {
   ): EntityDefinition<Data, View>;
 }
 
-export interface EntityViewLinker<Data> extends ClientDb {
+export interface EntityViewLinker<Data> {
+  db: ClientDb;
   updateSelf(data: Partial<Data>): EntityUpdateResult;
   cleanup: CleanupObject;
 }
 
 type EntityDefinitionGetView<Data, View> = (
   item: Data,
-  manager: EntityViewLinker<Data>
+  linker: EntityViewLinker<Data>
 ) => View;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

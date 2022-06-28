@@ -39,6 +39,7 @@ function getSyncConfig<T>(): EntitySyncConfig<T> {
 export const owner = defineEntity<TestOwnerEntity>({
   idField: "id",
   keys: ["id", "name", "updatedAt"],
+  uniqueProps: ["name"],
   updatedAtField: "updatedAt",
   name: "owner",
   sync: getSyncConfig<TestOwnerEntity>(),
@@ -48,7 +49,7 @@ export const owner = defineEntity<TestOwnerEntity>({
     },
   },
   getDefaultValues: getDefaultCommonData,
-}).addView((ownerData, { entity }) => {
+}).addView((ownerData, { db: { entity } }) => {
   return {
     get dogs() {
       return entity(dog).query({ owner_id: ownerData.id });
@@ -66,7 +67,7 @@ export const dog = defineEntity<TestDogEntity>({
   name: "dog",
   sync: getSyncConfig<TestDogEntity>(),
   getDefaultValues: getDefaultCommonData,
-}).addView((dogData, { entity }) => {
+}).addView((dogData, { db: { entity } }) => {
   return {
     get owner() {
       return entity(owner).assertFindById(dogData.owner_id);
