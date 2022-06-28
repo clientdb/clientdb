@@ -37,14 +37,6 @@ export interface EntityStoreFindMethods<Data, View> {
   ) => EntityQuery<Data, View>;
 
   sort: (sort: EntityQuerySortInput<Data, View>) => EntityQuery<Data, View>;
-  findByUniqueIndex<K extends IndexableKey<Data & View>>(
-    key: K,
-    value: IndexableData<Data & View>[K]
-  ): Entity<Data, View> | null;
-  assertFindByUniqueIndex<K extends IndexableKey<Data & View>>(
-    key: K,
-    value: IndexableData<Data & View>[K]
-  ): Entity<Data, View>;
 
   findById(id: string): Entity<Data, View> | null;
   assertFindById(id: string, error?: MessageOrError): Entity<Data, View>;
@@ -59,6 +51,7 @@ export interface EntityStoreFindMethods<Data, View> {
 export interface EntityStore<Data, View>
   extends EntityStoreFindMethods<Data, View> {
   db: ClientDb;
+  // Will return all items in store, including ones not passing root filter
   items: IObservableArray<Entity<Data, View>>;
   sortItems(items: Entity<Data, View>[]): Entity<Data, View>[];
   add(
@@ -241,36 +234,6 @@ export function createEntityStore<Data, View>(
     },
     findFirst(filter) {
       return store.query(filter).first;
-    },
-    findByUniqueIndex(key, value) {
-      const results = store.getPropIndex(key).find(value);
-
-      if (!results.length) return null;
-
-      if (results.length > 1)
-        console.warn(
-          `Store has multiple items for unique index value ${key as string}:${
-            value as string
-          }.`
-        );
-
-      const result = results[0];
-
-      if (getIsEntityAccessable && !getIsEntityAccessable(result)) return null;
-
-      return result;
-    },
-    assertFindByUniqueIndex(key, value) {
-      const entity = store.findByUniqueIndex(key, value);
-
-      assert(
-        entity,
-        `Assertion error for assertFindByUniqueIndex for key ${
-          key as string
-        } and value ${value as string}`
-      );
-
-      return entity;
     },
     removeById(id, source = "user") {
       const entity = itemsMap[id] ?? null;
