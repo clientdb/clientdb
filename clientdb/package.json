@@ -18,6 +18,7 @@
     "jest": "28.1.1",
     "jest-environment-jsdom": "28.1.1",
     "parcel": "^2.6.2",
+    "rimraf": "^3.0.2",
     "ts-jest": "28.0.5",
     "typescript": "4.7.4"
   },
@@ -28,6 +29,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --collectCoverage",
-    "build": "parcel build"
+    "build": "parcel build",
+    "build:clean": "rimraf index.js index.js.map index.d.ts index.d.ts.map index.module.js index.module.js.map"
   }
 }
