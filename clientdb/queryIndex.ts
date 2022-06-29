@@ -7,7 +7,7 @@ import {
   runInAction,
 } from "mobx";
 
-import { Entity } from "clientdb";
+import { Entity } from "./entity";
 import { Thunk, resolveThunk } from "./utils/thunk";
 
 import { EntityStore } from "./store";

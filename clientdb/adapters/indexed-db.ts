@@ -1,6 +1,9 @@
 import { IDBPDatabase, deleteDB, openDB } from "idb";
-
-import { PersistanceAdapter, PersistanceDB, PersistanceTableAdapter } from "clientdb";
+import {
+  PersistanceAdapter,
+  PersistanceDB,
+  PersistanceTableAdapter,
+} from "../persistanceAdapter";
 
 /**
  * This is IndexedDB adapter for clientdb that allows persisting all the data locally.
@@ -11,7 +14,10 @@ import { PersistanceAdapter, PersistanceDB, PersistanceTableAdapter } from "clie
  *
  * If fails again - will then just throw given error
  */
-async function performDbCallbackTryingAgainOnError<T>(databaseName: string, callback: () => T) {
+async function performDbCallbackTryingAgainOnError<T>(
+  databaseName: string,
+  callback: () => T
+) {
   try {
     const result = await callback();
     return result;
@@ -51,13 +57,18 @@ export function createIndexedDbAdapter(): PersistanceAdapter {
           openDB(name, version, {
             upgrade(database, oldVersion, newVersion) {
               // Each time new version of database is detected - wipe out entire data and re-create it
-              console.info(`New database version - handling upgrade`, { oldVersion, newVersion });
+              console.info(`New database version - handling upgrade`, {
+                oldVersion,
+                newVersion,
+              });
               for (const existingStore of database.objectStoreNames) {
                 database.deleteObjectStore(existingStore);
               }
 
               for (const entity of tables) {
-                database.createObjectStore(entity.name, { keyPath: entity.keyField });
+                database.createObjectStore(entity.name, {
+                  keyPath: entity.keyField,
+                });
               }
             },
             blocked() {
@@ -95,7 +106,9 @@ export function createIndexedDbAdapter(): PersistanceAdapter {
         async getTable<Data>(name: string) {
           async function getStoreWriteSession() {
             try {
-              const transaction = await db.transaction([name], "readwrite", { durability: "relaxed" });
+              const transaction = await db.transaction([name], "readwrite", {
+                durability: "relaxed",
+              });
 
               const store = transaction.objectStore(name);
 

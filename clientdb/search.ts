@@ -2,14 +2,14 @@ import { Index } from "flexsearch";
 import { mapValues, memoize, pick, values } from "lodash";
 import { makeAutoObservable } from "mobx";
 
-import { Entity } from "clientdb";
+import { Entity } from "./entity";
 
 import { EntityStore } from "./store";
-import { computedArray } from "./utils/computedArray";
 import { assert } from "./utils/assert";
-import { typedKeys } from "./utils/object";
-import { isNotNullish } from "./utils/nullish";
+import { computedArray } from "./utils/computedArray";
 import { runUntracked } from "./utils/mobx";
+import { isNotNullish } from "./utils/nullish";
+import { typedKeys } from "./utils/object";
 
 interface EntitySearchFieldDetailedConfig<Value> {
   extract?: (value: Value) => string;

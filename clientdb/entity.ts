@@ -1,22 +1,21 @@
 import { isEqual, pick } from "lodash";
 import {
   action,
-  computed,
   extendObservable,
   makeAutoObservable,
   runInAction,
   toJS,
 } from "mobx";
 
-import { waitForEntityAllAwaitingPushOperations } from "clientdb";
+import { waitForEntityAllAwaitingPushOperations } from "./sync";
 
+import { ClientDb } from "./db";
 import { EntityDefinition, EntityViewLinker } from "./definition";
 import { EntityStore } from "./store";
 import { EntityChangeSource } from "./types";
+import { assert } from "./utils/assert";
 import { CleanupObject, createCleanupObject } from "./utils/cleanup";
 import { typedKeys } from "./utils/object";
-import { assert } from "./utils/assert";
-import { ClientDb } from "./db";
 
 export interface EntityUpdateResult {
   hadChanges: boolean;
