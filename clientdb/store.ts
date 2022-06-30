@@ -70,19 +70,34 @@ export type EntityStoreFromDefinition<
   ? EntityStore<Data, View>
   : never;
 
+export interface EntityCreatedEvent<Data> {
+  source: EntityChangeSource;
+  db: ClientDb;
+}
+export interface EntityUpdatedEvent<Data> {
+  dataBefore: Data;
+  changedKeys: (keyof Data)[];
+  changedData: Partial<Data>;
+  source: EntityChangeSource;
+  db: ClientDb;
+}
+
+export interface EntityWillUpdateEvent<Data> {
+  input: Partial<Data>;
+  source: EntityChangeSource;
+  db: ClientDb;
+}
+
+export interface EntityRemovedEvent<Data> {
+  source: EntityChangeSource;
+  db: ClientDb;
+}
+
 type EntityStoreEvents<Data, View> = {
-  created: [Entity<Data, View>, EntityChangeSource];
-  updated: [
-    entity: Entity<Data, View>,
-    dataBefore: Data,
-    source: EntityChangeSource
-  ];
-  willUpdate: [
-    entity: Entity<Data, View>,
-    input: Partial<Data>,
-    source: EntityChangeSource
-  ];
-  removed: [Entity<Data, View>, EntityChangeSource];
+  created: [Entity<Data, View>, EntityCreatedEvent<Data>];
+  updated: [Entity<Data, View>, EntityUpdatedEvent<Data>];
+  willUpdate: [Entity<Data, View>, EntityWillUpdateEvent<Data>];
+  removed: [Entity<Data, View>, EntityRemovedEvent<Data>];
 };
 
 export type EntityStoreEventsEmmiter<Data, View> = EventsEmmiter<
@@ -236,7 +251,7 @@ export function createEntityStore<Data, View>(
       runInAction(() => {
         items.push(entity);
         itemsMap[id] = entity;
-        events.emit("created", entity, source);
+        events.emit("created", entity, { source, db });
       });
 
       return entity;
@@ -261,7 +276,7 @@ export function createEntityStore<Data, View>(
         entity.cleanup.clean();
         didRemove = items.remove(entity);
         delete itemsMap[id];
-        events.emit("removed", entity, source);
+        events.emit("removed", entity, { source, db });
       });
 
       return didRemove;

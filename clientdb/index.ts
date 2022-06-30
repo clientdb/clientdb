@@ -9,3 +9,5 @@ export * from "./persistance";
 export * from "./sync";
 export * from "./utils/cachedComputed";
 export * from "./utils/cachedComputedWithoutArgs";
+export * from "./context";
+export * from "./find";

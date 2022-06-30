@@ -2,7 +2,7 @@ import {
   PersistanceAdapter,
   PersistanceAdapterInfo,
   PersistanceTableConfig,
-} from "./db/adapter";
+} from "./persistanceAdapter";
 import { EntityDefinition } from "./definition";
 import { getHash } from "./utils/hash";
 

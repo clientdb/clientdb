@@ -10,6 +10,11 @@ import { EntitySyncConfig } from "./sync";
 import { CleanupObject } from "./utils/cleanup";
 import { getHash } from "./utils/hash";
 import { PartialWithExplicitOptionals } from "./utils/types";
+import {
+  EntityCreatedEvent,
+  EntityRemovedEvent,
+  EntityUpdatedEvent,
+} from "./store";
 
 type EntityRootFilter<Data, View> = (
   entity: Entity<Data, View>,
@@ -53,13 +58,18 @@ interface EntityConfig<Data, View> {
 }
 
 export type EntityEvents<Data, View> = {
-  created?: (entity: Entity<Data, View>, db: ClientDb) => void;
+  created?: (
+    entity: Entity<Data, View>,
+    event: EntityCreatedEvent<Data>
+  ) => void;
   updated?: (
     entity: Entity<Data, View>,
-    dataBefore: Data,
-    db: ClientDb
+    event: EntityUpdatedEvent<Data>
   ) => void;
-  removed?: (entity: Entity<Data, View>, db: ClientDb) => void;
+  removed?: (
+    entity: Entity<Data, View>,
+    event: EntityRemovedEvent<Data>
+  ) => void;
 };
 
 export interface EntityDefinition<Data, View> {

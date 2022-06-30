@@ -62,22 +62,19 @@ export function createEntityClient<Data, View>(
   const store = createEntityStore<Data, View>(definition, db);
 
   function attachEntityEvents() {
-    const cleanupcreated = store.events.on("created", (entity, source) => {
-      if (source === "user") {
-        definition.config.events?.created?.(entity, db);
+    const cleanupcreated = store.events.on("created", (entity, event) => {
+      if (event.source === "user") {
+        definition.config.events?.created?.(entity, event);
       }
     });
-    const cleanupupdated = store.events.on(
-      "updated",
-      (entity, dataBefore, source) => {
-        if (source === "user") {
-          definition.config.events?.updated?.(entity, dataBefore, db);
-        }
+    const cleanupupdated = store.events.on("updated", (entity, event) => {
+      if (event.source === "user") {
+        definition.config.events?.updated?.(entity, event);
       }
-    );
-    const cleanupremoved = store.events.on("removed", (entity, source) => {
-      if (source === "user") {
-        definition.config.events?.removed?.(entity, db);
+    });
+    const cleanupremoved = store.events.on("removed", (entity, event) => {
+      if (event.source === "user") {
+        definition.config.events?.removed?.(entity, event);
       }
     });
 

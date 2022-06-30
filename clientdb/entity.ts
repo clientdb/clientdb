@@ -16,6 +16,7 @@ import { EntityChangeSource } from "./types";
 import { assert } from "./utils/assert";
 import { CleanupObject, createCleanupObject } from "./utils/cleanup";
 import { typedKeys } from "./utils/object";
+import { getChangedData } from "./utils/getChangedData";
 
 export interface EntityUpdateResult {
   hadChanges: boolean;
@@ -55,18 +56,27 @@ interface CreateEntityInput<D, V> {
   store: EntityStore<D, V>;
 }
 
-function assertDataHasAllFields<D>(
+function assertDataMatchDefinition<D>(
   data: D,
   definition: EntityDefinition<D, any>
 ) {
-  const rawDataKeys = typedKeys(data);
+  const rawDataKeys = new Set(typedKeys(data));
 
-  for (const requiredKey of definition.config.keys ?? []) {
+  for (const requiredKey of definition.config.keys) {
     assert(
-      rawDataKeys.includes(requiredKey),
+      rawDataKeys.has(requiredKey),
       `Required field "${
         requiredKey as string
       }" is missing when creating new entity ${definition.config.name}`
+    );
+
+    rawDataKeys.delete(requiredKey);
+  }
+
+  if (rawDataKeys.size > 0) {
+    const missingFields = Array.from(rawDataKeys).join(", ");
+    throw new Error(
+      `Unknown fields "${missingFields}" found when creating new entity "${definition.config.name}"`
     );
   }
 }
@@ -79,6 +89,7 @@ function fillDataDefaults<D>(data: Partial<D>, store: EntityStore<D, any>): D {
   if (!definition.config.getDefaultValues) {
     return data as D;
   }
+
   const dataWithDefaults = {
     ...config.getDefaultValues?.(db),
     ...data,
@@ -96,7 +107,7 @@ export function createEntity<D, V>({
   const { config } = definition;
   const dataWithDefaults = fillDataDefaults(data, store);
 
-  assertDataHasAllFields(dataWithDefaults, definition);
+  assertDataMatchDefinition(dataWithDefaults, definition);
 
   const initialKey = data[config.idField];
 
@@ -206,19 +217,27 @@ export function createEntity<D, V>({
 
       const undoData = pick(dataBeforeUpdate, changedKeys);
 
-      store.events.emit("willUpdate", entity, input, source);
+      store.events.emit("willUpdate", entity, { input, source, db });
+
+      const changedData: Partial<D> = {};
 
       runInAction(() => {
         changedKeys.forEach((keyToUpdate) => {
           const value = input[keyToUpdate];
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           (entity as D)[keyToUpdate] = value!;
+          changedData[keyToUpdate] = value;
         });
 
         touchUpdatedAt();
       });
 
-      store.events.emit("updated", entity, dataBeforeUpdate, source);
+      store.events.emit("updated", entity, {
+        dataBefore: dataBeforeUpdate,
+        changedKeys,
+        changedData,
+        source,
+        db,
+      });
 
       return {
         hadChanges: true,
