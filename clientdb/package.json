@@ -1,7 +1,23 @@
 {
   "name": "@acapela/clientdb",
-  "version": "0.1.6",
+  "version": "0.1.7",
+  "description": "ClientDB is an open source in-memory database for enabling real-time web apps.",
   "license": "Apache-2.0",
+  "keywords": [
+    "database",
+    "BaaS",
+    "IndexedDB",
+    "in-memory",
+    "real-time",
+    "client"
+  ],
+  "bugs": {
+    "url": "https://github.com/acapela/clientdb/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acapela/clientdb.git"
+  },
   "source": "index.ts",
   "main": "index.js",
   "module": "index.module.js",
