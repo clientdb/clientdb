@@ -1,27 +1,32 @@
-name: Publish to NPM
-on: push
+name: CI
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
 
 jobs:
   build:
-    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/setup-deps
-      - name: Build ClientDB tar package 🔧
-        run: cd clientdb && yarn build
-
-  publish:
-    name: Publish package on NPM 📦
+      - run: yarn core build
+      #- run: yarn core test
+  release:
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: ./.github/actions/setup-deps
+      - uses: go-semantic-release/action@v1
+        id: semrel
         with:
-          node-version: "16"
-      - run: npm install
-      - run: npm test
-      - uses: JS-DevTools/npm-publish@v1
-        working-directory: ./clientdb
-        with:
-          token: ${{ secrets.NPM_ACCESS_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          update-file: ./clientdb/package.json
+      - run: yarn core build && yarn publish ./clientdb
+        if: steps.semrel.outputs.version != ''
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
