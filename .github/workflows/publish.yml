@@ -25,6 +25,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           update-file: ./clientdb/package.json
+          allow-initial-development-versions: true
       - uses: ./.github/actions/setup-deps
         if: steps.semrel.outputs.version != ''
       - run: yarn core build && npm publish ./clientdb
