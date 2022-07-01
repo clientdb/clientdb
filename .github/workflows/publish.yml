@@ -27,7 +27,7 @@ jobs:
           update-file: ./clientdb/package.json
       - uses: ./.github/actions/setup-deps
         if: steps.semrel.outputs.version != ''
-      - run: yarn core build && yarn publish ./clientdb
+      - run: yarn core build && yarn npm publish ./clientdb
         if: steps.semrel.outputs.version != ''
         env:
           NPM_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
