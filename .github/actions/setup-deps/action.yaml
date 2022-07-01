@@ -3,10 +3,11 @@ description: "Installs node, yarn and project dependencies"
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-node@v2
+    - uses: actions/setup-node@v3
       with:
         node-version: "16"
-    - uses: actions/cache@v2
+        registry-url: 'https://registry.npmjs.org'
+    - uses: actions/cache@v3
       with:
         path: .yarn/cache
         key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
