@@ -20,13 +20,14 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v3
-      - uses: ./.github/actions/setup-deps
       - uses: go-semantic-release/action@v1
         id: semrel
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           update-file: ./clientdb/package.json
+      - uses: ./.github/actions/setup-deps
+        if: steps.semrel.outputs.version != ''
       - run: yarn core build && yarn publish ./clientdb
         if: steps.semrel.outputs.version != ''
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
