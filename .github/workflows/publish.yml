@@ -1,0 +1,27 @@
+name: Publish to NPM
+on: push
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup-deps
+      - name: Build ClientDB tar package 🔧
+        run: cd clientdb && yarn build
+
+  publish:
+    name: Publish package on NPM 📦
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+      - run: npm install
+      - run: npm test
+      - uses: JS-DevTools/npm-publish@v1
+        working-directory: ./clientdb
+        with:
+          token: ${{ secrets.NPM_ACCESS_TOKEN }}
