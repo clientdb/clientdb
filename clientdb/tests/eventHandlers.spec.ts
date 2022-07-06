@@ -12,7 +12,7 @@ const updated = jest.fn();
 const removed = jest.fn();
 
 const owner = defineEntity<TestOwnerEntity>({
-  keyField: "id",
+  idField: "id",
   keys: ["id", "name", "updatedAt"],
   updatedAtField: "updatedAt",
   name: "owner",

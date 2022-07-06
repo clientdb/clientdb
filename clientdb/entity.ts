@@ -16,7 +16,6 @@ import { EntityChangeSource } from "./types";
 import { assert } from "./utils/assert";
 import { CleanupObject, createCleanupObject } from "./utils/cleanup";
 import { typedKeys } from "./utils/object";
-import { getChangedData } from "./utils/getChangedData";
 
 export interface EntityUpdateResult {
   hadChanges: boolean;
@@ -93,7 +92,7 @@ function fillDataDefaults<D>(data: Partial<D>, store: EntityStore<D, any>): D {
   const dataWithDefaults = {
     ...config.getDefaultValues?.(db),
     ...data,
-  } as D;
+  } as unknown as D;
 
   return dataWithDefaults;
 }

@@ -9,7 +9,9 @@ describe("persistance", () => {
       persistanceMocks: {
         owner: {
           async fetchAllItems() {
-            return [{ id: "1", name: "Adam", updatedAt: new Date() }];
+            return [
+              { id: "1", name: "Adam", updatedAt: new Date(), hide: false },
+            ];
           },
         },
       },

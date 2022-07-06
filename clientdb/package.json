@@ -1,5 +1,5 @@
 {
-  "name": "@acapela/clientdb",
+  "name": "clientdb",
   "version": "0.0.0-development",
   "description": "ClientDB is an open source in-memory database for enabling real-time web apps.",
   "license": "Apache-2.0",

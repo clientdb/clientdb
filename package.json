@@ -12,6 +12,8 @@
     "clientdb"
   ],
   "dependencies": {
+    "graphql": "^16.5.0",
+    "idb": "^7.0.2",
     "mobx": "6.6.1"
   },
   "scripts": {
@@ -20,6 +22,7 @@
   "devDependencies": {
     "@parcel/packager-ts": "2.6.2",
     "@parcel/transformer-typescript-types": "2.6.2",
+    "typedoc": "^0.23.5",
     "typescript": ">=3.0.0"
   },
   "packageManager": "yarn@3.2.1"

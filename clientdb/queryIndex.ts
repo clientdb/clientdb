@@ -260,7 +260,7 @@ export function createQueryFieldIndex<
     const results = observableIndex.get(indexValue);
 
     if (!results) {
-      return [];
+      return observable.array();
     }
 
     return results;

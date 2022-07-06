@@ -81,7 +81,7 @@ export function createIndexedDbAdapter(): PersistanceAdapter {
                * Context: if you have 2 tabs opened with the app, but some of them is having 'older' db version, and you refresh never one
                * this callback will be called.
                *
-               * TLDR: this callback = "if I am already opened, but someone else wants to upgrade db version (potentially in different tab!) - call this callback"
+               * TL;DR: this callback = "if I am already opened, but someone else wants to upgrade db version (potentially in different tab!) - call this callback"
                */
 
               // If this happens, we indeed want to instantly close the connection and reload the page (it usually means user has 'old' tab opened for a long time!)

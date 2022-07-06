@@ -2,10 +2,10 @@ import { waitForAllSyncToFlush } from "clientdb";
 import { createResolvablePromise, wait } from "../utils/promises";
 
 import {
-  DefaultEntitiesMap,
-  TestOwnerEntity,
   createTestDb,
+  EntitySyncConfigMock,
   owner,
+  TestOwnerEntity,
 } from "./utils";
 
 describe("sync", () => {
@@ -15,10 +15,12 @@ describe("sync", () => {
         owner: {
           pullUpdated: ({ isFirstSync, updateItems }) => {
             if (isFirstSync) {
-              updateItems([{ id: "1", name: "Adam", updatedAt: new Date() }]);
+              updateItems([
+                { id: "1", name: "Adam", updatedAt: new Date(), hide: false },
+              ]);
             }
           },
-        },
+        } as EntitySyncConfigMock<TestOwnerEntity>,
       },
     });
 

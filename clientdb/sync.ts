@@ -200,10 +200,10 @@ export function createEntitySyncManager<Data, View>(
 
     runUntracked(() => {
       store.items.forEach((item) => {
-        const nextupdatedAt = item.getUpdatedAt();
+        const nextUpdatedAt = item.getUpdatedAt();
 
-        if (nextupdatedAt > initialDate) {
-          initialDate = nextupdatedAt;
+        if (nextUpdatedAt > initialDate) {
+          initialDate = nextUpdatedAt;
         }
       });
     });

@@ -124,7 +124,7 @@ export function defineEntity<Data extends {}, View extends {} = {}>(
       return defineEntity<Data, View>({
         ...config,
         getView,
-      } as EntityConfig<Data, View>) as EntityDefinition<Data, View>;
+      } as unknown as EntityConfig<Data, View>) as EntityDefinition<Data, View>;
     },
     addRootFilter(validator) {
       return defineEntity({ ...config, rootFilter: validator });
