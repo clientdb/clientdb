@@ -102,18 +102,5 @@
     "skipLibCheck": true /* Skip type checking all .d.ts files. */
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.d.ts"],
-  "exclude": ["node_modules"],
-  "typedocOptions": {
-    "entryPoints": ["clientdb/index.ts"],
-    "exclude": ["**/*+(.test|.spec|.e2e).ts", "**/tests/**"],
-    "excludeNotDocumented": true,
-    "excludeInternal": true,
-    "excludePrivate": true,
-    "excludeProtected": true,
-    "excludeExternals": true,
-    "hideGenerator": true,
-    "defaultCategory": "Default",
-    "categoryOrder": ["Default", "Category Name", "Other Category", "*"],
-    "out": "docs"
-  }
+  "exclude": ["node_modules"]
 }
