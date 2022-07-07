@@ -15,7 +15,5 @@ export function createEntityFromSchema<D, V>(
     idField: entitySchema.idField,
     name: entitySchema.name,
     keys: entitySchema.attributes.map((attr) => attr.name),
-    sync: {},
-    updatedAtField: "updated_at",
   }) as any;
 }

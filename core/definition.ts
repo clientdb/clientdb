@@ -24,7 +24,6 @@ interface EntityConfig<Data, View> {
   name: string;
   keys: Array<keyof Data>;
   idField: keyof Data;
-  updatedAtField: keyof Data;
   uniqueProps?: Array<keyof Data>;
   /**
    * We require optional values (null and undefined) to be explicitly provided.
