@@ -1,0 +1,308 @@
+{
+  "types": [
+    {
+      "schemaID": 2200,
+      "schemaName": "public",
+      "typeID": 16447,
+      "typeName": "_list",
+      "kind": "array",
+      "category": "A",
+      "comment": null,
+      "subtypeID": 16448,
+      "subtypeName": "list"
+    },
+    {
+      "schemaID": 2200,
+      "schemaName": "public",
+      "typeID": 16465,
+      "typeName": "_todo",
+      "kind": "array",
+      "category": "A",
+      "comment": null,
+      "subtypeID": 16466,
+      "subtypeName": "todo"
+    },
+    {
+      "schemaID": 2200,
+      "schemaName": "public",
+      "typeID": 16448,
+      "typeName": "list",
+      "kind": "c",
+      "category": "C",
+      "comment": null,
+      "classID": 16446,
+      "attributes": [
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16446,
+          "className": "list",
+          "attributeNumber": 1,
+          "attributeName": "id",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "gen_random_uuid()",
+          "comment": null,
+          "typeID": 2950,
+          "typeLength": -1
+        },
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16446,
+          "className": "list",
+          "attributeNumber": 3,
+          "attributeName": "is_private",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "false",
+          "comment": null,
+          "typeID": 16,
+          "typeLength": -1
+        },
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16446,
+          "className": "list",
+          "attributeNumber": 2,
+          "attributeName": "name",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "comment": null,
+          "typeID": 25,
+          "typeLength": -1
+        }
+      ]
+    },
+    {
+      "schemaID": 2200,
+      "schemaName": "public",
+      "typeID": 16466,
+      "typeName": "todo",
+      "kind": "c",
+      "category": "C",
+      "comment": null,
+      "classID": 16464,
+      "attributes": [
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16464,
+          "className": "todo",
+          "attributeNumber": 3,
+          "attributeName": "done_at",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "comment": null,
+          "typeID": 1114,
+          "typeLength": -1
+        },
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16464,
+          "className": "todo",
+          "attributeNumber": 1,
+          "attributeName": "id",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "gen_random_uuid()",
+          "comment": null,
+          "typeID": 2950,
+          "typeLength": -1
+        },
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16464,
+          "className": "todo",
+          "attributeNumber": 4,
+          "attributeName": "list_id",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "comment": null,
+          "typeID": 2950,
+          "typeLength": -1
+        },
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16464,
+          "className": "todo",
+          "attributeNumber": 2,
+          "attributeName": "name",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "comment": null,
+          "typeID": 25,
+          "typeLength": -1
+        }
+      ]
+    }
+  ],
+  "classes": [
+    {
+      "schemaID": 2200,
+      "schemaName": "public",
+      "classID": 16446,
+      "className": "list",
+      "kind": "r",
+      "comment": null,
+      "attributes": [
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16446,
+          "className": "list",
+          "attributeNumber": 1,
+          "attributeName": "id",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "gen_random_uuid()",
+          "comment": null,
+          "typeID": 2950,
+          "typeLength": -1
+        },
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16446,
+          "className": "list",
+          "attributeNumber": 3,
+          "attributeName": "is_private",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "false",
+          "comment": null,
+          "typeID": 16,
+          "typeLength": -1
+        },
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16446,
+          "className": "list",
+          "attributeNumber": 2,
+          "attributeName": "name",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "comment": null,
+          "typeID": 25,
+          "typeLength": -1
+        }
+      ],
+      "constraints": [
+        {
+          "constraintName": "list_pkey",
+          "constraintType": "p",
+          "classID": 16446,
+          "referencedClassID": 0,
+          "foreignKeyUpdateAction": " ",
+          "foreignKeyDeletionAction": " ",
+          "foreignKeyMatchType": " ",
+          "tableAttributeNumbers": [1],
+          "referencedAttributeNumbers": null,
+          "constraintDescription": "PRIMARY KEY (id)"
+        }
+      ]
+    },
+    {
+      "schemaID": 2200,
+      "schemaName": "public",
+      "classID": 16464,
+      "className": "todo",
+      "kind": "r",
+      "comment": null,
+      "attributes": [
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16464,
+          "className": "todo",
+          "attributeNumber": 3,
+          "attributeName": "done_at",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "comment": null,
+          "typeID": 1114,
+          "typeLength": -1
+        },
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16464,
+          "className": "todo",
+          "attributeNumber": 1,
+          "attributeName": "id",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "gen_random_uuid()",
+          "comment": null,
+          "typeID": 2950,
+          "typeLength": -1
+        },
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16464,
+          "className": "todo",
+          "attributeNumber": 4,
+          "attributeName": "list_id",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "comment": null,
+          "typeID": 2950,
+          "typeLength": -1
+        },
+        {
+          "schemaID": 2200,
+          "schemaName": "public",
+          "classID": 16464,
+          "className": "todo",
+          "attributeNumber": 2,
+          "attributeName": "name",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "comment": null,
+          "typeID": 25,
+          "typeLength": -1
+        }
+      ],
+      "constraints": [
+        {
+          "constraintName": "todo_list_id_fkey",
+          "constraintType": "f",
+          "classID": 16464,
+          "referencedClassID": 16446,
+          "foreignKeyUpdateAction": "a",
+          "foreignKeyDeletionAction": "a",
+          "foreignKeyMatchType": "s",
+          "tableAttributeNumbers": [4],
+          "referencedAttributeNumbers": [1],
+          "constraintDescription": "FOREIGN KEY (list_id) REFERENCES list(id)"
+        },
+        {
+          "constraintName": "todo_pkey",
+          "constraintType": "p",
+          "classID": 16464,
+          "referencedClassID": 0,
+          "foreignKeyUpdateAction": " ",
+          "foreignKeyDeletionAction": " ",
+          "foreignKeyMatchType": " ",
+          "tableAttributeNumbers": [1],
+          "referencedAttributeNumbers": null,
+          "constraintDescription": "PRIMARY KEY (id)"
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "name": "@acapela/clientdb",
+  "name": "@clientdb/core",
   "version": "0.1.5",
   "license": "LGPL-3.0-or-later",
   "source": "index.ts",
@@ -8,7 +8,8 @@
   "types": "index.d.ts",
   "dependencies": {
     "flexsearch": "^0.7.21",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "prettier": "^2.7.1"
   },
   "devDependencies": {
     "@types/flexsearch": "^0.7.2",

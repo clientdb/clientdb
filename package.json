@@ -4,13 +4,15 @@
   "license": "LGPL-3.0-or-later",
   "private": true,
   "workspaces": [
-    "clientdb"
+    "core",
+    "engine"
   ],
   "dependencies": {
     "mobx": "6.6.1"
   },
   "scripts": {
-    "core": "yarn workspace @acapela/clientdb"
+    "core": "yarn workspace @clientdb/core",
+    "engine": "yarn workspace @clientdb/engine"
   },
   "devDependencies": {
     "@parcel/packager-ts": "2.6.2",

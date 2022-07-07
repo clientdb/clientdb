@@ -1,0 +1,20 @@
+{
+  "name": "@clientdb/engine",
+  "version": "0.1.5",
+  "license": "LGPL-3.0-or-later",
+  "source": "index.ts",
+  "main": "index.js",
+  "module": "index.module.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "docker": "docker-compose up -d",
+    "gen": "ts-node-dev generate.ts"
+  },
+  "dependencies": {
+    "@databases/pg": "^5.4.1",
+    "@databases/pg-schema-introspect": "^4.1.0"
+  },
+  "devDependencies": {
+    "ts-node-dev": "^2.0.0"
+  }
+}
