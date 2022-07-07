@@ -6,7 +6,6 @@ import { ClientDb } from "./db";
 import { EntityUpdateResult } from "./entity";
 import { EntityFilterFunction, SortResult } from "./query";
 import { EntitySearchConfig } from "./search";
-import { EntitySyncConfig } from "./sync";
 import { CleanupObject } from "./utils/cleanup";
 import { getHash } from "./utils/hash";
 import { PartialWithExplicitOptionals } from "./utils/types";
@@ -37,7 +36,6 @@ interface EntityConfig<Data, View> {
    * Thus for { foo?: Maybe<string> } it would be required to provide { foo: null } as a default instead of {}
    */
   getDefaultValues?: (db: ClientDb) => PartialWithExplicitOptionals<Data>;
-  sync: EntitySyncConfig<Data>;
   defaultSort?: (item: Data) => SortResult;
   customObservableAnnotations?: AnnotationsMap<Data, never>;
   /**

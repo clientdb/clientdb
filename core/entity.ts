@@ -7,8 +7,6 @@ import {
   toJS,
 } from "mobx";
 
-import { waitForEntityAllAwaitingPushOperations } from "./sync";
-
 import { ClientDb } from "./db";
 import { EntityDefinition, EntityViewLinker } from "./definition";
 import { EntityStore } from "./store";
@@ -16,7 +14,6 @@ import { EntityChangeSource } from "./types";
 import { assert } from "./utils/assert";
 import { CleanupObject, createCleanupObject } from "./utils/cleanup";
 import { typedKeys } from "./utils/object";
-import { getChangedData } from "./utils/getChangedData";
 
 export interface EntityUpdateResult {
   hadChanges: boolean;
@@ -32,7 +29,6 @@ type EntityMethods<Data, View> = {
   getUpdatedAt(): Date;
   remove(source?: EntityChangeSource): void;
   isRemoved(): boolean;
-  waitForSync(): Promise<void>;
   definition: EntityDefinition<Data, View>;
   db: ClientDb;
   cleanup: CleanupObject;
@@ -46,10 +42,6 @@ export type EntityByDefinition<Def> = Def extends EntityDefinition<
 >
   ? Entity<Data, View>
   : never;
-
-export interface CreateEntityConfig {
-  needsSync: boolean;
-}
 
 interface CreateEntityInput<D, V> {
   data: Partial<D>;
@@ -161,9 +153,6 @@ export function createEntity<D, V>({
     isRemoved() {
       return !store.findById(entityMethods.getId());
     },
-    waitForSync() {
-      return waitForEntityAllAwaitingPushOperations(entity);
-    },
     getId() {
       return `${entity[config.idField]}`;
     },
@@ -257,7 +246,6 @@ export function createEntity<D, V>({
       getIdPropName: false,
       getUpdatedAt: false,
       definition: false,
-      waitForSync: false,
       remove: action,
       update: action,
       db: false,
