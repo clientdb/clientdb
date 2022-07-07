@@ -1,59 +1,18 @@
-import { DbSchema } from "../schema/schema";
-
-export type MutationRemoveInput = {
-  type: "remove";
-  entity: string;
-  id: string;
-};
-
-export type MutationUpdateInput = {
-  type: "update";
-  entity: string;
-  id: string;
-  data: object;
-};
-
-export type MutationCreateInput = {
-  type: "create";
-  entity: string;
-  data: object;
-};
-
-export type MutationInput =
-  | MutationRemoveInput
-  | MutationUpdateInput
-  | MutationCreateInput;
-
-export interface MutationContext {
-  userId: string | null;
-  schema: DbSchema;
-  connector: any;
-}
-
-export async function getCanPerformMutation(
-  context: MutationContext,
-  mutation: MutationInput
-): Promise<boolean> {
-  switch (mutation.type) {
-    case "remove":
-      return true;
-    case "update":
-      return true;
-    case "create":
-      return true;
-    default:
-      return false;
-  }
-}
+import { EntityChange } from "./change";
+import { getIsChangeAllowed } from "./changePermission";
+import { getIsChangeDataValid } from "./changeValidation";
+import { SyncRequestContext } from "./context";
 
 export async function performMutation(
-  context: MutationContext,
-  input: MutationInput
+  context: SyncRequestContext,
+  input: EntityChange
 ): Promise<void> {
-  const canPerform = await getCanPerformMutation(context, input);
+  if (!getIsChangeDataValid(context, input)) {
+    throw new Error("Invalid change data");
+  }
 
-  if (!canPerform) {
-    throw new Error("Cannot perform mutation");
+  if (!(await getIsChangeAllowed(context, input))) {
+    throw new Error("Change is not allowed");
   }
 
   switch (input.type) {

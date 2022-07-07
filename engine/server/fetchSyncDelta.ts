@@ -24,10 +24,10 @@ export type EntityDelta =
   | EntityUpdateRequest
   | EntityCreateRequest;
 
-export async function fetchDelta(
+export async function fetchSyncDelta(
   context: SyncRequestContext
 ): Promise<EntityDelta[]> {
-  const { connector, schema } = context;
+  const { connector, schema, lastSyncId } = context;
 
   const deltaPromises = schema.entities.map(async (entity) => {
     const kind = entity.name;
