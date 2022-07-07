@@ -8,7 +8,7 @@
   "types": "index.d.ts",
   "scripts": {
     "docker": "docker-compose up -d",
-    "gen": "ts-node-dev generate.ts"
+    "gen": "ts-node-dev client.ts"
   },
   "dependencies": {
     "@databases/pg": "^5.4.1",

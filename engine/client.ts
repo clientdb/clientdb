@@ -1,13 +1,7 @@
-import connect, { sql } from "@databases/pg";
+import connect from "@databases/pg";
 
-import introspectDb, {
-  ArrayType,
-  Schema,
-} from "@databases/pg-schema-introspect";
-
-export function createClientFromSchema(schema: Schema) {
-  schema.classes;
-}
+import { generateClient } from "./generate/all";
+import { introspectPGSchema } from "./introspection/pg";
 
 async function generate() {
   const db = connect({
@@ -19,11 +13,9 @@ async function generate() {
     host: "localhost",
   });
 
-  const schema = await introspectDb(db);
+  const schema = await introspectPGSchema(db);
 
-  console.log(JSON.stringify(schema, undefined, 2));
-
-  createClientFromSchema(schema);
+  generateClient(schema);
 }
 
 generate();

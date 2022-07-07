@@ -1,9 +1,10 @@
 import {
   ClassDetails,
   ConstraintType,
+  Queryable,
   Schema,
 } from "@databases/pg-schema-introspect";
-import { PgTypesLookup } from "./pgTypes";
+import { getDbTypes, PgTypesLookup } from "./pgTypes";
 import { getPlural } from "../../utils/pluralize";
 import {
   DbSchema,
@@ -12,6 +13,7 @@ import {
   SchemaEntityReferenceRelation,
 } from "../../schema/schema";
 
+import introspectDb from "@databases/pg-schema-introspect";
 function convertReferenceRelationToListRelation(
   entity: SchemaEntity,
   referenceRelation: SchemaEntityReferenceRelation
@@ -166,7 +168,9 @@ function findEntityByName(entityes: SchemaEntity[], name: string) {
   return entityes.find((e) => e.name === name);
 }
 
-export function parseDatabaseSchema(context: ParseSchemaContext): DbSchema {
+export function parseDatabaseSchemaWithContext(
+  context: ParseSchemaContext
+): DbSchema {
   const { schema } = context;
   const { classes, types } = schema;
 
@@ -198,4 +202,19 @@ export function parseDatabaseSchema(context: ParseSchemaContext): DbSchema {
   }
 
   return { entities };
+}
+
+export async function introspectPGSchema(
+  connection: Queryable
+): Promise<DbSchema> {
+  const typesLookup = await getDbTypes(connection);
+  const classEntityLookup = new Map<ClassDetails, SchemaEntity>();
+
+  const schema = await introspectDb(connection);
+
+  return parseDatabaseSchemaWithContext({
+    typesLookup,
+    classEntityLookup,
+    schema,
+  });
 }
