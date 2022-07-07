@@ -9,7 +9,8 @@
     "url": "https://github.com/acapela/clientdb.git"
   },
   "workspaces": [
-    "clientdb"
+    "clientdb",
+    "docs"
   ],
   "dependencies": {
     "graphql": "^16.5.0",
