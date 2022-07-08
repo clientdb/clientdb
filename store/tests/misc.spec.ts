@@ -1,8 +1,8 @@
 import { createTestDb, dog, owner } from "./utils";
 
 describe("clientdb misc", () => {
-  async function getTestDb() {
-    const db = await createTestDb();
+  function getTestDb() {
+    const db = createTestDb();
 
     const adam = db.entity(owner).create({ name: "Adam" });
     const omar = db.entity(owner).create({ name: "Omar" });
@@ -26,8 +26,8 @@ describe("clientdb misc", () => {
     ] as const;
   }
 
-  it("removes item", async () => {
-    const [db, data] = await getTestDb();
+  it("removes item", () => {
+    const [db, data] = getTestDb();
 
     expect(data.owners.adam.dogs.all.length).toBe(2);
 
@@ -41,8 +41,8 @@ describe("clientdb misc", () => {
     db.destroy();
   });
 
-  it("will prevent breaking unique index", async () => {
-    const [db] = await getTestDb();
+  it("will prevent breaking unique index", () => {
+    const [db] = getTestDb();
 
     expect(() => {
       db.entity(owner).create({ name: "Adam" });
@@ -51,8 +51,8 @@ describe("clientdb misc", () => {
     );
   });
 
-  it("will prevent duplicating id", async () => {
-    const [db, data] = await getTestDb();
+  it("will prevent duplicating id", () => {
+    const [db, data] = getTestDb();
 
     expect(() => {
       db.entity(owner).create({ name: "Adam 2", id: data.owners.adam.id });
@@ -61,8 +61,8 @@ describe("clientdb misc", () => {
     );
   });
 
-  it("will prevent updating id", async () => {
-    const [db, data] = await getTestDb();
+  it("will prevent updating id", () => {
+    const [db, data] = getTestDb();
 
     expect(() => {
       data.owners.adam.update({ id: "new-id" });
@@ -71,8 +71,8 @@ describe("clientdb misc", () => {
     );
   });
 
-  it("will properly undo update", async () => {
-    const [db, data] = await getTestDb();
+  it("will properly undo update", () => {
+    const [db, data] = getTestDb();
 
     const undo = data.owners.adam.update({ name: "Not Adam" }).rollback;
 
@@ -83,8 +83,8 @@ describe("clientdb misc", () => {
     expect(data.owners.adam.name).toBe("Adam");
   });
 
-  it("will properly detect empty update", async () => {
-    const [db, data] = await getTestDb();
+  it("will properly detect empty update", () => {
+    const [db, data] = getTestDb();
 
     expect(data.owners.adam.update({ name: "Adam" }).changes).toEqual({});
     expect(data.owners.adam.update({ name: "Adam2" }).changes).toEqual({
@@ -92,8 +92,8 @@ describe("clientdb misc", () => {
     });
   });
 
-  it("will exclude items not passing root filter", async () => {
-    const [db, data] = await getTestDb();
+  it("will exclude items not passing root filter", () => {
+    const [db, data] = getTestDb();
 
     const owners = db.entity(owner);
 

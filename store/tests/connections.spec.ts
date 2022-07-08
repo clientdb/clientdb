@@ -1,8 +1,8 @@
 import { createTestDb, dog, owner } from "./utils";
 
 describe("clientdb query", () => {
-  async function getTestDb() {
-    const db = await createTestDb();
+  function getTestDb() {
+    const db = createTestDb();
 
     const adam = db.entity(owner).create({ name: "Adam" });
     const omar = db.entity(owner).create({ name: "Omar" });
@@ -26,8 +26,8 @@ describe("clientdb query", () => {
     ] as const;
   }
 
-  it("resolves relation", async () => {
-    const [db, data] = await getTestDb();
+  it("resolves relation", () => {
+    const [db, data] = getTestDb();
 
     expect(data.dogs.adams_rex.owner).toBe(data.owners.adam);
     const adamsDogs = data.owners.adam.dogs.all;
@@ -39,8 +39,8 @@ describe("clientdb query", () => {
     db.destroy();
   });
 
-  it("resolves relation after updates", async () => {
-    const [db, data] = await getTestDb();
+  it("resolves relation after updates", () => {
+    const [db, data] = getTestDb();
 
     const adamsDogs = data.owners.adam.dogs;
 

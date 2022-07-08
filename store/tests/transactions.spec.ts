@@ -25,8 +25,8 @@ function getTestDb() {
 }
 
 describe("clientdb transactions", () => {
-  it("is optimistic", async () => {
-    const [db, data] = await getTestDb();
+  it("is optimistic", () => {
+    const [db, data] = getTestDb();
 
     runTransaction(() => {
       db.entity(owner).create({ name: "A" });
@@ -36,8 +36,8 @@ describe("clientdb transactions", () => {
     expect(db.entity(owner).count).toBe(4);
   });
 
-  it("will not commit data if failed", async () => {
-    const [db, data] = await getTestDb();
+  it("will not commit data if failed", () => {
+    const [db, data] = getTestDb();
 
     try {
       runTransaction(() => {
@@ -62,8 +62,8 @@ describe("clientdb transactions", () => {
     expect(db.entity(owner).count).toBe(2);
   });
 
-  it("will allow manually rejecting transaction", async () => {
-    const [db, data] = await getTestDb();
+  it("will allow manually rejecting transaction", () => {
+    const [db, data] = getTestDb();
 
     const [, tr] = runTransaction(() => {
       db.entity(owner).create({ name: "A" });
@@ -77,8 +77,8 @@ describe("clientdb transactions", () => {
     expect(db.entity(owner).count).toBe(2);
   });
 
-  it("will keep multiple transactions visible even if some are rejected", async () => {
-    const [db, data] = await getTestDb();
+  it("will keep multiple transactions visible even if some are rejected", () => {
+    const [db, data] = getTestDb();
 
     const adam = data.owners.adam;
 

@@ -1,8 +1,8 @@
 import { createTestDb, dog, owner } from "./utils";
 
 describe("clientdb query", () => {
-  async function getTestDb() {
-    const db = await createTestDb();
+  function getTestDb() {
+    const db = createTestDb();
 
     const adam = db.entity(owner).create({ name: "Adam" });
     const omar = db.entity(owner).create({ name: "Omar" });
@@ -26,8 +26,8 @@ describe("clientdb query", () => {
     ] as const;
   }
 
-  it("performs simple query", async () => {
-    const [db, data] = await getTestDb();
+  it("performs simple query", () => {
+    const [db, data] = getTestDb();
 
     const query = db.entity(owner).query({ name: "Adam" });
 
@@ -37,8 +37,8 @@ describe("clientdb query", () => {
     db.destroy();
   });
 
-  it("performs simple query with multiple allowed values", async () => {
-    const [db, data] = await getTestDb();
+  it("performs simple query with multiple allowed values", () => {
+    const [db, data] = getTestDb();
 
     expect(db.entity(owner).query({ name: ["Adam", "No-one"] }).all).toEqual([
       data.owners.adam,
@@ -51,8 +51,8 @@ describe("clientdb query", () => {
     expect(db.entity(owner).query({ name: ["nope", "dope"] }).all).toEqual([]);
   });
 
-  it("narrows down simple query", async () => {
-    const [db, data] = await getTestDb();
+  it("narrows down simple query", () => {
+    const [db, data] = getTestDb();
 
     const adamsRex = db
       .entity(dog)

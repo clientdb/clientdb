@@ -32,8 +32,8 @@ describe("Event listeners", () => {
     removed.mockReset();
   });
 
-  it("calls the item added method when item is created", async () => {
-    const db = await createTestDb();
+  it("calls the item added method when item is created", () => {
+    const db = createTestDb();
 
     const entity = db.entity(owner).create({ name: "Rasputin" });
 
@@ -47,8 +47,8 @@ describe("Event listeners", () => {
     );
   });
 
-  it("calls the item updated method when item is updated", async () => {
-    const db = await createTestDb();
+  it("calls the item updated method when item is updated", () => {
+    const db = createTestDb();
 
     const nameOnCreation = { name: "Rasputin" };
     const entity = db.entity(owner).create(nameOnCreation);
@@ -66,8 +66,8 @@ describe("Event listeners", () => {
     );
   });
 
-  it("calls the item removed method when item is removed", async () => {
-    const db = await createTestDb();
+  it("calls the item removed method when item is removed", () => {
+    const db = createTestDb();
 
     const nameOnCreation = { name: "Rasputin" };
     const entity = db.entity(owner).create(nameOnCreation);

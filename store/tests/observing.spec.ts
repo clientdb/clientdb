@@ -3,23 +3,33 @@ import { autorun, runInAction } from "mobx";
 import { createTestDb, dog, owner } from "./utils";
 
 describe("clientdb tracking", () => {
-  async function getTestDb() {
-    const db = await createTestDb();
+  function getTestDb() {
+    const db = createTestDb();
 
     const adam = db.entity(owner).create({ name: "Adam" });
     const omar = db.entity(owner).create({ name: "Omar" });
 
     const adams_rex = db.entity(dog).create({ name: "rex", owner_id: adam.id });
-    const adams_teddy = db.entity(dog).create({ name: "teddy", owner_id: adam.id });
+    const adams_teddy = db
+      .entity(dog)
+      .create({ name: "teddy", owner_id: adam.id });
 
-    const omars_rudy = db.entity(dog).create({ name: "rudy", owner_id: omar.id });
+    const omars_rudy = db
+      .entity(dog)
+      .create({ name: "rudy", owner_id: omar.id });
     const omars_rex = db.entity(dog).create({ name: "rex", owner_id: omar.id });
 
-    return [db, { owners: { adam, omar }, dogs: { adams_rex, adams_teddy, omars_rudy, omars_rex } }] as const;
+    return [
+      db,
+      {
+        owners: { adam, omar },
+        dogs: { adams_rex, adams_teddy, omars_rudy, omars_rex },
+      },
+    ] as const;
   }
 
-  it("observes deletes", async () => {
-    const [db, data] = await getTestDb();
+  it("observes deletes", () => {
+    const [db, data] = getTestDb();
 
     const tracker = jest.fn(() => {
       return data.owners.adam.dogs.all.length;
@@ -39,8 +49,8 @@ describe("clientdb tracking", () => {
     db.destroy();
   });
 
-  it("observes deletes via query", async () => {
-    const [db, data] = await getTestDb();
+  it("observes deletes via query", () => {
+    const [db, data] = getTestDb();
 
     const tracker = jest.fn(() => {
       return db.entity(dog).query({ owner_id: data.owners.omar.id }).all.length;
@@ -62,8 +72,8 @@ describe("clientdb tracking", () => {
     db.destroy();
   });
 
-  it("observes created items", async () => {
-    const [db, data] = await getTestDb();
+  it("observes created items", () => {
+    const [db, data] = getTestDb();
 
     const tracker = jest.fn(() => {
       return data.owners.adam.dogs.all.length;

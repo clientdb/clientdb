@@ -8,8 +8,8 @@ import {
 } from "./utils";
 
 describe("clientdb query", () => {
-  async function getTestDb() {
-    const db = await createTestDb();
+  function getTestDb() {
+    const db = createTestDb();
 
     const adam = db.entity(owner).create({ name: "Adam" });
     const omar = db.entity(owner).create({ name: "Omar" });
@@ -33,8 +33,8 @@ describe("clientdb query", () => {
     ] as const;
   }
 
-  it("performs query", async () => {
-    const [db] = await getTestDb();
+  it("performs query", () => {
+    const [db] = getTestDb();
 
     const queryFunction = jest.fn((owner: { name: string }) => {
       return owner.name === "Adam";
@@ -59,8 +59,8 @@ describe("clientdb query", () => {
     db.destroy();
   });
 
-  it("properly sorts results", async () => {
-    const [db, data] = await getTestDb();
+  it("properly sorts results", () => {
+    const [db, data] = getTestDb();
 
     const {
       owners: { adam, omar },
@@ -78,8 +78,8 @@ describe("clientdb query", () => {
     db.destroy();
   });
 
-  it("properly returns query meta results", async () => {
-    const [db, data] = await getTestDb();
+  it("properly returns query meta results", () => {
+    const [db, data] = getTestDb();
 
     const {
       owners: { adam, omar },
@@ -102,8 +102,8 @@ describe("clientdb query", () => {
     db.destroy();
   });
 
-  it("performs $or query", async () => {
-    const [db, data] = await getTestDb();
+  it("performs $or query", () => {
+    const [db, data] = getTestDb();
 
     const ownerQuery = db.entity(owner).query;
 
@@ -128,8 +128,8 @@ describe("clientdb query", () => {
     db.destroy();
   });
 
-  it("performs nested query", async () => {
-    const [db, data] = await getTestDb();
+  it("performs nested query", () => {
+    const [db, data] = getTestDb();
 
     expect(
       db.entity(owner).query({ name: "Adam" }).query({ dogsCount: 2 }).count
@@ -144,8 +144,8 @@ describe("clientdb query", () => {
     ).toBe(0);
   });
 
-  it("reuses query", async () => {
-    const [db, data] = await getTestDb();
+  it("reuses query", () => {
+    const [db, data] = getTestDb();
     const checker = jest.fn((owner: TestOwnerEntity) => owner.name === "Adam");
     const checker2 = jest.fn((owner: TestOwnerEntity) => owner.name === "Adam");
 
@@ -167,8 +167,8 @@ describe("clientdb query", () => {
     expect(checker2).toBeCalledTimes(ownersCount);
   });
 
-  it("reuses filter on nested query", async () => {
-    const [db, data] = await getTestDb();
+  it("reuses filter on nested query", () => {
+    const [db, data] = getTestDb();
     const checker = jest.fn((owner: TestOwnerEntity) => owner.name === "Adam");
 
     autorunOnce(() => {

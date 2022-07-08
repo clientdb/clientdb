@@ -1,8 +1,8 @@
 import { createTestDb, dog, owner } from "./utils";
 
 describe("clientdb sorting", () => {
-  async function getTestDb() {
-    const db = await createTestDb();
+  function getTestDb() {
+    const db = createTestDb();
 
     const adam = db.entity(owner).create({ name: "Adam" });
     const omar = db.entity(owner).create({ name: "Omar" });
@@ -27,7 +27,7 @@ describe("clientdb sorting", () => {
   }
 
   it("properly updates default order of owner.name", async () => {
-    const [db, data] = await getTestDb();
+    const [db, data] = getTestDb();
 
     expect(db.entity(owner).all).toEqual([data.owners.adam, data.owners.omar]);
 
@@ -39,7 +39,7 @@ describe("clientdb sorting", () => {
   });
 
   it("handles custom sorter", async () => {
-    const [db, data] = await getTestDb();
+    const [db, data] = getTestDb();
 
     const byDogsCount = db.entity(owner).sort((owner) => -owner.dogsCount);
 
