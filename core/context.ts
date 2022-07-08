@@ -13,13 +13,17 @@ export interface DbContextInstance<T> {
   context: DbContext<T>;
 }
 
-export type DbContext<T> = (value: T) => DbContextInstance<T>;
+export type DbContext<T> = ReturnType<typeof createDbContext<T>>;
 
-export function createDbContext<T>(): DbContext<T> {
-  return function dbContext(value) {
+export function createDbContext<T>(name = "Untitled Context") {
+  function dbContext(value: T) {
     return {
       value,
       context: dbContext,
     };
-  };
+  }
+
+  dbContext.contextName = name;
+
+  return dbContext;
 }

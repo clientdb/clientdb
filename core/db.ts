@@ -84,7 +84,7 @@ export function createClientDb(
 
     if (!client) {
       throw new Error(
-        `no client for given definition (${definition.config.name}) in this db. Make sure it is added to entities map when creating client db`
+        `No client for given definition (${definition.config.name}) in this db. Make sure it is added to entities map when creating client db`
       );
     }
 
@@ -93,7 +93,9 @@ export function createClientDb(
 
   function getContextValue<V>(context: DbContext<V>) {
     if (!contexts) {
-      throw new Error(`No context are defined for this db`);
+      throw new Error(
+        `No context are defined for this db (trying to get context - ${context.contextName})`
+      );
     }
 
     const correspondingContextInstance = contexts.find(
@@ -101,7 +103,9 @@ export function createClientDb(
     );
 
     if (!correspondingContextInstance) {
-      throw new Error(`No context in this db matching requested one`);
+      throw new Error(
+        `No context in this db matching requested one - ${context.contextName}`
+      );
     }
 
     return correspondingContextInstance.value as V;
