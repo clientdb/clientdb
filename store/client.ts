@@ -4,17 +4,34 @@ import { ClientDb } from "./db";
 
 import { EntityDefinition } from "./definition";
 import { Entity, createEntity } from "./entity";
-import { EntityStorePublicMethods, createEntityStore } from "./store";
+import {
+  EntityStorePublicMethods,
+  createEntityStore,
+  EntityStore,
+} from "./store";
 import { CleanupObject } from "./utils/cleanup";
+import {
+  EntityChangeEvent,
+  EntityStoreEvents,
+  EntityStoreEventsEmmiter,
+} from "./events";
+import { createEventsEmmiter } from "./utils/eventManager";
+import {
+  createTransactionWithChanges,
+  getCurrentTransaction,
+} from "./transaction";
 
 export interface EntityClient<Data, View>
   extends EntityStorePublicMethods<Data, View> {
   all: Entity<Data, View>[];
   hasItems: boolean;
+  count: number;
   create(input: Partial<Data>): Entity<Data, View>;
-  update(id: string, input: Partial<Data>): Entity<Data, View>;
   put(input: Partial<Data>): Entity<Data, View>;
   definition: EntityDefinition<Data, View>;
+  store: EntityStore<Data, View>;
+
+  events: EntityStoreEventsEmmiter<Data, View>;
 }
 
 export type EntityClientByDefinition<
@@ -43,69 +60,122 @@ export function createEntityClient<Data, View>(
     const { created, removed, updated } = definition.config.events ?? {};
 
     if (created) {
-      cleanup.next = store.events.on("created", created);
+      cleanup.next = events.on("created", created);
     }
 
     if (removed) {
-      cleanup.next = store.events.on("removed", removed);
+      cleanup.next = events.on("removed", removed);
     }
 
     if (updated) {
-      cleanup.next = store.events.on("updated", updated);
+      cleanup.next = events.on("updated", updated);
     }
   }
 
+  // Allow listening to CRUD updates in the store
+  const events = createEventsEmmiter<EntityStoreEvents<Data, View>>(
+    definition.config.name
+  );
+
+  cleanup.next = events.onOneOf(["created", "removed", "updated"], (change) => {
+    const transaction = getCurrentTransaction();
+
+    if (!transaction) {
+      const transaction = createTransactionWithChanges([
+        change as EntityChangeEvent<unknown, unknown>,
+      ]);
+
+      db.events.emit("transaction", { type: "transaction", transaction });
+      return;
+    }
+
+    transaction.registerChange(change as EntityChangeEvent<unknown, unknown>);
+  });
+
   attachEntityEvents();
 
-  const { query, findById, removeById, sort, find, findFirst, updateById } =
-    store;
+  const { query, findById, remove, sort, find, findFirst, update } = store;
 
   function createStoreEntity(input: Partial<Data>) {
-    return createEntity<Data, View>({ data: input, store });
+    return createEntity<Data, View>({ data: input, client });
   }
 
+  const countComputed = computed(() => {
+    return client.all.length;
+  });
+
   const hasItemsComputed = computed(() => {
-    return client.all.length > 0;
+    return countComputed.get() > 0;
   });
 
   const client: EntityClient<Data, View> = {
     definition,
     query,
     findById,
-    removeById,
-    updateById,
     find,
     findFirst,
     sort,
+    store,
+    events,
     get all() {
       return store.all;
+    },
+    get count() {
+      return countComputed.get();
     },
     get hasItems() {
       return hasItemsComputed.get();
     },
     create(input) {
       const newEntity = createStoreEntity(input);
-      return store.add(newEntity);
+
+      return runInAction(() => {
+        store.add(newEntity);
+        events.emit("created", {
+          db,
+          entity: newEntity,
+          type: "created",
+          rollback() {
+            store.remove(newEntity.getId());
+          },
+        });
+        return newEntity;
+      });
+    },
+    remove(id) {
+      return runInAction(() => {
+        const entity = store.findById(id);
+
+        const didRemove = store.remove(id);
+
+        if (!didRemove) return false;
+
+        events.emit("removed", {
+          db,
+          entity: entity!,
+          type: "removed",
+          rollback() {
+            store.add(entity!);
+          },
+        });
+
+        return didRemove;
+      });
     },
     update(id, input) {
-      const entity = client.findById(id);
-
-      if (!entity) {
-        throw new Error("no update with this id");
-      }
-
-      entity.update(input);
-
-      return entity;
+      return runInAction(() => {
+        const updateEvent = store.update(id, input);
+        events.emit("updated", updateEvent);
+        return updateEvent;
+      });
     },
     put(input) {
       const id = `${input[definition.config.idField]}`;
       if (client.findById(id)) {
-        return client.update(id, input);
+        return client.update(id, input).entity;
       }
 
-      const newEntity = createStoreEntity(input);
-      return store.add(newEntity);
+      return client.create(input);
     },
   };
 

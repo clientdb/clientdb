@@ -8,6 +8,8 @@ import { createEntityClient } from "./client";
 import { DbContextInstance } from "./context";
 import { createCleanupObject } from "./utils/cleanup";
 import { IS_CLIENT } from "./utils/client";
+import { ClientDbEvents, ClientDbEventsEmmiter } from "./events";
+import { createEventsEmmiter } from "./utils/eventManager";
 
 interface ClientDbUtils {
   assertNotDestroyed(msg: string): void;
@@ -19,6 +21,7 @@ export type ClientDb = {
   getContextValue<D>(context: DbContext<D>): D;
   readonly isDestroyed: boolean;
   utils: ClientDbUtils;
+  events: ClientDbEventsEmmiter;
 };
 
 interface ClientDbConfig {
@@ -37,6 +40,8 @@ export function createClientDb(
   >();
 
   const cleanup = createCleanupObject();
+
+  const events = createEventsEmmiter<ClientDbEvents>();
 
   let isDestroyed = false;
 
@@ -66,6 +71,7 @@ export function createClientDb(
       return isDestroyed;
     },
     utils,
+    events,
   };
 
   for (const definition of definitions) {

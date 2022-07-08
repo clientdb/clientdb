@@ -8,12 +8,22 @@ describe("clientdb query", () => {
     const omar = db.entity(owner).create({ name: "Omar" });
 
     const adams_rex = db.entity(dog).create({ name: "rex", owner_id: adam.id });
-    const adams_teddy = db.entity(dog).create({ name: "teddy", owner_id: adam.id });
+    const adams_teddy = db
+      .entity(dog)
+      .create({ name: "teddy", owner_id: adam.id });
 
-    const omars_rudy = db.entity(dog).create({ name: "rudy", owner_id: omar.id });
+    const omars_rudy = db
+      .entity(dog)
+      .create({ name: "rudy", owner_id: omar.id });
     const omars_rex = db.entity(dog).create({ name: "rex", owner_id: omar.id });
 
-    return [db, { owners: { adam, omar }, dogs: { adams_rex, adams_teddy, omars_rudy, omars_rex } }] as const;
+    return [
+      db,
+      {
+        owners: { adam, omar },
+        dogs: { adams_rex, adams_teddy, omars_rudy, omars_rex },
+      },
+    ] as const;
   }
 
   it("resolves relation", async () => {

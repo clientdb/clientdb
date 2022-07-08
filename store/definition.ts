@@ -3,16 +3,16 @@ import { AnnotationsMap } from "mobx";
 import { Entity } from "./entity";
 
 import { ClientDb } from "./db";
-import { EntityUpdateResult } from "./store";
-import { EntityFilterFunction, SortResult } from "./query";
-import { CleanupObject } from "./utils/cleanup";
-import { getHash } from "./utils/hash";
-import { PartialWithExplicitOptionals } from "./utils/types";
 import {
   EntityCreatedEvent,
   EntityRemovedEvent,
   EntityUpdatedEvent,
-} from "./store";
+} from "./events";
+import { EntityFilterFunction, SortResult } from "./query";
+import { EntityUpdateResult } from "./store";
+import { CleanupObject } from "./utils/cleanup";
+import { getHash } from "./utils/hash";
+import { PartialWithExplicitOptionals } from "./utils/types";
 
 type EntityRootFilter<Data, View> = (
   entity: Entity<Data, View>,
@@ -53,18 +53,9 @@ interface EntityConfig<Data, View> {
 }
 
 export type EntityEvents<Data, View> = {
-  created?: (
-    entity: Entity<Data, View>,
-    event: EntityCreatedEvent<Data>
-  ) => void;
-  updated?: (
-    entity: Entity<Data, View>,
-    event: EntityUpdatedEvent<Data>
-  ) => void;
-  removed?: (
-    entity: Entity<Data, View>,
-    event: EntityRemovedEvent<Data>
-  ) => void;
+  created?: (event: EntityCreatedEvent<Data, View>) => void;
+  updated?: (event: EntityUpdatedEvent<Data, View>) => void;
+  removed?: (event: EntityRemovedEvent<Data, View>) => void;
 };
 
 export interface EntityDefinition<Data, View> {

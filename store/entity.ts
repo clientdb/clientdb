@@ -6,17 +6,19 @@ import {
   runInAction,
   toJS,
 } from "mobx";
+import { EntityClient } from "./client";
 
 import { ClientDb } from "./db";
 import { EntityDefinition, EntityViewLinker } from "./definition";
-import { EntityStore, EntityUpdateResult } from "./store";
+import { EntityChangeEvent, EntityUpdatedEvent } from "./events";
+import { EntityStore } from "./store";
 import { assert } from "./utils/assert";
 import { CleanupObject, createCleanupObject } from "./utils/cleanup";
 import { typedKeys } from "./utils/object";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type EntityMethods<Data, View> = {
-  update(data: Partial<Data>): EntityUpdateResult;
+  update(data: Partial<Data>): EntityUpdatedEvent<Data, View>;
   getData(): Data;
   getId(): string;
   getIdPropName(): string;
@@ -24,6 +26,8 @@ type EntityMethods<Data, View> = {
   isRemoved(): boolean;
   definition: EntityDefinition<Data, View>;
   db: ClientDb;
+  store: EntityStore<Data, View>;
+  client: EntityClient<Data, View>;
   cleanup: CleanupObject;
 };
 
@@ -38,7 +42,7 @@ export type EntityByDefinition<Def> = Def extends EntityDefinition<
 
 interface CreateEntityInput<D, V> {
   data: Partial<D>;
-  store: EntityStore<D, V>;
+  client: EntityClient<D, V>;
 }
 
 function assertDataMatchDefinition<D>(
@@ -85,8 +89,9 @@ function fillDataDefaults<D>(data: Partial<D>, store: EntityStore<D, any>): D {
 
 export function createEntity<D, V>({
   data,
-  store,
+  client,
 }: CreateEntityInput<D, V>): Entity<D, V> {
+  const { store } = client;
   const { definition, db } = store;
 
   const { config } = definition;
@@ -122,9 +127,11 @@ export function createEntity<D, V>({
   const entityMethods: EntityMethods<D, V> = {
     definition,
     db: db,
+    store: store,
+    client,
     cleanup: cleanupObject,
     remove() {
-      store.removeById(entityMethods.getId());
+      client.remove(entityMethods.getId());
     },
     isRemoved() {
       return !store.findById(entityMethods.getId());
@@ -139,8 +146,8 @@ export function createEntity<D, V>({
       const rawObject = toJS(entity);
       return pick(rawObject, definition.config.keys);
     },
-    update(input): EntityUpdateResult {
-      return store.updateById(entityMethods.getId(), input);
+    update(input) {
+      return client.update(entityMethods.getId(), input);
     },
   };
 
@@ -153,6 +160,9 @@ export function createEntity<D, V>({
       getIdPropName: false,
       definition: false,
       remove: action,
+      store: false,
+      client: false,
+      cleanup: false,
       update: action,
       db: false,
     }

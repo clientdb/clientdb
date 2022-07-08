@@ -82,3 +82,30 @@ export function getMaxBy<T>(items: T[], getter: (item: T) => number) {
     return max;
   }, -Infinity);
 }
+
+interface ItemsGroup<T, G> {
+  items: T[];
+  group: G;
+}
+
+export function groupItems<T, G>(
+  items: T[],
+  groupper: (item: T) => G
+): ItemsGroup<T, G>[] {
+  const groupsMap = new Map<G, T[]>();
+
+  for (const item of items) {
+    const group = groupper(item);
+
+    if (!groupsMap.has(group)) {
+      groupsMap.set(group, []);
+    }
+
+    groupsMap.get(group)!.push(item);
+  }
+
+  return [...groupsMap.entries()].map(([group, items]) => ({
+    group,
+    items,
+  }));
+}

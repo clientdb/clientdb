@@ -30,6 +30,8 @@ export type IndexValueInput<T> = Thunk<T | T[]>;
 
 export interface QueryIndex<D, V, K extends IndexableKey<D & V>> {
   find(value: IndexFindInput<D, V, K>): Entity<D, V>[];
+  update(entity: Entity<D, V>): void;
+  remove(entity: Entity<D, V>): void;
 }
 
 /**
@@ -172,23 +174,6 @@ export function createQueryFieldIndex<
   );
 
   /**
-   * Built in key syncing
-   */
-  function handleBuiltInSyncing() {
-    // Populate index
-    runInAction(() => {
-      store.items.forEach((entity) => {
-        updateItemIndex(entity);
-      });
-    });
-
-    // On raw update/remove/add events simply update index or remove item from index
-    cleanup.next = store.events.on("created", updateItemIndex);
-    cleanup.next = store.events.on("updated", updateItemIndex);
-    cleanup.next = store.events.on("removed", removeItemFromIndex);
-  }
-
-  /**
    * Derieved handling
    */
 
@@ -210,6 +195,8 @@ export function createQueryFieldIndex<
       updateItemIndexWithValue(entity, change.newValue as TargetValue);
     });
 
+    cleanup.next = stop;
+
     // Save cleanup and mark entity as already observed
     entityDerievationWatching.set(entity, stop);
   }
@@ -228,30 +215,35 @@ export function createQueryFieldIndex<
     watchingStop();
   }
 
-  // Initialize derieved index
-  function handleDerievedSyncing() {
+  function handleUpdateRequest(entity: TargetEntity) {
+    if (isBasedOnBuiltInKey) {
+      updateItemIndex(entity);
+      return;
+    }
+
+    if (entityDerievationWatching.has(entity)) return;
+
+    registerEntityForDerievedChanges(entity);
+  }
+
+  function handleRemoveRequest(entity: TargetEntity) {
+    if (isBasedOnBuiltInKey) {
+      removeItemFromIndex(entity);
+      return;
+    }
+
+    stopWatchingEntityForDerievedChange(entity);
+  }
+
+  function initializeIndex() {
     runInAction(() => {
       store.items.forEach((entity) => {
-        // Populate index with initial values
-        updateItemIndex(entity);
-        // Start watching using mobx
-        registerEntityForDerievedChanges(entity);
+        handleUpdateRequest(entity);
       });
     });
-
-    // We only need added/removed item
-    cleanup.next = store.events.on("created", registerEntityForDerievedChanges);
-    cleanup.next = store.events.on(
-      "removed",
-      stopWatchingEntityForDerievedChange
-    );
   }
 
-  if (isBasedOnBuiltInKey) {
-    handleBuiltInSyncing();
-  } else {
-    handleDerievedSyncing();
-  }
+  initializeIndex();
 
   function findResultsForIndexValue(indexValue: TargetValue) {
     const results = observableIndex.get(indexValue);
@@ -292,5 +284,7 @@ export function createQueryFieldIndex<
 
   return {
     find,
+    update: handleUpdateRequest,
+    remove: handleRemoveRequest,
   };
 }

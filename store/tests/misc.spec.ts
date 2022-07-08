@@ -74,7 +74,7 @@ describe("clientdb misc", () => {
   it("will properly undo update", async () => {
     const [db, data] = await getTestDb();
 
-    const undo = data.owners.adam.update({ name: "Not Adam" }).undo;
+    const undo = data.owners.adam.update({ name: "Not Adam" }).rollback;
 
     expect(data.owners.adam.name).toBe("Not Adam");
 
@@ -86,8 +86,10 @@ describe("clientdb misc", () => {
   it("will properly detect empty update", async () => {
     const [db, data] = await getTestDb();
 
-    expect(data.owners.adam.update({ name: "Adam" }).hadChanges).toBe(false);
-    expect(data.owners.adam.update({ name: "Adam2" }).hadChanges).toBe(true);
+    expect(data.owners.adam.update({ name: "Adam" }).changes).toEqual({});
+    expect(data.owners.adam.update({ name: "Adam2" }).changes).toEqual({
+      name: ["Adam", "Adam2"],
+    });
   });
 
   it("will exclude items not passing root filter", async () => {

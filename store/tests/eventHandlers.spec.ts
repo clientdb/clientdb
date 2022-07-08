@@ -35,12 +35,15 @@ describe("Event listeners", () => {
   it("calls the item added method when item is created", async () => {
     const db = await createTestDb();
 
-    const createdEntity = db.entity(owner).create({ name: "Rasputin" });
+    const entity = db.entity(owner).create({ name: "Rasputin" });
 
     expect(created).toBeCalledTimes(1);
     expect(created).toBeCalledWith(
-      createdEntity,
-      expect.objectContaining(mockDbLinker)
+      expect.objectContaining({
+        db: expect.any(Object),
+        entity,
+        type: "created",
+      })
     );
   });
 
@@ -54,11 +57,11 @@ describe("Event listeners", () => {
 
     expect(updated).toBeCalledTimes(1);
     expect(updated).toBeCalledWith(
-      entity,
       expect.objectContaining({
-        ...mockDbLinker,
-        changedData: { name: "Pedro" },
-        changedKeys: ["name"],
+        db: expect.any(Object),
+        entity,
+        type: "updated",
+        changes: { name: ["Rasputin", "Pedro"] },
       })
     );
   });
@@ -73,8 +76,11 @@ describe("Event listeners", () => {
 
     expect(removed).toBeCalledTimes(1);
     expect(removed).toBeCalledWith(
-      entity,
-      expect.objectContaining(mockDbLinker)
+      expect.objectContaining({
+        db: expect.any(Object),
+        entity,
+        type: "removed",
+      })
     );
   });
 });

@@ -1,13 +1,14 @@
-import { isEqual, pick, sortBy } from "lodash";
+import { sortBy } from "lodash";
 import { IObservableArray, observable, runInAction } from "mobx";
 
 import { ClientDb } from "./db";
 import { EntityDefinition } from "./definition";
 import { Entity } from "./entity";
+import { EntityUpdatedEvent } from "./events";
 import { FindInput } from "./find";
 import {
-  createEntityQuery,
   Collection,
+  createEntityQuery,
   EntityQuerySortFunction,
   EntityQuerySortInput,
   resolveSortInput,
@@ -21,9 +22,9 @@ import {
 import { areArraysShallowEqual } from "./utils/arrays";
 import { cachedComputed } from "./utils/cachedComputed";
 import { cachedComputedWithoutArgs } from "./utils/cachedComputedWithoutArgs";
-import { CleanupObject, createCleanupObject } from "./utils/cleanup";
+import { computeChanges, pickBeforeFromChanges } from "./utils/changes";
+import { CleanupObject } from "./utils/cleanup";
 import { deepMemoize } from "./utils/deepMap";
-import { createEventsEmmiter, EventsEmmiter } from "./utils/eventManager";
 import { typedKeys } from "./utils/object";
 
 export interface EntityStorePublicMethods<Data, View> {
@@ -35,12 +36,10 @@ export interface EntityStorePublicMethods<Data, View> {
   sort: (sort: EntityQuerySortInput<Data, View>) => Collection<Data, View>;
 
   findById(id: string): Entity<Data, View> | null;
-  removeById(id: string): boolean;
-
+  remove(id: string): boolean;
+  update(id: string, data: Partial<Data>): EntityUpdatedEvent<Data, View>;
   find(filter: FindInput<Data, View>): Entity<Data, View>[];
   findFirst(filter: FindInput<Data, View>): Entity<Data, View> | null;
-
-  updateById(id: string, data: Partial<Data>): EntityUpdateResult;
 
   readonly all: Entity<Data, View>[];
 }
@@ -52,16 +51,11 @@ export interface EntityStore<Data, View>
   items: IObservableArray<Entity<Data, View>>;
   sortItems(items: Entity<Data, View>[]): Entity<Data, View>[];
   add(input: Entity<Data, View>): Entity<Data, View>;
-  events: EntityStoreEventsEmmiter<Data, View>;
+
   definition: EntityDefinition<Data, View>;
   getPropIndex<K extends IndexableKey<Data & View>>(
     key: K
   ): QueryIndex<Data, View, K>;
-}
-
-export interface EntityUpdateResult {
-  hadChanges: boolean;
-  undo: () => void;
 }
 
 export type EntityStoreFromDefinition<
@@ -69,36 +63,6 @@ export type EntityStoreFromDefinition<
 > = Definition extends EntityDefinition<infer Data, infer View>
   ? EntityStore<Data, View>
   : never;
-
-export interface EntityCreatedEvent<Data> {
-  db: ClientDb;
-}
-export interface EntityUpdatedEvent<Data> {
-  dataBefore: Data;
-  changedKeys: (keyof Data)[];
-  changedData: Partial<Data>;
-  db: ClientDb;
-}
-
-export interface EntityWillUpdateEvent<Data> {
-  input: Partial<Data>;
-  db: ClientDb;
-}
-
-export interface EntityRemovedEvent<Data> {
-  db: ClientDb;
-}
-
-type EntityStoreEvents<Data, View> = {
-  created: [Entity<Data, View>, EntityCreatedEvent<Data>];
-  updated: [Entity<Data, View>, EntityUpdatedEvent<Data>];
-  willUpdate: [Entity<Data, View>, EntityWillUpdateEvent<Data>];
-  removed: [Entity<Data, View>, EntityRemovedEvent<Data>];
-};
-
-export type EntityStoreEventsEmmiter<Data, View> = EventsEmmiter<
-  EntityStoreEvents<Data, View>
->;
 
 /**
  * Store is inner 'registry' of all items of given entity. It is like 'raw' database with no extra logic (like syncing)
@@ -147,11 +111,6 @@ export function createEntityStore<Data, View>(
   const allItems = cachedComputedWithoutArgs(() => {
     return sortItems(getRootSource());
   });
-
-  // Allow listening to CRUD updates in the store
-  const events = createEventsEmmiter<EntityStoreEvents<Data, View>>(
-    config.name
-  );
 
   const propIndexMap = new Map<
     keyof Data | keyof View,
@@ -212,16 +171,32 @@ export function createEntityStore<Data, View>(
     }
   }
 
+  function updateEntityIndexes(
+    entity: StoreEntity,
+    changedKeys?: Array<keyof Data>
+  ) {
+    for (const [indexKey, index] of propIndexMap.entries()) {
+      if (changedKeys && !changedKeys.includes(indexKey as keyof Data))
+        continue;
+      index.update(entity);
+    }
+  }
+
+  function removeEntityFromIndexes(entity: StoreEntity) {
+    for (const [indexKey, index] of propIndexMap.entries()) {
+      index.remove(entity);
+    }
+  }
+
   const store: EntityStore<Data, View> = {
     get all() {
       return allItems.get();
     },
     db,
     definition,
-    events,
     items,
     sortItems,
-    updateById(id, input) {
+    update(id, input) {
       const entity = itemsMap[id];
 
       if (!entity) {
@@ -230,14 +205,8 @@ export function createEntityStore<Data, View>(
         );
       }
 
-      const changedKeys = typedKeys(input).filter((keyToUpdate) => {
-        const value = input[keyToUpdate];
-        if (value === undefined) return false;
-
-        const existingValue = entity[keyToUpdate];
-
-        return !isEqual(value, existingValue);
-      });
+      const changes = computeChanges(entity, input);
+      const changedKeys = typedKeys(changes);
 
       if (changedKeys.includes(config.idField)) {
         throw new Error(
@@ -248,17 +217,19 @@ export function createEntityStore<Data, View>(
       // No changes will be made, return early
       if (!changedKeys.length)
         return {
-          hadChanges: false,
-          undo: () => void 0,
+          changes,
+          db,
+          entity,
+          type: "updated",
+          rollback: () => void 0,
         };
 
-      const dataBeforeUpdate = entity.getData();
-
-      const undoData = pick(dataBeforeUpdate, changedKeys);
-
-      events.emit("willUpdate", entity, { input, db });
-
       const changedData: Partial<Data> = {};
+
+      function rollback() {
+        const undoInput = pickBeforeFromChanges(changes);
+        store.update(id, undoInput);
+      }
 
       runInAction(() => {
         changedKeys.forEach((keyToUpdate) => {
@@ -266,20 +237,15 @@ export function createEntityStore<Data, View>(
           (entity as Data)[keyToUpdate] = value!;
           changedData[keyToUpdate] = value;
         });
-
-        events.emit("updated", entity, {
-          dataBefore: dataBeforeUpdate,
-          changedKeys,
-          changedData,
-          db,
-        });
+        updateEntityIndexes(entity, changedKeys);
       });
 
       return {
-        hadChanges: true,
-        undo() {
-          store.updateById(id, undoData);
-        },
+        changes,
+        db,
+        entity,
+        rollback,
+        type: "updated",
       };
     },
     getPropIndex(key) {
@@ -307,7 +273,7 @@ export function createEntityStore<Data, View>(
       runInAction(() => {
         items.push(entity);
         itemsMap[id] = entity;
-        events.emit("created", entity, { db });
+        updateEntityIndexes(entity);
       });
 
       return entity;
@@ -321,7 +287,7 @@ export function createEntityStore<Data, View>(
     findFirst(filter) {
       return store.query(filter).first;
     },
-    removeById(id) {
+    remove(id) {
       db.utils.assertNotDestroyed("Cannot remove items");
       const entity = itemsMap[id] ?? null;
 
@@ -333,7 +299,7 @@ export function createEntityStore<Data, View>(
         entity.cleanup.clean();
         didRemove = items.remove(entity);
         delete itemsMap[id];
-        events.emit("removed", entity, { db });
+        removeEntityFromIndexes(entity);
       });
 
       return didRemove;
