@@ -222,7 +222,7 @@ export function createEntityStore<Data, View>(
     items,
     sortItems,
     updateById(id, input) {
-      const entity = findById(id);
+      const entity = itemsMap[id];
 
       if (!entity) {
         throw new Error(

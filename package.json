@@ -11,7 +11,7 @@
     "mobx": "6.6.1"
   },
   "scripts": {
-    "store": "yarn workspace @clientdb/core",
+    "store": "yarn workspace @clientdb/store",
     "engine": "yarn workspace @clientdb/engine"
   },
   "devDependencies": {

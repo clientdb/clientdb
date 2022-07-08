@@ -1,4 +1,4 @@
-import { EntitySyncConfig, defineEntity } from "clientdb";
+import { defineEntity } from "@clientdb/store";
 
 interface CommonData {
   id: string;
@@ -29,26 +29,11 @@ export function getDefaultCommonData(): CommonData {
   };
 }
 
-function getSyncConfig<T>(): EntitySyncConfig<T> {
-  return {
-    pullUpdated({ updateItems }) {
-      updateItems([]);
-    },
-  };
-}
-
 export const owner = defineEntity<TestOwnerEntity>({
   idField: "id",
-  keys: ["id", "name", "updatedAt"],
+  keys: ["id", "name", "updatedAt", "hide"],
   uniqueProps: ["name"],
-  updatedAtField: "updatedAt",
   name: "owner",
-  sync: getSyncConfig<TestOwnerEntity>(),
-  search: {
-    fields: {
-      name: true,
-    },
-  },
   defaultSort: (owner) => owner.name,
   getDefaultValues: () => {
     return { ...getDefaultCommonData(), hide: false };
@@ -69,9 +54,7 @@ export const owner = defineEntity<TestOwnerEntity>({
 export const dog = defineEntity<TestDogEntity>({
   idField: "id",
   keys: ["id", "name", "updatedAt", "owner_id"],
-  updatedAtField: "updatedAt",
   name: "dog",
-  sync: getSyncConfig<TestDogEntity>(),
   getDefaultValues: getDefaultCommonData,
 }).addView((dogData, { db: { entity } }) => {
   return {

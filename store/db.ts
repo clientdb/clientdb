@@ -27,7 +27,7 @@ interface ClientDbConfig {
 
 export function createClientDb(
   definitions: Array<EntityDefinition<any, any>>,
-  { contexts }: ClientDbConfig
+  { contexts }: ClientDbConfig = {}
 ): ClientDb {
   assert(IS_CLIENT, "Client DB can only be created on client side");
 

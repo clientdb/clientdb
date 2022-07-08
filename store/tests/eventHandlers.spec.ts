@@ -1,22 +1,15 @@
-import { createClientDb, defineEntity, ClientDb } from "clientdb";
+import { createClientDb, defineEntity, ClientDb } from "@clientdb/store";
 
-import {
-  TestOwnerEntity,
-  createPersistanceAdapterMock,
-  getDefaultCommonData,
-  getSyncConfig,
-} from "./utils";
+import { TestOwnerEntity, getDefaultCommonData } from "./utils";
 
 const created = jest.fn();
 const updated = jest.fn();
 const removed = jest.fn();
 
 const owner = defineEntity<TestOwnerEntity>({
-  keyField: "id",
+  idField: "id",
   keys: ["id", "name", "updatedAt"],
-  updatedAtField: "updatedAt",
   name: "owner",
-  sync: getSyncConfig<TestOwnerEntity>(),
   getDefaultValues: getDefaultCommonData,
 }).addEventHandlers({
   created,
@@ -25,15 +18,11 @@ const owner = defineEntity<TestOwnerEntity>({
 });
 
 function createTestDb() {
-  return createClientDb([owner], {
-    persistance: createPersistanceAdapterMock(),
-  });
+  return createClientDb([owner]);
 }
 
-const mockDbLinker: ClientDb = {
-  getContextValue: expect.any(Function),
-  entity: expect.any(Function),
-  destroy: expect.any(Function),
+const mockDbLinker = {
+  db: expect.any(Object),
 };
 
 describe("Event listeners", () => {
@@ -66,8 +55,11 @@ describe("Event listeners", () => {
     expect(updated).toBeCalledTimes(1);
     expect(updated).toBeCalledWith(
       entity,
-      expect.objectContaining(nameOnCreation),
-      expect.objectContaining(mockDbLinker)
+      expect.objectContaining({
+        ...mockDbLinker,
+        changedData: { name: "Pedro" },
+        changedKeys: ["name"],
+      })
     );
   });
 
