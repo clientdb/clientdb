@@ -1,5 +1,5 @@
 {
-  "name": "@clientdb/core",
+  "name": "@clientdb/store",
   "version": "0.1.5",
   "license": "LGPL-3.0-or-later",
   "source": "index.ts",
