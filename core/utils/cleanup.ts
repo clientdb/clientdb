@@ -1,4 +1,4 @@
-
+import { runInAction } from "mobx";
 
 export type CleanupOrder = "from-first" | "from-last";
 
@@ -14,21 +14,29 @@ export type MaybeCleanup = Cleanup | void | undefined;
  * useEffect(() => {
  *   const cleanup = createCleanupObject();
  *
- *   cleanup.add(createTimeout());
- *   cleanup.add(createEvent());
+ *   cleanup.next = createTimeout();
+ *   cleanup.next = createEvent();
  *
  *   return cleanup.clean;
  * })
  */
 export function createCleanupObject() {
   const cleanups = new Set<Cleanup>();
+
   const cleanupObject = {
     clean() {
-      const cleanupsList = [...cleanups];
+      /**
+       * We start cleaning up from last items added. It is the same as eg, react effect where children effects are cleaned up before parents.
+       *
+       * Rationale is that cleanups added last might depend on something created before and if we clean them first, they might not be able to clean up properly.
+       */
+      const cleanupsList = [...cleanups].reverse();
+      cleanups.clear();
 
-      cleanupsList.forEach((cleanup) => {
-        cleanups.delete(cleanup);
-        cleanup();
+      runInAction(() => {
+        cleanupsList.forEach((cleanup) => {
+          cleanup();
+        });
       });
     },
     cleanOne(cleanup: Cleanup) {
@@ -37,6 +45,8 @@ export function createCleanupObject() {
       cleanups.delete(cleanup);
 
       cleanup();
+
+      return true;
     },
     set next(cleanupToAdd: MaybeCleanup | void) {
       if (!cleanupToAdd) return;

@@ -12,7 +12,7 @@ import { Thunk, resolveThunk } from "./utils/thunk";
 
 import { EntityStore } from "./store";
 import { computedArray } from "./utils/computedArray";
-import { createCleanupObject } from "./utils/cleanup";
+import { CleanupObject, createCleanupObject } from "./utils/cleanup";
 import { Primitive } from "./utils/primitive";
 
 export type IndexableData<T> = {
@@ -29,7 +29,6 @@ export type IndexFindInput<
 export type IndexValueInput<T> = Thunk<T | T[]>;
 
 export interface QueryIndex<D, V, K extends IndexableKey<D & V>> {
-  destroy(): void;
   find(value: IndexFindInput<D, V, K>): Entity<D, V>[];
 }
 
@@ -60,7 +59,11 @@ export function createQueryFieldIndex<
   D,
   V,
   K extends keyof IndexableData<D & V>
->(key: K, store: EntityStore<D, V>): QueryIndex<D, V, K> {
+>(
+  key: K,
+  store: EntityStore<D, V>,
+  cleanup: CleanupObject
+): QueryIndex<D, V, K> {
   type TargetEntity = Entity<D, V>;
   type TargetValue = IndexableData<TargetEntity>[K];
   type TargetValueInput = IndexValueInput<TargetValue>;
@@ -146,8 +149,6 @@ export function createQueryFieldIndex<
       currentItemIndexMap.delete(entity);
     });
   }
-
-  const cleanup = createCleanupObject();
 
   /**
    * There are 2 ways of indexing - it depends on 'key' being used.
@@ -252,10 +253,6 @@ export function createQueryFieldIndex<
     handleDerievedSyncing();
   }
 
-  function destroy() {
-    cleanup.clean();
-  }
-
   function findResultsForIndexValue(indexValue: TargetValue) {
     const results = observableIndex.get(indexValue);
 
@@ -295,6 +292,5 @@ export function createQueryFieldIndex<
 
   return {
     find,
-    destroy,
   };
 }

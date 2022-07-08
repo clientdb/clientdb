@@ -3,9 +3,8 @@ import { AnnotationsMap } from "mobx";
 import { Entity } from "./entity";
 
 import { ClientDb } from "./db";
-import { EntityUpdateResult } from "./entity";
+import { EntityUpdateResult } from "./store";
 import { EntityFilterFunction, SortResult } from "./query";
-import { EntitySearchConfig } from "./search";
 import { CleanupObject } from "./utils/cleanup";
 import { getHash } from "./utils/hash";
 import { PartialWithExplicitOptionals } from "./utils/types";
@@ -46,7 +45,6 @@ interface EntityConfig<Data, View> {
    */
   rootFilter?: EntityRootFilter<Data, View>;
   getView?: EntityDefinitionGetView<Data, View>;
-  search?: EntitySearchConfig<Data>;
   events?: EntityEvents<Data, View>;
   functionalFilterCheck?: (
     item: Data,

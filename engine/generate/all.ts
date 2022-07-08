@@ -1,5 +1,4 @@
-import * as ts from "typescript";
-import { Expression, factory as $ts, SyntaxKind } from "typescript";
+import { factory as $ts } from "typescript";
 import { pgTypeToTsType } from "../introspection/pg/pgTsTypes";
 import {
   DbSchema,

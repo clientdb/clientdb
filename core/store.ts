@@ -1,4 +1,4 @@
-import { sortBy } from "lodash";
+import { isEqual, pick, sortBy } from "lodash";
 import { IObservableArray, observable, runInAction } from "mobx";
 
 import { ClientDb } from "./db";
@@ -7,7 +7,7 @@ import { Entity } from "./entity";
 import { FindInput } from "./find";
 import {
   createEntityQuery,
-  EntityQuery,
+  Collection,
   EntityQuerySortFunction,
   EntityQuerySortInput,
   resolveSortInput,
@@ -18,50 +18,50 @@ import {
   IndexFindInput,
   QueryIndex,
 } from "./queryIndex";
-import { EntityChangeSource } from "./types";
 import { areArraysShallowEqual } from "./utils/arrays";
 import { cachedComputed } from "./utils/cachedComputed";
 import { cachedComputedWithoutArgs } from "./utils/cachedComputedWithoutArgs";
-import { createCleanupObject } from "./utils/cleanup";
+import { CleanupObject, createCleanupObject } from "./utils/cleanup";
 import { deepMemoize } from "./utils/deepMap";
-import {
-  createMobxAwareEventsEmmiter,
-  EventsEmmiter,
-} from "./utils/eventManager";
+import { createEventsEmmiter, EventsEmmiter } from "./utils/eventManager";
+import { typedKeys } from "./utils/object";
 
-export interface EntityStoreFindMethods<Data, View> {
+export interface EntityStorePublicMethods<Data, View> {
   query: (
     filter: FindInput<Data, View>,
     sort?: EntityQuerySortFunction<Data, View>
-  ) => EntityQuery<Data, View>;
+  ) => Collection<Data, View>;
 
-  sort: (sort: EntityQuerySortInput<Data, View>) => EntityQuery<Data, View>;
+  sort: (sort: EntityQuerySortInput<Data, View>) => Collection<Data, View>;
 
   findById(id: string): Entity<Data, View> | null;
-  removeById(id: string, source?: EntityChangeSource): boolean;
+  removeById(id: string): boolean;
 
   find(filter: FindInput<Data, View>): Entity<Data, View>[];
   findFirst(filter: FindInput<Data, View>): Entity<Data, View> | null;
+
+  updateById(id: string, data: Partial<Data>): EntityUpdateResult;
 
   readonly all: Entity<Data, View>[];
 }
 
 export interface EntityStore<Data, View>
-  extends EntityStoreFindMethods<Data, View> {
+  extends EntityStorePublicMethods<Data, View> {
   db: ClientDb;
   // Will return all items in store, including ones not passing root filter
   items: IObservableArray<Entity<Data, View>>;
   sortItems(items: Entity<Data, View>[]): Entity<Data, View>[];
-  add(
-    input: Entity<Data, View>,
-    source?: EntityChangeSource
-  ): Entity<Data, View>;
+  add(input: Entity<Data, View>): Entity<Data, View>;
   events: EntityStoreEventsEmmiter<Data, View>;
   definition: EntityDefinition<Data, View>;
-  destroy: () => void;
   getPropIndex<K extends IndexableKey<Data & View>>(
     key: K
   ): QueryIndex<Data, View, K>;
+}
+
+export interface EntityUpdateResult {
+  hadChanges: boolean;
+  undo: () => void;
 }
 
 export type EntityStoreFromDefinition<
@@ -71,25 +71,21 @@ export type EntityStoreFromDefinition<
   : never;
 
 export interface EntityCreatedEvent<Data> {
-  source: EntityChangeSource;
   db: ClientDb;
 }
 export interface EntityUpdatedEvent<Data> {
   dataBefore: Data;
   changedKeys: (keyof Data)[];
   changedData: Partial<Data>;
-  source: EntityChangeSource;
   db: ClientDb;
 }
 
 export interface EntityWillUpdateEvent<Data> {
   input: Partial<Data>;
-  source: EntityChangeSource;
   db: ClientDb;
 }
 
 export interface EntityRemovedEvent<Data> {
-  source: EntityChangeSource;
   db: ClientDb;
 }
 
@@ -109,7 +105,8 @@ export type EntityStoreEventsEmmiter<Data, View> = EventsEmmiter<
  */
 export function createEntityStore<Data, View>(
   definition: EntityDefinition<Data, View>,
-  db: ClientDb
+  db: ClientDb,
+  cleanup: CleanupObject
 ): EntityStore<Data, View> {
   type StoreEntity = Entity<Data, View>;
 
@@ -152,7 +149,7 @@ export function createEntityStore<Data, View>(
   });
 
   // Allow listening to CRUD updates in the store
-  const events = createMobxAwareEventsEmmiter<EntityStoreEvents<Data, View>>(
+  const events = createEventsEmmiter<EntityStoreEvents<Data, View>>(
     config.name
   );
 
@@ -166,8 +163,6 @@ export function createEntityStore<Data, View>(
 
     return id;
   }
-
-  const cleanups = createCleanupObject();
 
   const createOrReuseQuery = deepMemoize(
     function createOrReuseQuery(
@@ -226,18 +221,79 @@ export function createEntityStore<Data, View>(
     events,
     items,
     sortItems,
+    updateById(id, input) {
+      const entity = findById(id);
+
+      if (!entity) {
+        throw new Error(
+          `Entity "${definition.config.name}" with id "${id}" not found`
+        );
+      }
+
+      const changedKeys = typedKeys(input).filter((keyToUpdate) => {
+        const value = input[keyToUpdate];
+        if (value === undefined) return false;
+
+        const existingValue = entity[keyToUpdate];
+
+        return !isEqual(value, existingValue);
+      });
+
+      if (changedKeys.includes(config.idField)) {
+        throw new Error(
+          `Cannot update id field of entity "${definition.config.name}"`
+        );
+      }
+
+      // No changes will be made, return early
+      if (!changedKeys.length)
+        return {
+          hadChanges: false,
+          undo: () => void 0,
+        };
+
+      const dataBeforeUpdate = entity.getData();
+
+      const undoData = pick(dataBeforeUpdate, changedKeys);
+
+      events.emit("willUpdate", entity, { input, db });
+
+      const changedData: Partial<Data> = {};
+
+      runInAction(() => {
+        changedKeys.forEach((keyToUpdate) => {
+          const value = input[keyToUpdate];
+          (entity as Data)[keyToUpdate] = value!;
+          changedData[keyToUpdate] = value;
+        });
+
+        events.emit("updated", entity, {
+          dataBefore: dataBeforeUpdate,
+          changedKeys,
+          changedData,
+          db,
+        });
+      });
+
+      return {
+        hadChanges: true,
+        undo() {
+          store.updateById(id, undoData);
+        },
+      };
+    },
     getPropIndex(key) {
       const existingIndex = propIndexMap.get(key);
 
       if (existingIndex) return existingIndex;
 
-      const newIndex = createQueryFieldIndex(key, store);
+      const newIndex = createQueryFieldIndex(key, store, cleanup);
 
       propIndexMap.set(key, newIndex);
 
       return newIndex;
     },
-    add(entity, source = "user") {
+    add(entity) {
       const id = getEntityId(entity);
 
       if (itemsMap[id]) {
@@ -251,7 +307,7 @@ export function createEntityStore<Data, View>(
       runInAction(() => {
         items.push(entity);
         itemsMap[id] = entity;
-        events.emit("created", entity, { source, db });
+        events.emit("created", entity, { db });
       });
 
       return entity;
@@ -265,7 +321,8 @@ export function createEntityStore<Data, View>(
     findFirst(filter) {
       return store.query(filter).first;
     },
-    removeById(id, source = "user") {
+    removeById(id) {
+      db.utils.assertNotDestroyed("Cannot remove items");
       const entity = itemsMap[id] ?? null;
 
       if (entity === null) return false;
@@ -276,7 +333,7 @@ export function createEntityStore<Data, View>(
         entity.cleanup.clean();
         didRemove = items.remove(entity);
         delete itemsMap[id];
-        events.emit("removed", entity, { source, db });
+        events.emit("removed", entity, { db });
       });
 
       return didRemove;
@@ -286,15 +343,6 @@ export function createEntityStore<Data, View>(
     },
     sort(sort) {
       return createOrReuseQuery(undefined, sort);
-    },
-    destroy() {
-      runInAction(() => {
-        cleanups.clean();
-        propIndexMap.forEach((queryIndex) => {
-          queryIndex.destroy();
-        });
-        events.destroy();
-      });
     },
   };
 

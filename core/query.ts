@@ -48,7 +48,7 @@ export type EntityQueryByDefinition<Def> = Def extends EntityDefinition<
   infer D,
   infer V
 >
-  ? EntityQuery<D, V>
+  ? Collection<D, V>
   : never;
 
 export function resolveSortInput<Data, View>(
@@ -65,7 +65,7 @@ export function resolveSortInput<Data, View>(
 
 type MaybeObservableArray<T> = IObservableArray<T> | T[];
 
-export type EntityQuery<Data, View> = {
+export type Collection<Data, View> = {
   all: Entity<Data, View>[];
   first: Entity<Data, View> | null;
   last: Entity<Data, View> | null;
@@ -76,8 +76,8 @@ export type EntityQuery<Data, View> = {
   query: (
     filter: FindInput<Data, View>,
     sort?: EntityQuerySortFunction<Data, View>
-  ) => EntityQuery<Data, View>;
-  sort(sort: EntityQuerySortFunction<Data, View>): EntityQuery<Data, View>;
+  ) => Collection<Data, View>;
+  sort(sort: EntityQuerySortFunction<Data, View>): Collection<Data, View>;
 };
 
 /**
@@ -93,7 +93,7 @@ export function createEntityQuery<Data, View>(
   getSource: () => MaybeObservableArray<Entity<Data, View>>,
   queryConfig: EntityQueryConfig<Data, View>,
   store: EntityStore<Data, View>
-): EntityQuery<Data, View> {
+): Collection<Data, View> {
   const { definition } = store;
   const { filter, sort, name: queryName } = queryConfig;
 

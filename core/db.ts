@@ -1,28 +1,33 @@
+import { runInAction } from "mobx";
 import { EntityClient } from "./client";
 import { DbContext } from "./context";
 import { EntityDefinition } from "./definition";
+import { assert } from "./utils/assert";
+
+import { createEntityClient } from "./client";
+import { DbContextInstance } from "./context";
+import { createCleanupObject } from "./utils/cleanup";
+import { IS_CLIENT } from "./utils/client";
+
+interface ClientDbUtils {
+  assertNotDestroyed(msg: string): void;
+}
 
 export type ClientDb = {
   destroy: () => void;
   entity<D, V>(definition: EntityDefinition<D, V>): EntityClient<D, V>;
   getContextValue<D>(context: DbContext<D>): D;
+  readonly isDestroyed: boolean;
+  utils: ClientDbUtils;
 };
-
-import { runInAction } from "mobx";
-
-import { createEntityClient } from "./client";
-import { DbContextInstance } from "./context";
-import { assert } from "./utils/assert";
-import { IS_CLIENT } from "./utils/client";
 
 interface ClientDbConfig {
   contexts?: DbContextInstance<unknown>[];
-  onDestroyRequest?: () => void;
 }
 
 export function createClientDb(
   definitions: Array<EntityDefinition<any, any>>,
-  { contexts, onDestroyRequest }: ClientDbConfig
+  { contexts }: ClientDbConfig
 ): ClientDb {
   assert(IS_CLIENT, "Client DB can only be created on client side");
 
@@ -31,22 +36,45 @@ export function createClientDb(
     EntityClient<any, any>
   >();
 
+  const cleanup = createCleanupObject();
+
+  let isDestroyed = false;
+
+  function destroy() {
+    if (isDestroyed) {
+      throw new Error("Client DB is already destroyed");
+    }
+
+    runInAction(() => {
+      cleanup.clean();
+    });
+
+    isDestroyed = true;
+  }
+
+  const utils: ClientDbUtils = {
+    assertNotDestroyed(msg) {
+      assert(!isDestroyed, `${msg} - ClientDB is destroyed`);
+    },
+  };
+
   const clientdb: ClientDb = {
     entity: getEntityClient,
     getContextValue,
     destroy,
+    get isDestroyed() {
+      return isDestroyed;
+    },
+    utils,
   };
 
-  const entityClients = definitions.map((definition) => {
-    const entityClient = createEntityClient(definition, {
+  for (const definition of definitions) {
+    const client = createEntityClient(definition, {
       db: clientdb,
+      cleanup,
     });
 
-    return entityClient;
-  });
-
-  for (const client of entityClients) {
-    clientsLookup.set(client.definition, client);
+    clientsLookup.set(definition, client);
   }
 
   function getEntityClient<Data, View>(
@@ -77,14 +105,6 @@ export function createClientDb(
     }
 
     return correspondingContextInstance.value as V;
-  }
-
-  function destroy() {
-    runInAction(() => {
-      entityClients.forEach((client) => {
-        client.destroy();
-      });
-    });
   }
 
   return clientdb;
