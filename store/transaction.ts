@@ -1,7 +1,6 @@
-import { groupBy } from "lodash";
+import { ClientDb } from "./db";
 import { Entity } from "./entity";
 import { EntityChangeEvent } from "./events";
-import { groupItems } from "./utils/arrays";
 import { pickAfterFromChanges, pickBeforeFromChanges } from "./utils/changes";
 import { typedKeys } from "./utils/object";
 
@@ -20,14 +19,6 @@ import { typedKeys } from "./utils/object";
 
 type Change = EntityChangeEvent<unknown, unknown>;
 type AnyEntity = Entity<unknown, unknown>;
-
-export interface ClientDBTransaction {
-  registerChange(change: Change): void;
-  getChanges(): Change[];
-  commit(): void;
-  reject(): void;
-  undo(): void;
-}
 
 /**
  * General architecture:
@@ -60,12 +51,30 @@ function registerEntityChange(change: Change) {
   changes.add(change);
 }
 
+function removeChange(changeToRemove: Change) {
+  const changes = getEntityChanges(changeToRemove.entity);
+
+  if (!changes) {
+    throw new Error("No registered changes");
+  }
+
+  if (!changes.has(changeToRemove)) {
+    console.warn("Did not delete");
+    return;
+  }
+
+  changes.delete(changeToRemove);
+}
+
 /**
  * If we reject 'initial' change, while 'next' change is already pending, we need to tell 'next' change how to restore initial state of entity.
  *
  * To do that, we'll inject 'before' change values from initial change to next change
  */
-function removeChangeAndRebase(changes: Set<Change>, changeToRemove: Change) {
+function removeChangeAndUpdateNextTransaction(
+  changes: Set<Change>,
+  changeToRemove: Change
+) {
   // There is no need of rebasing - there is only one change
   if (changes.size === 1) {
     changes.delete(changeToRemove);
@@ -119,7 +128,7 @@ function deregisterEntityChange(change: Change) {
     return;
   }
 
-  removeChangeAndRebase(changes, change);
+  removeChangeAndUpdateNextTransaction(changes, change);
 }
 
 /**
@@ -171,6 +180,9 @@ function undoEntityChange(change: Change) {
   }
 }
 
+/**
+ * Will get all pending transactions for given entity and re-apply them
+ */
 function rebaseEntityChanges(entity: AnyEntity) {
   const changes = getEntityChanges(entity);
 
@@ -181,10 +193,22 @@ function rebaseEntityChanges(entity: AnyEntity) {
   }
 }
 
-export function createTransaction(): ClientDBTransaction {
+export function createTransaction() {
   const changes: Change[] = [];
 
-  function registerChange(change: Change) {
+  let db: ClientDb | null = null;
+
+  function pushChange(change: Change) {
+    if (db && change.db !== db) {
+      throw new Error(
+        "Single transaction cannot include changes across multiple instances of clientdb"
+      );
+    }
+
+    if (!db) {
+      db = change.db;
+    }
+
     registerEntityChange(change);
     changes.push(change);
   }
@@ -194,10 +218,8 @@ export function createTransaction(): ClientDBTransaction {
   }
 
   function commit() {
-    const entitiesToRebase = new Set<AnyEntity>();
     for (const change of changes) {
-      entitiesToRebase.add(change.entity);
-      deregisterEntityChange(change);
+      removeChange(change);
     }
   }
 
@@ -219,7 +241,6 @@ export function createTransaction(): ClientDBTransaction {
     for (const change of changes) {
       entitiesToRebase.add(change.entity);
       undoEntityChange(change);
-      deregisterEntityChange(change);
     }
 
     for (const entity of entitiesToRebase) {
@@ -228,7 +249,7 @@ export function createTransaction(): ClientDBTransaction {
   }
 
   return {
-    registerChange,
+    pushChange,
     getChanges,
     commit,
     reject,
@@ -236,11 +257,13 @@ export function createTransaction(): ClientDBTransaction {
   };
 }
 
+export type ClientDBTransaction = ReturnType<typeof createTransaction>;
+
 export function createTransactionWithChanges(changes: Change[]) {
   const transaction = createTransaction();
 
   for (const change of changes) {
-    transaction.registerChange(change);
+    transaction.pushChange(change);
   }
 
   return transaction;
@@ -249,32 +272,17 @@ export function createTransactionWithChanges(changes: Change[]) {
 let currentTransaction: ClientDBTransaction | null = null;
 
 function emitTransaction(transaction: ClientDBTransaction) {
-  if (!transaction.getChanges().length) return;
+  const changes = transaction.getChanges();
 
-  /**
-   * It is technically possible that single transaction did include changes from multiple client dbs.
-   * We should emit events to proper ones.
-   *
-   * Note: transactions between multiple client dbs are not orchiestrated in any way.
-   */
-  const dbGroups = groupItems(transaction.getChanges(), (change) => change.db);
+  if (!changes.length) return;
 
-  if (dbGroups.length === 1) {
-    const [{ group: db }] = dbGroups;
-    db.events.emit("transaction", {
-      type: "transaction",
-      transaction,
-    });
-    return;
-  }
+  // We know db is the same for every change
+  const [{ db }] = changes;
 
-  for (const { group: db, items: changes } of dbGroups) {
-    const transactionForThisDB = createTransactionWithChanges(changes);
-    db.events.emit("transaction", {
-      type: "transaction",
-      transaction: transactionForThisDB,
-    });
-  }
+  db.events.emit("transaction", {
+    type: "transaction",
+    transaction: transaction,
+  });
 }
 
 export function getCurrentTransaction() {

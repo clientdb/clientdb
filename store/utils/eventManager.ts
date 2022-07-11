@@ -16,6 +16,8 @@ export type EventsEmmiter<EventsMap extends Record<string, unknown[]>> = {
     handler: EventHandler<EventsMap[N]>
   ): Unsubscribe;
   emit<N extends keyof EventsMap>(name: N, ...data: EventsMap[N]): void;
+  hasListeners<N extends keyof EventsMap>(name: N): boolean;
+  removeAllListeners(): void;
 };
 
 const DEV_DEBUG_EVENTS = false;
@@ -70,6 +72,10 @@ export function createEventsEmmiter<
     };
   }
 
+  function hasListeners<N extends keyof EventsMap>(name: N) {
+    return !!subscribersMap.get(name)?.size;
+  }
+
   function emit<N extends keyof EventsMap>(name: N, ...data: EventsMap[N]) {
     if (IS_DEV && DEV_DEBUG_EVENTS && debug) {
       console.warn(`Event [${debug}]`, name, data);
@@ -84,9 +90,15 @@ export function createEventsEmmiter<
     });
   }
 
+  function removeAllListeners() {
+    subscribersMap.clear();
+  }
+
   return {
     on,
     onOneOf,
     emit,
+    hasListeners,
+    removeAllListeners,
   };
 }

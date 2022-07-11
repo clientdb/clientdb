@@ -66,6 +66,9 @@ export type EntityStoreFromDefinition<
 
 /**
  * Store is inner 'registry' of all items of given entity. It is like 'raw' database with no extra logic (like syncing)
+ *
+ * Note: store is not responsible for emitting events. this is done by client.
+ * This allows distinguishing between 'system' and 'user' events where user is only making changes with client.
  */
 export function createEntityStore<Data, View>(
   definition: EntityDefinition<Data, View>,

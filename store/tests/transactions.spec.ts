@@ -4,6 +4,10 @@ import { createTestDb, dog, owner } from "./utils";
 function getTestDb() {
   const db = createTestDb();
 
+  db.events.on("transaction", () => {
+    //
+  });
+
   const adam = db.entity(owner).create({ name: "Adam" });
   const omar = db.entity(owner).create({ name: "Omar" });
 
@@ -41,7 +45,8 @@ describe("clientdb transactions", () => {
 
     try {
       runTransaction(() => {
-        db.entity(owner).create({ name: "A" });
+        const foo = db.entity(owner).create({ name: "A" });
+
         db.entity(owner).create({ name: "B" });
 
         throw new Error("Failed");
@@ -103,6 +108,32 @@ describe("clientdb transactions", () => {
     expect(adam.name).toBe("Adam");
   });
 
+  it("properly restore the value if some transactions are committed and some are rejected", () => {
+    const [db, data] = getTestDb();
+
+    const { adam, omar } = data.owners;
+
+    const [, changeToA] = runTransaction(() => {
+      adam.update({ name: "A" });
+    });
+
+    const [, changeToB] = runTransaction(() => {
+      adam.update({ name: "B" });
+    });
+
+    const [, changeToC] = runTransaction(() => {
+      adam.update({ name: "C" });
+    });
+
+    expect(adam.name).toBe("C");
+    changeToA.commit();
+    expect(adam.name).toBe("C");
+    changeToC.reject();
+    expect(adam.name).toBe("B");
+    changeToB.reject();
+    expect(adam.name).toBe("A");
+  });
+
   it("will emit transactions to db", () => {
     const [db, data] = getTestDb();
 
@@ -153,10 +184,14 @@ describe("clientdb transactions", () => {
 
     db.events.on("transaction", picker);
 
-    const { adam } = data.owners;
+    const { adam, omar } = data.owners;
 
     adam.remove();
 
     expect(picker).toBeCalledTimes(1);
+
+    omar.remove();
+
+    expect(picker).toBeCalledTimes(2);
   });
 });

@@ -56,31 +56,39 @@ export function createEntityClient<Data, View>(
 ): EntityClient<Data, View> {
   const store = createEntityStore<Data, View>(definition, db, cleanup);
 
-  function attachEntityEvents() {
-    const { created, removed, updated } = definition.config.events ?? {};
-
-    if (created) {
-      cleanup.next = events.on("created", created);
-    }
-
-    if (removed) {
-      cleanup.next = events.on("removed", removed);
-    }
-
-    if (updated) {
-      cleanup.next = events.on("updated", updated);
-    }
-  }
-
   // Allow listening to CRUD updates in the store
   const events = createEventsEmmiter<EntityStoreEvents<Data, View>>(
     definition.config.name
   );
 
-  cleanup.next = events.onOneOf(["created", "removed", "updated"], (change) => {
-    const transaction = getCurrentTransaction();
+  const { created, removed, updated } = definition.config.events ?? {};
 
-    if (!transaction) {
+  if (created) {
+    cleanup.next = events.on("created", created);
+  }
+
+  if (removed) {
+    cleanup.next = events.on("removed", removed);
+  }
+
+  if (updated) {
+    cleanup.next = events.on("updated", updated);
+  }
+
+  cleanup.next = events.onOneOf(["created", "removed", "updated"], (change) => {
+    const currentTransaction = getCurrentTransaction();
+
+    if (!db.events.hasListeners("transaction")) {
+      if (currentTransaction) {
+        console.warn(
+          "running runTransaction with operations on db that is not listening to transactions."
+        );
+      }
+      return;
+    }
+
+    if (!currentTransaction) {
+      // Emit change as one-step transaction
       const transaction = createTransactionWithChanges([
         change as EntityChangeEvent<unknown, unknown>,
       ]);
@@ -89,12 +97,14 @@ export function createEntityClient<Data, View>(
       return;
     }
 
-    transaction.registerChange(change as EntityChangeEvent<unknown, unknown>);
+    currentTransaction.pushChange(
+      change as EntityChangeEvent<unknown, unknown>
+    );
   });
 
-  attachEntityEvents();
+  cleanup.next = events.removeAllListeners;
 
-  const { query, findById, remove, sort, find, findFirst, update } = store;
+  const { query, findById, sort, find, findFirst } = store;
 
   function createStoreEntity(input: Partial<Data>) {
     return createEntity<Data, View>({ data: input, client });
