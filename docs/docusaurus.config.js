@@ -7,9 +7,10 @@ const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "clientdb - Documentation",
-  url: "https://your-docusaurus-test-site.com",
-  baseUrl: "/",
-  onBrokenLinks: "throw",
+  url: "https://acapela.github.io",
+  baseUrl: "/clientdb/",
+  // TODO: move to throw after initial version of the app is out
+  onBrokenLinks: "warn",
   onBrokenMarkdownLinks: "warn",
   favicon: "img/favicon.png",
 
@@ -17,6 +18,8 @@ const config = {
   // If you aren't using GitHub pages, you don't need these.
   organizationName: "acapela", // Usually your GitHub org/user name.
   projectName: "clientdb", // Usually your repo name.
+  deploymentBranch: "gh-pages",
+  trailingSlash: false,
 
   // Even if you don't use internalization, you can use this field to set useful
   // metadata like html lang. For example, if your site is Chinese, you may want
@@ -33,7 +36,6 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
-          // Please change this to your repo.
         },
         blog: false,
         theme: {
