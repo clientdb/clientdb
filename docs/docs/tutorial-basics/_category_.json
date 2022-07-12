@@ -1,8 +1,8 @@
 {
-  "label": "Tutorial - Basics",
+  "label": "Tutorial",
   "position": 2,
   "link": {
     "type": "generated-index",
-    "description": "5 minutes to learn the most important Docusaurus concepts."
+    "description": "This tutorial should not take more than 10 minutes to complete. We will learn how to create clientdb database, define entities, relations between them, and how to read from db or insert data into it."
   }
 }
