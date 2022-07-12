@@ -21,5 +21,3 @@ export type EntityChangeRequest =
   | EntityRemoveRequest
   | EntityUpdateRequest
   | EntityCreateRequest;
-
-export interface DbConnector {}

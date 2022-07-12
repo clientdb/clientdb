@@ -5,14 +5,14 @@ export interface EntityKindBootData<D = {}> {
   items: D[];
 }
 
-export async function fetchBootData(
+export async function fetchInitialData(
   context: SyncRequestContext
 ): Promise<EntityKindBootData<any>[]> {
-  const { connector, schema } = context;
+  const { db, schema } = context;
 
   const bootDataPromises = schema.entities.map(async (entity) => {
+    const items = await db.table(entity.name).select("*");
     const kind = entity.name;
-    const items = await connector.fetchBootData(kind, context);
     return { kind, items };
   });
 

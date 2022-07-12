@@ -1,24 +1,26 @@
 import { DbSchema } from "../schema/schema";
 import { SyncRequestContext } from "./context";
+import { Knex } from "knex";
+import { Request } from "express";
 
 export interface RequestDataHandlers {
-  getUserId: (request: Request) => string | null;
-  getLastSyncId: (request: Request) => number | null;
+  getUserId: (request: Request) => Promise<string | null>;
+  getLastSyncId: (request: Request) => Promise<number | null>;
 }
 
-export function createRequestContext(
+export async function createRequestContext(
   req: Request,
   config: RequestDataHandlers,
   schema: DbSchema,
-  connector: any
-): SyncRequestContext {
-  const userId = config.getUserId(req);
-  const lastSyncId = config.getLastSyncId(req);
+  db: Knex
+): Promise<SyncRequestContext> {
+  const userId = await config.getUserId(req);
+  const lastSyncId = await config.getLastSyncId(req);
 
   return {
     userId,
     lastSyncId,
     schema,
-    connector,
+    db,
   };
 }

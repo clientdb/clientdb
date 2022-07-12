@@ -27,15 +27,13 @@ export type EntityDelta =
 export async function fetchSyncDelta(
   context: SyncRequestContext
 ): Promise<EntityDelta[]> {
-  const { connector, schema, lastSyncId } = context;
+  const { db, schema, lastSyncId } = context;
 
-  const deltaPromises = schema.entities.map(async (entity) => {
-    const kind = entity.name;
-    const items = await connector.fetchDelta(kind, context);
-    return items;
-  });
+  const syncRequests = await db
+    .table("sync")
+    .select("*")
+    .where("id", ">", lastSyncId)
+    .andWhere("user_id", "=", context.userId);
 
-  const delta = await Promise.all(deltaPromises);
-
-  return delta;
+  return syncRequests;
 }
