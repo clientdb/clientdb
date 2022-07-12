@@ -180,7 +180,7 @@ export function createEntityClient<Data, View>(
       });
     },
     put(input) {
-      const id = `${input[definition.config.idField]}`;
+      const id = `${input[definition.config.idField!]}`;
       if (client.findById(id)) {
         return client.update(id, input).entity;
       }

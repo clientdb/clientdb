@@ -7,8 +7,7 @@ const updated = jest.fn();
 const removed = jest.fn();
 
 const owner = defineEntity<TestOwnerEntity>({
-  idField: "id",
-  keys: ["id", "name", "updatedAt"],
+  fields: ["id", "name", "updatedAt"],
   name: "owner",
   getDefaultValues: getDefaultCommonData,
 }).addEventHandlers({

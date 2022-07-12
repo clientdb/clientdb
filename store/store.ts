@@ -121,7 +121,7 @@ export function createEntityStore<Data, View>(
   >();
 
   function getEntityId(entity: Entity<Data, View>) {
-    const id = `${entity[config.idField]}`;
+    const id = `${entity[config.idField!]}`;
 
     return id;
   }
@@ -211,7 +211,7 @@ export function createEntityStore<Data, View>(
       const changes = computeChanges(entity, input);
       const changedKeys = typedKeys(changes);
 
-      if (changedKeys.includes(config.idField)) {
+      if (changedKeys.includes(config.idField!)) {
         throw new Error(
           `Cannot update id field of entity "${definition.config.name}"`
         );

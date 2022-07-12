@@ -69,7 +69,7 @@ function getTablesConfigFromDefinitions(
     (definition): PersistanceTableConfig => {
       return {
         name: definition.config.name,
-        keyField: definition.config.idField,
+        keyField: definition.config.idField!,
       };
     }
   );
