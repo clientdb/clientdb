@@ -9,7 +9,6 @@ import {
   EntityUpdatedEvent,
 } from "./events";
 import { EntityFilterFunction, SortResult } from "./query";
-import { EntityUpdateResult } from "./store";
 import { CleanupObject } from "./utils/cleanup";
 import { getHash } from "./utils/hash";
 import { PartialWithExplicitOptionals } from "./utils/types";
@@ -21,8 +20,8 @@ type EntityRootFilter<Data, View> = (
 
 interface EntityConfig<Data, View> {
   name: string;
-  keys: Array<keyof Data>;
-  idField: keyof Data;
+  fields: Array<keyof Data>;
+  idField?: keyof Data;
   uniqueProps?: Array<keyof Data>;
   /**
    * We require optional values (null and undefined) to be explicitly provided.
@@ -72,15 +71,15 @@ export interface EntityDefinition<Data, View> {
   ): EntityDefinition<Data, View>;
 }
 
-export interface EntityViewLinker<Data> {
+export interface EntityViewLinker<Data, View> {
   db: ClientDb;
-  updateSelf(data: Partial<Data>): EntityUpdateResult;
+  updateSelf(data: Partial<Data>): EntityUpdatedEvent<Data, View>;
   cleanup: CleanupObject;
 }
 
 type EntityDefinitionGetView<Data, View> = (
   item: Data,
-  linker: EntityViewLinker<Data>
+  linker: EntityViewLinker<Data, View>
 ) => View;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,12 +97,21 @@ export type AnyEntityDefinition = EntityDefinition<any, any>;
 export function defineEntity<Data extends {}, View extends {} = {}>(
   config: EntityConfig<Data, View>
 ): EntityDefinition<Data, View> {
+  if (!config.idField) {
+    if (config.fields.includes("id" as keyof Data)) {
+      config.idField = "id" as keyof Data;
+    } else {
+      throw new Error(
+        `Entity ${config.name} has no id field. Please specify one using "idField" config option.`
+      );
+    }
+  }
   return {
     config,
 
     // Schema hash is used to determine if data shape changed and full reload is needed
     getSchemaHash() {
-      const sortedKeys = [...config.keys].sort();
+      const sortedKeys = [...config.fields].sort();
       return getHash(sortedKeys.join(""));
     },
     addView<View>(getView: EntityDefinitionGetView<Data, View>) {

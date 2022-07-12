@@ -169,7 +169,7 @@ export function createQueryFieldIndex<
    */
 
   // Let's check if index key is built-in key or derieved prop
-  const isBasedOnBuiltInKey = store.definition.config.keys.includes(
+  const isBasedOnBuiltInKey = store.definition.config.fields.includes(
     key as keyof D
   );
 

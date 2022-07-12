@@ -30,8 +30,7 @@ export function getDefaultCommonData(): CommonData {
 }
 
 export const owner = defineEntity<TestOwnerEntity>({
-  idField: "id",
-  keys: ["id", "name", "updatedAt", "hide"],
+  fields: ["id", "name", "updatedAt", "hide"],
   uniqueProps: ["name"],
   name: "owner",
   defaultSort: (owner) => owner.name,
@@ -52,8 +51,7 @@ export const owner = defineEntity<TestOwnerEntity>({
   .addRootFilter((owner) => !owner.hide);
 
 export const dog = defineEntity<TestDogEntity>({
-  idField: "id",
-  keys: ["id", "name", "updatedAt", "owner_id"],
+  fields: ["id", "name", "updatedAt", "owner_id"],
   name: "dog",
   getDefaultValues: getDefaultCommonData,
 }).addView((dogData, { db: { entity } }) => {

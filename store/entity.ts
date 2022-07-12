@@ -1,16 +1,10 @@
-import { isEqual, pick } from "lodash";
-import {
-  action,
-  extendObservable,
-  makeAutoObservable,
-  runInAction,
-  toJS,
-} from "mobx";
+import { pick } from "lodash";
+import { action, extendObservable, makeAutoObservable, toJS } from "mobx";
 import { EntityClient } from "./client";
 
 import { ClientDb } from "./db";
 import { EntityDefinition, EntityViewLinker } from "./definition";
-import { EntityChangeEvent, EntityUpdatedEvent } from "./events";
+import { EntityUpdatedEvent } from "./events";
 import { EntityStore } from "./store";
 import { assert } from "./utils/assert";
 import { CleanupObject, createCleanupObject } from "./utils/cleanup";
@@ -51,7 +45,7 @@ function assertDataMatchDefinition<D>(
 ) {
   const rawDataKeys = new Set(typedKeys(data));
 
-  for (const requiredKey of definition.config.keys) {
+  for (const requiredKey of definition.config.fields) {
     assert(
       rawDataKeys.has(requiredKey),
       `Required field "${
@@ -99,7 +93,7 @@ export function createEntity<D, V>({
 
   assertDataMatchDefinition(dataWithDefaults, definition);
 
-  const initialKey = data[config.idField];
+  const initialKey = data[config.idField!];
 
   const observableData = makeAutoObservable<D & object>(
     dataWithDefaults as D & object,
@@ -111,7 +105,7 @@ export function createEntity<D, V>({
 
   const cleanupObject = createCleanupObject();
 
-  const viewLinker: EntityViewLinker<D> = {
+  const viewLinker: EntityViewLinker<D, V> = {
     db,
     updateSelf(data) {
       return entity.update(data);
@@ -137,14 +131,14 @@ export function createEntity<D, V>({
       return !store.findById(entityMethods.getId());
     },
     getId() {
-      return `${entity[config.idField]}`;
+      return `${entity[config.idField!]}`;
     },
     getIdPropName() {
       return config.idField as string;
     },
     getData() {
       const rawObject = toJS(entity);
-      return pick(rawObject, definition.config.keys);
+      return pick(rawObject, definition.config.fields);
     },
     update(input) {
       return client.update(entityMethods.getId(), input);

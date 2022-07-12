@@ -1,4 +1,4 @@
-import { defineEntity, EntityDefinition } from "@clientdb/core";
+import { defineEntity, EntityDefinition } from "@clientdb/store";
 import { DbSchema } from "../schema/schema";
 
 export function createEntityFromSchema<D, V>(
@@ -14,6 +14,6 @@ export function createEntityFromSchema<D, V>(
   return defineEntity({
     idField: entitySchema.idField,
     name: entitySchema.name,
-    keys: entitySchema.attributes.map((attr) => attr.name),
+    fields: entitySchema.attributes.map((attr) => attr.name),
   }) as any;
 }
