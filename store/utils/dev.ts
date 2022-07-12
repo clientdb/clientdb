@@ -1,1 +1,0 @@
-export const IS_DEV = process.env.STAGE !== "staging" && process.env.STAGE !== "production";

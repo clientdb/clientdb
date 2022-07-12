@@ -1,9 +1,0 @@
-*.ts
-*.map
-!*.d.ts
-
-jest.config.js
-
-tsconfig.json
-
-docs/
