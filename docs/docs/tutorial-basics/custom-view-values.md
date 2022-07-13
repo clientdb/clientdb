@@ -2,13 +2,13 @@
 sidebar_position: 4
 ---
 
-# Enchance entity view
+# Enhance entity view
 
-In previous section we created view that allowes us to resolve relations between entities.
+In the previous section, we created a view that allows us to resolve relations between entities.
 
-View can also be used to define any custom values that will be available in our entities.
+The view can also be used to define any custom values that will be available in our entities.
 
-Let's define `isDone` field that will be boolean value based on if `doneAt` is null or not.
+Let's define `isDone` field that will be a boolean value based on weather `doneAt` is null or not.
 
 ```ts
 import { defineEntity } from "@clientdb/store";
@@ -33,7 +33,7 @@ const todoEntity = defineEntity<Todo>({
 });
 ```
 
-Now we can use `isDone` field in every todo in our database
+Now we can use the `isDone` field in every todo in our database
 
 ```ts
 const todo = db.entity(todoEntity).create({
@@ -49,7 +49,7 @@ todo.update({ doneAt: new Date() });
 todo.isDone; // true
 ```
 
-## Using custom fields to query database
+## Using custom fields to query the database
 
 All custom fields are available when we query our database.
 
@@ -85,7 +85,7 @@ Note: queries are indexed by clientdb under the hood, so your queries will be ve
 
 ## Creating custom 'methods' in your view
 
-View can define derieved data like `isDone`, but it can also include custom methods like `markAsDone`
+The view can define derived data like `isDone`, but it can also include custom methods like `markAsDone`
 
 ```ts
 import { defineEntity } from "@clientdb/store";
@@ -120,7 +120,7 @@ const todoEntity = defineEntity<Todo>({
 });
 ```
 
-We now used another utility passed to `addView` called `updateSelf` that allows us to update our entity in database.
+We now used another utility passed to `addView` called `updateSelf` that allows us to update our entity in the database.
 
 We can now use those methods on any todo in our database
 

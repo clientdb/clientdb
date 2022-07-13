@@ -4,9 +4,13 @@ sidebar_position: 1
 
 # Getting started
 
-The only thing you'll need to start using clientdb store is installing it from npm.
+## What is clientdb
+
+Clientdb is a simple, fast, and powerful database for client-side applications.
 
 ## Installation
+
+The only thing you'll need to start using the clientdb store is installing it from npm.
 
 ```bash
 yarn add @clientdb/store
@@ -20,4 +24,4 @@ npm install @clientdb/store
 
 ## Next steps
 
-Go to next section which is tutorial explaining all the core concepts of clientdb.
+Go to the next section which is a tutorial explaining all the core concepts of clientdb.

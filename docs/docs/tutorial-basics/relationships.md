@@ -4,9 +4,14 @@ sidebar_position: 2
 
 # Relationships between entities
 
-Our database now has one entity called `todo`.
+In the previous section, we created `todo` entity.
 
-Let's create `list` entity and add relationships between `todo` and `list`.
+In this section we'll create `list` entity and create relationships between `todo` and `list`:
+
+- `todo.list` will create a reference to the corresponding list entity
+- `list.todos` will return an array of todos belonging to the given list
+
+Ok, let's start by defining `list` entity:
 
 ```ts
 interface List {
@@ -20,9 +25,7 @@ const listEntity = defineEntity<List>({
 });
 ```
 
-List entity is ready, but there is no relation between todo and list.
-
-Let's add `listId` field to todo entity we created before.
+Let's add a `listId` field to the `todo` entity we created before.
 
 ```ts
 import { defineEntity } from "@clientdb/store";
@@ -44,28 +47,20 @@ const todoEntity = defineEntity<Todo>({
 
 Great! Our entities now have all the data we need, but we still don't have relationships between them.
 
-We can add it now creating so-called `view` to our entities definitions.
+To do that, we'll create the so-called `view` on both our entities' definitions.
 
-View simply allows us to append custom derieved data to our entities.
+The view allows us to append custom-derived data to our entities.
 
 ## Add `todo.list` relation
 
-We'll call `.addView` on our `todo` entity definition explaining it how to find corresponding list.
+We'll call `.addView` on our `todo` entity definition. This will add custom data to every `todo`.
 
 ```ts
 import { defineEntity } from "@clientdb/store";
 
-interface Todo {
-  id: string;
-  title: string;
-  doneAt: Date;
-  listId: string;
-}
-
 const todoEntity = defineEntity<Todo>({
-  name: "todo",
-  fields: ["id", "title", "doneAt", "listId"],
-  // highlight-next-line
+  // ...
+  // highlight-start
 }).addView((todo, { db }) => {
   return {
     get list() {
@@ -73,20 +68,23 @@ const todoEntity = defineEntity<Todo>({
     },
   };
 });
+// highlight-end
 ```
 
-Function we passed to `addView` is called with 2 arguments:
+The function we passed to `addView` is called with 2 arguments:
 
-- data object of the entity
-- object which includes 'db' property which is database given todo is part of. We can use it to find other entities than todo's in the same database.
+- data of the entity (`todo`)
+- helper object which includes the `db` property. `db` is the database given todo belongs to. We can use it to find other entities (todos or lists) in the same database.
 
-Using those, we can create `list` property that will try to find list entity with id equal to `todo.listId`.
+Using those, we can create a `list` property getter that will try to find a `list` with an id equal to `todo.listId`.
 
-### Important note
+:::info
 
-Data passed to `addView` (`todo` variable in our case) is observable. This means that if you change `todo.listId` property, `list` property will be updated.
+Data passed to `addView` (`todo` variable in our case) is observable. This means that if you change the `todo.listId` property, the `list` property will be updated.
 
-### Another important note
+:::
+
+:::caution
 
 View properties should be getters. If we'd define view as:
 
@@ -110,15 +108,16 @@ return {
 
 List property would not be observable as relation will be resolved at the moment when we create entity instead of when we read `todo.list` property. Read more [in mobx guide](https://mobx.js.org/understanding-reactivity.html).
 
----
+:::
 
-Ok, now we can also add relation to list entity. It'll be `list.todos` property that will return array of todos that are part of this list.
+## Adding `list.todos` property
+
+Ok, now we can also add a relation to the `list` entity. It'll return an array of todos that are part of this list.
 
 ```ts
 const listEntity = defineEntity<List>({
-  name: "list",
-  fields: ["id", "name"],
-  // highlight-next-line
+  // ...
+  // highlight-start
 }).addView((list, { db }) => {
   return {
     get todos() {
@@ -128,11 +127,12 @@ const listEntity = defineEntity<List>({
     },
   };
 });
+// highlight-end
 ```
 
 Our relations are ready.
 
-Last thing we need to do is update our database to be aware of our new entity
+The last thing we need to do is update our database to be aware of our new `listEntity` entity
 
 ```ts
 import { createClientDb } from "@clientdb/store";
@@ -140,6 +140,8 @@ import { createClientDb } from "@clientdb/store";
 // highlight-next-line
 const db = createClientDb([todoEntity, listEntity]);
 ```
+
+---
 
 We're ready to go.
 

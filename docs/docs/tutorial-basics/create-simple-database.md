@@ -2,11 +2,23 @@
 sidebar_position: 2
 ---
 
-# Creating simple client database
+# Creating a simple client database
+
+The best way to quickly learn how to use clientdb would be to write some code with it.
+
+We'll create a simple 'Todos' client database with `todo` and `list` entities.
+
+We'll cover:
+
+- defining entities (aka tables) of our client database
+- creating a database given our defined entities
+- inserting into and reading from the database
+- defining relationships between entities
+- defining default values for entities
 
 ## Define our first entity
 
-First thing we need to do is to define what type of data will your entity hold. You can think of entities like database tables.
+The first thing we need to do is to define what type of data will your entity hold. You can think of entities like database tables.
 
 Let's start with our Todo entity.
 
@@ -25,15 +37,19 @@ const todoEntity = defineEntity<Todo>({
 });
 ```
 
-This is the minimal definition of an entity. There are way more powerful features we'll go trough later.
+This is the minimal definition of an entity. There are way more powerful features we'll go through later.
 
-In the previous example we defined data interface of the `Todo` entity. These were the `name` of the entity (which should usually be the same as the table's name), the `idField` that is used to point to id of the entity, and what `fields` are allowed (should list all fields of your data interface).
+We created a new entity definition `todoEntity` using TypeScript interface to make it type-safe.
 
-Note: You can also set `idField` when defining new entity. If you don't define it, it will be automatically set to `id`.
+We also provided minimal required configuration which includes `name` of the entity (aka. table name) and `fields` array which is a list of allowed fields of this entity.
+
+:::note
+You can also set `idField` when defining a new entity. If you don't define it, it will be automatically set to `id`.
+:::
 
 ## Creating a data store
 
-Now as we have our first entity, we can already create local database with it.
+Now as we have our first entity, we can already create a local database with it.
 
 ```ts
 import { createClientDb } from "@clientdb/store";
@@ -41,11 +57,13 @@ import { createClientDb } from "@clientdb/store";
 const db = createClientDb([todoEntity]);
 ```
 
-To create db, we need to pass array of entities that will be avaliable in it.
+To create a new client db, we need to pass an array of entities that will be available in it.
 
-## Creating new entities
+`db` we created will be an entry point for all the operations of our data like reading, inserting, querying, etc.
 
-Now we can add first todo to our database.
+## Inserting data
+
+Now we can add the first todo to our database.
 
 ```ts
 const todo = db.add(todoEntity, {
@@ -55,13 +73,15 @@ const todo = db.add(todoEntity, {
 });
 ```
 
-`db.add` return our newly created todo. We can instantly read from it:
+Call to `db.add` returns our newly created todo. We can instantly read from it:
 
 ```ts
 todo.title; // "Buy milk"
 ```
 
-We can now get our todo directly from database:
+## Get all items from db
+
+We can now get all todos from our database
 
 ```ts
 db.entity(todoEntity).count; // count of all todos - 1
@@ -71,7 +91,9 @@ const [firstTodo] = allTodos;
 firstTodo.title; // "Buy milk"
 ```
 
-We can also query our database:
+## Querying the database
+
+We can also query our database with criteria of what we are looking for:
 
 ```ts
 const todoQuery = db.entity(todoEntity).query({
@@ -82,6 +104,12 @@ todoQuery.count; // 1
 todoQuery.first.title; // "Buy milk"
 todoQuery.all; // [todoWeCreated]
 ```
+
+:::note
+Query object can be way more advanced than shown in this example. Check out API reference to more informations
+:::
+
+:::info
 
 ## Your data is observable
 
@@ -114,9 +142,11 @@ db.add(todoEntity, {
 // 2
 ```
 
+:::
+
 ## Updating entity data
 
-Every entity can be updated with `.update` method.
+Every entity can be updated by calling `entity.update()` method.
 
 ```ts
 const todo = db.entity(todoEntity).findById("todo-1");
@@ -125,16 +155,18 @@ todo.doneAt; // null
 
 const now = new Date();
 
+// highlight-start
 todo.update({
   doneAt: now,
 });
+// highlight-end
 
 todo.doneAt; // now
 ```
 
 ## Deleting entities
 
-Each entity can be removed with `.remove` method
+Each entity can be removed with `entity.remove()` call
 
 ```ts
 const todo = db.entity(todoEntity).findById("todo-1");
@@ -143,5 +175,11 @@ todo.remove();
 
 db.entity(todoEntity).findById("todo-1"); // null
 ```
+
+:::caution
+Calling `.update()` on removed entity will throw an error.
+
+You can check if the entity is removed, by calling `entity.isRemoved()`
+:::
 
 Great! We now have our database with `todo` entity. Let's move forward by creating our `list` entity and connecting it with `todo` entity.
