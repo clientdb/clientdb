@@ -125,3 +125,4 @@ kustomize
 nohup.out
 
 buildinfo.tsbuild
+.vercel
