@@ -1,0 +1,8 @@
+{
+  "label": "Tutorial",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "This tutorial should not take more than 20 minutes to complete. You will learn how to create clientdb database, define entities, relations between them, and how to read from db or insert data into it."
+  }
+}
