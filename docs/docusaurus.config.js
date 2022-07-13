@@ -7,8 +7,8 @@ const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "clientdb - Documentation",
-  url: "https://acapela.github.io",
-  baseUrl: "/clientdb/",
+  url: "https://docs.clientdb.dev",
+  baseUrl: "/",
   // TODO: move to throw after initial version of the app is out
   onBrokenLinks: "warn",
   onBrokenMarkdownLinks: "warn",
@@ -77,11 +77,11 @@ const config = {
             items: [
               {
                 label: "Homepage",
-                to: "/",
+                to: "https://clientdb.dev",
               },
               {
                 label: "Docs",
-                to: "/docs/getting-started",
+                to: "/",
               },
               {
                 label: "GitHub",
