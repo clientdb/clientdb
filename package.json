@@ -1,8 +1,13 @@
 {
   "name": "@clientdb/root",
-  "version": "0.1.0",
-  "license": "LGPL-3.0-or-later",
+  "version": "0.0.0-dev",
+  "description": "ClientDB is an open source in-memory database for enabling real-time web apps.",
+  "license": "Apache-2.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acapela/clientdb.git"
+  },
   "workspaces": [
     "store",
     "engine"
@@ -18,5 +23,6 @@
     "@parcel/packager-ts": "2.6.2",
     "@parcel/transformer-typescript-types": "2.6.2",
     "typescript": ">=3.0.0"
-  }
+  },
+  "packageManager": "yarn@3.2.1"
 }

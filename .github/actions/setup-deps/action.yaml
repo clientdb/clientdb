@@ -1,0 +1,17 @@
+name: "Setup Yarn and Node"
+description: "Installs node, yarn and project dependencies"
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v3
+      with:
+        node-version: "16"
+        registry-url: 'https://registry.npmjs.org'
+    - uses: actions/cache@v3
+      with:
+        path: .yarn/cache
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-yarn-
+    - run: yarn
+      shell: bash
