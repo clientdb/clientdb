@@ -10,14 +10,16 @@
   },
   "workspaces": [
     "core",
-    "engine"
+    "engine",
+    "docs"
   ],
   "dependencies": {
     "mobx": "6.6.1"
   },
   "scripts": {
     "core": "yarn workspace @clientdb/core",
-    "engine": "yarn workspace @clientdb/engine"
+    "engine": "yarn workspace @clientdb/engine",
+    "docs": "yarn workspace @clientdb/docs"
   },
   "devDependencies": {
     "@parcel/packager-ts": "2.6.2",
