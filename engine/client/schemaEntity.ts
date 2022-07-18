@@ -1,4 +1,4 @@
-import { defineEntity, EntityDefinition } from "@clientdb/store";
+import { defineEntity, EntityDefinition } from "@clientdb/core";
 import { DbSchema } from "../schema/schema";
 
 export function createEntityFromSchema<D, V>(

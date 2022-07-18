@@ -28,7 +28,7 @@ const listEntity = defineEntity<List>({
 Let's add a `listId` field to the `todo` entity we created before.
 
 ```ts
-import { defineEntity } from "@clientdb/store";
+import { defineEntity } from "@clientdb/core";
 
 interface Todo {
   id: string;
@@ -56,7 +56,7 @@ The view allows us to append custom-derived data to our entities.
 We'll call `.addView` on our `todo` entity definition. This will add custom data to every `todo`.
 
 ```ts
-import { defineEntity } from "@clientdb/store";
+import { defineEntity } from "@clientdb/core";
 
 const todoEntity = defineEntity<Todo>({
   // ...
@@ -135,7 +135,7 @@ Our relations are ready.
 The last thing we need to do is update our database to be aware of our new `listEntity` entity
 
 ```ts
-import { createClientDb } from "@clientdb/store";
+import { createClientDb } from "@clientdb/core";
 
 // highlight-next-line
 const db = createClientDb([todoEntity, listEntity]);
@@ -181,8 +181,8 @@ todo1.list === todo2.list; // true
 Full code so far would be:
 
 ```ts
-import { createClientDb } from "@clientdb/store";
-import { defineEntity } from "@clientdb/store";
+import { createClientDb } from "@clientdb/core";
+import { defineEntity } from "@clientdb/core";
 
 interface Todo {
   id: string;

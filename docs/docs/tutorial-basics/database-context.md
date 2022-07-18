@@ -22,7 +22,7 @@ Example use cases:
 Let's write some code.
 
 ```ts
-import { createDbContext, createClientDb } from "@clientdb/store";
+import { createDbContext, createClientDb } from "@clientdb/core";
 
 // highlight-next-line
 const userIdContext = createDbContext<string>();

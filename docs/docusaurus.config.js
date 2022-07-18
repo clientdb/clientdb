@@ -89,7 +89,7 @@ const config = {
               },
               {
                 label: "npm",
-                href: "https://www.npmjs.com/package/@acapela/clientdb",
+                href: "https://www.npmjs.com/package/@clientdb/core",
               },
             ],
           },

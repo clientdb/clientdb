@@ -1,4 +1,4 @@
-import { AnyEntityDefinition, createClientDb } from "@clientdb/store";
+import { AnyEntityDefinition, createClientDb } from "@clientdb/core";
 
 import { dog, owner } from "./entities";
 

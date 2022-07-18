@@ -23,7 +23,7 @@ The first thing we need to do is to define what type of data will your entity ho
 Let's start with our Todo entity.
 
 ```ts
-import { defineEntity } from "@clientdb/store";
+import { defineEntity } from "@clientdb/core";
 
 interface Todo {
   id: string;
@@ -52,7 +52,7 @@ You can also set `idField` when defining a new entity. If you don't define it, i
 Now as we have our first entity, we can already create a local database with it.
 
 ```ts
-import { createClientDb } from "@clientdb/store";
+import { createClientDb } from "@clientdb/core";
 
 const db = createClientDb([todoEntity]);
 ```

@@ -11,16 +11,16 @@ Clientdb is a simple, fast, and powerful database for client-side applications.
 
 ## Installation
 
-The only thing you'll need to start using the clientdb store is installing it from npm.
+The only thing you'll need to start using the clientdb core is installing it from npm.
 
 ```bash
-yarn add @clientdb/store
+yarn add @clientdb/core
 ```
 
 or
 
 ```bash
-npm install @clientdb/store
+npm install @clientdb/core
 ```
 
 ## Next steps

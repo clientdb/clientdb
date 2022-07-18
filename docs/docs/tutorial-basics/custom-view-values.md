@@ -11,7 +11,7 @@ The view can also be used to define any custom values that will be available in 
 Let's define `isDone` field that will be a boolean value based on weather `doneAt` is null or not.
 
 ```ts
-import { defineEntity } from "@clientdb/store";
+import { defineEntity } from "@clientdb/core";
 
 interface Todo {
   id: string;
@@ -88,7 +88,7 @@ Note: queries are indexed by clientdb under the hood, so your queries will be ve
 The view can define derived data like `isDone`, but it can also include custom methods like `markAsDone`
 
 ```ts
-import { defineEntity } from "@clientdb/store";
+import { defineEntity } from "@clientdb/core";
 
 interface Todo {
   id: string;
