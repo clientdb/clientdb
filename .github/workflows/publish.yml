@@ -2,10 +2,10 @@ name: CI
 on:
   push:
     branches:
-      - '**'
+      - "**"
   pull_request:
     branches:
-      - '**'
+      - "**"
 
 jobs:
   build:
@@ -24,11 +24,11 @@ jobs:
         id: semrel
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          update-file: ./clientdb/package.json
+          update-file: ./core/package.json
           allow-initial-development-versions: true
       - uses: ./.github/actions/setup-deps
         if: steps.semrel.outputs.version != ''
-      - run: yarn core build && npm publish ./clientdb
+      - run: yarn core build && npm publish ./core
         if: steps.semrel.outputs.version != ''
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
