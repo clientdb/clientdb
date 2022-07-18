@@ -389,6 +389,29 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@clientdb/core@workspace:core":
+  version: 0.0.0-use.local
+  resolution: "@clientdb/core@workspace:core"
+  dependencies:
+    "@types/flexsearch": ^0.7.2
+    "@types/jest": ^28.1.3
+    "@types/lodash": ^4.14.182
+    "@types/node": ^18.0.6
+    babel-jest: ^27.4.6
+    flexsearch: ^0.7.21
+    jest: 28.1.1
+    jest-environment-jsdom: 28.1.1
+    lodash: ^4.17.21
+    parcel: ^2.6.2
+    prettier: ^2.7.1
+    rimraf: ^3.0.2
+    ts-jest: 28.0.5
+    typescript: 4.7.4
+  peerDependencies:
+    mobx: "*"
+  languageName: unknown
+  linkType: soft
+
 "@clientdb/engine@workspace:engine":
   version: 0.0.0-use.local
   resolution: "@clientdb/engine@workspace:engine"
@@ -411,28 +434,6 @@ __metadata:
     "@parcel/transformer-typescript-types": 2.6.2
     mobx: 6.6.1
     typescript: ">=3.0.0"
-  languageName: unknown
-  linkType: soft
-
-"@clientdb/store@workspace:store":
-  version: 0.0.0-use.local
-  resolution: "@clientdb/store@workspace:store"
-  dependencies:
-    "@types/flexsearch": ^0.7.2
-    "@types/jest": ^28.1.3
-    "@types/lodash": ^4.14.182
-    babel-jest: ^27.4.6
-    flexsearch: ^0.7.21
-    jest: 28.1.1
-    jest-environment-jsdom: 28.1.1
-    lodash: ^4.17.21
-    parcel: ^2.6.2
-    prettier: ^2.7.1
-    rimraf: ^3.0.2
-    ts-jest: 28.0.5
-    typescript: 4.7.4
-  peerDependencies:
-    mobx: "*"
   languageName: unknown
   linkType: soft
 
@@ -2154,6 +2155,13 @@ __metadata:
   version: 18.0.3
   resolution: "@types/node@npm:18.0.3"
   checksum: 5dec59fbbc1186c808b53df1ca717dad034dbd6a901c75f5b052c845618b531b05f27217122c6254db99529a68618e4cfc534ae3dbf4e88754e9e572df80defa
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^18.0.6":
+  version: 18.0.6
+  resolution: "@types/node@npm:18.0.6"
+  checksum: 780f8885a6b6eb12f4c0246617747fdc37a451931b3c01ce8148d356c0903b705dcb16cc6a914de63d48b0dc1b002c7a3dfae681f580e1761aa551d3cd996813
   languageName: node
   linkType: hard
 

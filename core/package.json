@@ -1,6 +1,6 @@
 {
-  "name": "@clientdb/store",
-  "version": "0.1.5",
+  "name": "@clientdb/core",
+  "version": "0.0.0-development",
   "description": "ClientDB is an open source in-memory database for enabling real-time web apps.",
   "license": "Apache-2.0",
   "keywords": [
@@ -31,6 +31,7 @@
     "@types/flexsearch": "^0.7.2",
     "@types/jest": "^28.1.3",
     "@types/lodash": "^4.14.182",
+    "@types/node": "^18.0.6",
     "babel-jest": "^27.4.6",
     "jest": "28.1.1",
     "jest-environment-jsdom": "28.1.1",

@@ -3,7 +3,7 @@ import { ObservableMap, autorun, observable, runInAction } from "mobx";
 import {
   CACHED_COMPUTED_ALIVE_TIME,
   cachedComputedWithoutArgs,
-} from "@clientdb/store";
+} from "@clientdb/core";
 
 import { runObserved } from "./utils";
 

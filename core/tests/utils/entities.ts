@@ -1,4 +1,4 @@
-import { defineEntity } from "@clientdb/store";
+import { defineEntity } from "@clientdb/core";
 
 interface CommonData {
   id: string;

@@ -1,4 +1,4 @@
-import { createClientDb, defineEntity, ClientDb } from "@clientdb/store";
+import { createClientDb, defineEntity, ClientDb } from "@clientdb/core";
 
 import { TestOwnerEntity, getDefaultCommonData } from "./utils";
 

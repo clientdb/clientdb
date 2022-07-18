@@ -7,7 +7,7 @@ ClientDB is an open source in-memory database for enabling real-time web apps. B
 Install clientdb with yarn
 
 ```bash
-  yarn add @acapela/clientdb
+  yarn add @clientdb/core
 ```
 
 ## Tech Stack

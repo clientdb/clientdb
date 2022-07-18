@@ -9,14 +9,14 @@
     "url": "https://github.com/acapela/clientdb.git"
   },
   "workspaces": [
-    "store",
+    "core",
     "engine"
   ],
   "dependencies": {
     "mobx": "6.6.1"
   },
   "scripts": {
-    "store": "yarn workspace @clientdb/store",
+    "core": "yarn workspace @clientdb/core",
     "engine": "yarn workspace @clientdb/engine"
   },
   "devDependencies": {
