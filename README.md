@@ -22,28 +22,21 @@ Clone the project
   git clone git@github.com:acapela/clientdb.git
 ```
 
-Go to the project directory
-
-```bash
-  cd clientdb
-```
-
 Install dependencies
 
 ```bash
   yarn install
 ```
 
-Build the client
+Build the client-side db
 
 ```bash
-  cd clientdb
-  yarn build
+  yarn core build
 ```
 
 ## Running Tests
 
-To run tests, run the following command while in clientdb/clientdb directory
+To run tests, run the following command while in /core directory
 
 ```bash
   yarn test
