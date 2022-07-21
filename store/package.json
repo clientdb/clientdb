@@ -23,11 +23,13 @@
   "module": "index.module.js",
   "types": "index.d.ts",
   "dependencies": {
+    "collections": "^5.1.13",
     "flexsearch": "^0.7.21",
     "lodash": "^4.17.21",
     "prettier": "^2.7.1"
   },
   "devDependencies": {
+    "@types/collections": "^5.1.2",
     "@types/flexsearch": "^0.7.2",
     "@types/jest": "^28.1.3",
     "@types/lodash": "^4.14.182",
