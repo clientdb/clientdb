@@ -1,14 +1,17 @@
 import { Knex } from "knex";
 import { DbSchemaModel } from "../../schema/model";
-import { WherePermission } from "../../schema/types";
+import { EntityReadPermissionConfig, PermissionRule } from "../../schema/types";
 import { resolveValuePointer } from "../../schema/utils";
-import { pickPermissions } from "../change";
+import { createLogger } from "../../utils/logger";
+import { pickPermission, pickPermissionsRules } from "../change";
 import { SyncRequestContext } from "../context";
 import { createJoins, JoinInfo } from "./join";
 import { createUserSelects } from "./userSelect";
 import { createWhereConditions, WherePointer, WhereTree } from "./where";
 
 type QueryBuilder = Knex.QueryBuilder;
+
+const log = createLogger("Permission query", false);
 
 function applyJoins(query: QueryBuilder, joins: JoinInfo[]) {
   for (const join of joins) {
@@ -103,18 +106,14 @@ function applyWhere(
 
 function createBasePermissionMapQuery<T>(
   entity: string,
-  permission: WherePermission<T>,
+  rule: PermissionRule<T>,
   context: SyncRequestContext
 ) {
   const { db } = context;
 
-  const joins = createJoins(entity, permission, context.schema);
+  const joins = createJoins(entity, rule, context.schema);
 
-  const [constantWhere] = createWhereConditions(
-    entity,
-    permission,
-    context.schema
-  );
+  const [constantWhere] = createWhereConditions(entity, rule, context.schema);
 
   let rootQuery = db.from(`${entity}`);
 
@@ -128,14 +127,28 @@ function applyEntityIdSelect(query: QueryBuilder, entity: string) {
   return query.select(`${entity}.id`);
 }
 
-function applyEntityDataSelect(query: QueryBuilder, entity: string) {
-  return query.select(`${entity}.*`);
+function applyEntityDataSelect(
+  query: QueryBuilder,
+  entity: string,
+  permission: EntityReadPermissionConfig<any>
+) {
+  const { fields } = permission;
+
+  if (!fields) {
+    return query.select(`${entity}.*`);
+  }
+
+  const selectFields = fields.map((field) => {
+    return `${entity}.${field}`;
+  });
+
+  return query.select(selectFields);
 }
 
 function applyAllowedUsersSelect(
   query: QueryBuilder,
   entity: string,
-  permission: WherePermission<any>,
+  permission: PermissionRule<any>,
   context: SyncRequestContext
 ) {
   const userSelects = createUserSelects(
@@ -153,7 +166,7 @@ function applyAllowedUsersSelect(
 function applyContextWhere(
   query: QueryBuilder,
   entity: string,
-  permission: WherePermission<any>,
+  permission: PermissionRule<any>,
   context: SyncRequestContext
 ) {
   const [, contextualWhere] = createWhereConditions(
@@ -171,7 +184,7 @@ export function createAccessQuery<T>(
   context: SyncRequestContext,
   entity: string
 ) {
-  const permission = pickPermissions(context, entity, "read");
+  const permission = pickPermissionsRules(context, entity, "read");
 
   if (!permission) return null;
 
@@ -187,14 +200,14 @@ export function createUserAccessQuery<T>(
   context: SyncRequestContext,
   entity: string
 ) {
-  const permission = pickPermissions(context, entity, "read");
+  const readRules = pickPermissionsRules(context, entity, "read");
 
-  if (!permission) return null;
+  if (!readRules) return null;
 
-  let query = createBasePermissionMapQuery(entity, permission, context);
+  let query = createBasePermissionMapQuery(entity, readRules, context);
 
   query = applyEntityIdSelect(query, entity);
-  query = applyContextWhere(query, entity, permission, context);
+  query = applyContextWhere(query, entity, readRules, context);
 
   return query;
 }
@@ -203,14 +216,16 @@ export function createInitialLoadQuery<T>(
   context: SyncRequestContext,
   entity: string
 ) {
-  const permission = pickPermissions(context, entity, "read");
+  const permission = pickPermission(context, entity, "read");
 
   if (!permission) return null;
 
-  let query = createBasePermissionMapQuery(entity, permission, context);
+  let query = createBasePermissionMapQuery(entity, permission.rule, context);
 
-  query = applyEntityDataSelect(query, entity);
-  query = applyContextWhere(query, entity, permission, context);
+  query = applyEntityDataSelect(query, entity, permission);
+  query = applyContextWhere(query, entity, permission.rule, context);
+
+  log("init", query.toString(), { permission });
 
   return query;
 }

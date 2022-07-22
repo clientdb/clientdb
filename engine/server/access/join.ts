@@ -1,5 +1,5 @@
 import { DbSchemaModel } from "../../schema/model";
-import { WherePermission } from "../../schema/types";
+import { PermissionRule } from "../../schema/types";
 import { traversePermissions } from "./traverse";
 
 function getJoinColumns(from: string, to: string, schema: DbSchemaModel) {
@@ -43,12 +43,12 @@ export interface JoinInfo {
 
 export function createJoins<T>(
   entity: string,
-  permissions: WherePermission<T>,
+  permissions: PermissionRule<T>,
   schema: DbSchemaModel
 ): JoinInfo[] {
   const joins: JoinInfo[] = [];
   traversePermissions(entity, permissions, schema, {
-    onRelation({ key, path, relation }) {
+    onRelation({ key, path }) {
       const [fromColumn, toColumn] = getJoinColumns(entity, key, schema);
 
       joins.push({

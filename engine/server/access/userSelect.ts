@@ -1,5 +1,5 @@
 import { DbSchemaModel } from "../../schema/model";
-import { WherePermission } from "../../schema/types";
+import { PermissionRule } from "../../schema/types";
 import { traversePermissions } from "./traverse";
 
 function getIsFieldPointingToUserId(
@@ -25,7 +25,7 @@ function getIsFieldPointingToUserId(
 
 export function createUserSelects<T>(
   entity: string,
-  permissions: WherePermission<T>,
+  permissions: PermissionRule<T>,
   schema: DbSchemaModel,
   userTable: string
 ): string[] {
@@ -45,7 +45,7 @@ export function createUserSelects<T>(
         userTable
       );
 
-      if (getIsFieldPointingToUserId(table, key, schema, userTable)) {
+      if (isPointingToUserId) {
         userSelects.push(selectPath);
       }
     },

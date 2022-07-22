@@ -1,28 +1,7 @@
 import { DbSchemaModel } from "../../schema/model";
-import { WherePermission, WhereValueConfig } from "../../schema/types";
+import { PermissionRule, WhereValueConfig } from "../../schema/types";
 import { getIsWhereValueConfigConstant } from "../../schema/utils";
 import { ConditionGroupSegment, traversePermissions } from "./traverse";
-
-function getIsFieldPointingToUserId(
-  table: string,
-  field: string,
-  schema: DbSchemaModel,
-  userTable: string
-) {
-  const userIdField = schema.getIdField(userTable);
-
-  if (!userIdField) {
-    throw new Error(`User table ${userTable} has no id field`);
-  }
-
-  if (table === userTable && field === userIdField) {
-    return true;
-  }
-
-  const maybeUserEntity = schema.getEntityReferencedBy(table, field);
-
-  return maybeUserEntity?.name === userTable;
-}
 
 export interface WhereTree {
   conditions?: WherePointer[];
@@ -102,14 +81,14 @@ function parseWhereTree(pointers: RawWherePointer[]): WhereTree {
 
 export function createWhereConditions<T>(
   entity: string,
-  permissions: WherePermission<T>,
+  permissions: PermissionRule<T>,
   schema: DbSchemaModel
 ) {
   const constantWhere: RawWherePointer[] = [];
   const dynamicWhere: RawWherePointer[] = [];
 
   traversePermissions(entity, permissions, schema, {
-    onValue({ key, table, selectPath, value, conditionGroup }) {
+    onValue({ selectPath, value, conditionGroup }) {
       const isConstant = getIsWhereValueConfigConstant(value);
 
       if (isConstant) {

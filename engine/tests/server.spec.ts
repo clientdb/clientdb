@@ -21,8 +21,16 @@ describe("server", () => {
     const userId = uuidv4();
     const userBId = uuidv4();
 
-    await server.admin.create("user", { id: userId, name: "user-1" });
-    await server.admin.create("user", { id: userBId, name: "user-2" });
+    await server.admin.create("user", {
+      id: userId,
+      name: "user-1",
+      password: "aaa",
+    });
+    await server.admin.create("user", {
+      id: userBId,
+      name: "user-2",
+      password: "bbb",
+    });
 
     const listId = uuidv4();
 
@@ -53,5 +61,9 @@ describe("server", () => {
     expect(bData.users).toHaveLength(1);
     expect(bData.todos).toHaveLength(0);
     expect(bData.lists).toHaveLength(0);
+
+    expect(aData.users![0].id).toBe(userId);
+    expect(aData.users![0].name).toBe("user-1");
+    expect(aData.users![0].password).toBeUndefined();
   });
 });

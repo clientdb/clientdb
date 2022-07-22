@@ -1,9 +1,6 @@
-import { createWhereConditions } from "./access/where";
-import { createJoins } from "./access/join";
-import { createUserSelects } from "./access/userSelect";
-import { pickPermissions } from "./change";
+import { createLogger } from "../utils/logger";
+import { createInitialLoadQuery } from "./access/query";
 import { SyncRequestContext } from "./context";
-import { createAccessQuery, createInitialLoadQuery } from "./access/query";
 
 export interface EntityKindBootData<D = {}> {
   kind: string;
@@ -15,6 +12,8 @@ export interface InitialLoadData {
   data: EntityKindBootData<any>[];
 }
 
+const log = createLogger("Init Load", false);
+
 async function fetchEntityIntialData(
   context: SyncRequestContext,
   entity: string
@@ -24,6 +23,8 @@ async function fetchEntityIntialData(
   if (!query) {
     return { kind: entity, items: [] };
   }
+
+  log(`Fetching initial data for ${entity}`, query.toString());
 
   const items = await query;
   const kind = entity;

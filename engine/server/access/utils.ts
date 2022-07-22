@@ -1,19 +1,19 @@
 import { DbSchemaModel } from "../../schema/model";
 import {
-  DataPermissions,
-  RelationsPermissions,
-  WhereRule,
-  WherePermission,
+  DataSelector,
+  RelationsSelector,
+  PermissionSelector,
+  PermissionRule,
   WhereValue,
-  RelationPermission,
+  RelationRule,
 } from "../../schema/types";
 
 export function pickRelationPermissions<T>(
-  rule: WhereRule<T>,
+  rule: PermissionSelector<T>,
   entity: string,
   schema: DbSchemaModel
-): RelationsPermissions<T> {
-  const relationPermissions: RelationsPermissions<T> = {};
+): RelationsSelector<T> {
+  const relationPermissions: RelationsSelector<T> = {};
 
   for (const [field, fieldSpec] of Object.entries(rule)) {
     const relation = schema.getRelation(entity, field);
@@ -29,11 +29,11 @@ export function pickRelationPermissions<T>(
 }
 
 export function pickDataPermissions<T>(
-  rule: WhereRule<T>,
+  rule: PermissionSelector<T>,
   entity: string,
   schema: DbSchemaModel
-): DataPermissions<T> {
-  const dataPermissions: DataPermissions<T> = {};
+): DataSelector<T> {
+  const dataPermissions: DataSelector<T> = {};
 
   for (const [field, fieldSpec] of Object.entries(rule)) {
     const relation = schema.getRelation(entity, field);
@@ -48,18 +48,18 @@ export function pickDataPermissions<T>(
   return dataPermissions;
 }
 
-export function parseWherePermission<T>(permission: WherePermission<T>) {
+export function parseWherePermission<T>(permission: PermissionRule<T>) {
   const { $and, $or, ...rule } = permission;
 
   return {
-    rule: rule as WhereRule<T>,
+    rule: rule as PermissionSelector<T>,
     $and,
     $or,
   };
 }
 
 export function parseWhereRule<T>(
-  rule: WhereRule<T>,
+  rule: PermissionSelector<T>,
   entity: string,
   schema: DbSchemaModel
 ) {
@@ -71,7 +71,7 @@ export function parseWhereRule<T>(
   >;
 
   const relationEntires = Object.entries(relationPermissions) as Array<
-    [keyof T, RelationPermission<T[keyof T]>]
+    [keyof T, RelationRule<T[keyof T]>]
   >;
 
   return {

@@ -1,8 +1,8 @@
 import { DbSchemaModel } from "../../schema/model";
 import {
-  RelationPermission,
-  WherePermission,
-  WhereRule,
+  RelationRule,
+  PermissionRule,
+  PermissionSelector,
   WhereValue,
   WhereValueConfig,
 } from "../../schema/types";
@@ -12,7 +12,7 @@ import { parseWherePermission, parseWhereRule } from "./utils";
 export type ConditionGroupSegment = "and" | "or" | number;
 
 interface TraverseRelationInfo {
-  relation: RelationPermission<any>;
+  relation: RelationRule<any>;
   key: string;
   table: string;
   path: string[];
@@ -42,7 +42,7 @@ function traverseRule<T>(
   selectPath: string[],
   conditionGroup: ConditionGroupSegment[],
   table: string,
-  rule: WhereRule<T>,
+  rule: PermissionSelector<T>,
   schema: DbSchemaModel,
   callbacks: TraverseCallbacks
 ) {
@@ -91,7 +91,7 @@ function traversePermissionsWithPath<T>(
   selectPath: string[],
   conditionGroup: ConditionGroupSegment[],
   entity: string,
-  permissions: WherePermission<T>,
+  permissions: PermissionRule<T>,
   schema: DbSchemaModel,
   callbacks: TraverseCallbacks
 ) {
@@ -138,7 +138,7 @@ function traversePermissionsWithPath<T>(
 
 export function traversePermissions<T>(
   entity: string,
-  permissions: WherePermission<T>,
+  permissions: PermissionRule<T>,
   schema: DbSchemaModel,
   callbacks: TraverseCallbacks
 ) {

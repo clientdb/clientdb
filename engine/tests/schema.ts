@@ -10,6 +10,7 @@ import {
 interface User {
   id: string;
   name: string;
+  password: string;
   todos: SchemaCollection<Todo>;
   lists: SchemaCollection<List>;
 }
@@ -50,6 +51,7 @@ export const schema: DbSchema = {
       attributes: [
         { name: "id", type: "uuid", isNullable: false },
         { name: "name", type: "text", isNullable: false },
+        { name: "password", type: "text", isNullable: false },
       ],
       relations: [
         {
@@ -144,25 +146,26 @@ const ownedTodo: Where["todo"] = {
 export const permissions: Permissions = {
   user: {
     read: {
-      check: selfUser,
+      rule: selfUser,
+      fields: ["id", "name"],
     },
     update: {
-      check: selfUser,
+      rule: selfUser,
       fields: ["name"],
     },
     remove: selfUser,
     create: {
-      check: {},
+      rule: {},
     },
   },
   list: {
     read: {
-      check: {
+      rule: {
         $or: [ownedList, publicList],
       },
     },
     create: {
-      check: ownedList,
+      rule: ownedList,
       fields: ["id", "is_private", "name"],
       preset: {
         user_id: currentUser,
@@ -170,26 +173,26 @@ export const permissions: Permissions = {
     },
     remove: ownedList,
     update: {
-      check: ownedList,
+      rule: ownedList,
       fields: ["is_private", "name"],
     },
   },
   todo: {
     read: {
-      check: {
+      rule: {
         $or: [ownedTodo, publicTodo],
       },
       fields: ["done_at", "id", "name"],
     },
     create: {
-      check: ownedTodo,
+      rule: ownedTodo,
       preset: {
         user_id: currentUser,
       },
     },
     remove: ownedTodo,
     update: {
-      check: ownedTodo,
+      rule: ownedTodo,
       fields: ["name", "done_at", "list_id"],
     },
   },

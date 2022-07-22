@@ -45,22 +45,22 @@ export type WhereValueConfig<T> = {
   $notIn?: ValuePointer<T[]>;
 };
 
-export type DataPermissions<T> = {
+export type DataSelector<T> = {
   [K in keyof T]?: WhereValue<T[K]>;
 };
 
-export type RelationPermission<T> = WherePermission<RelationSchemaType<T>>;
+export type RelationRule<T> = PermissionRule<RelationSchemaType<T>>;
 
-export type RelationsPermissions<T> = {
-  [K in keyof T]?: RelationPermission<T[K]>;
+export type RelationsSelector<T> = {
+  [K in keyof T]?: RelationRule<T[K]>;
 };
 
-export type WhereRule<T> = DataPermissions<EntitySchemaData<T>> &
-  RelationsPermissions<EntitySchemaRelations<T>>;
+export type PermissionSelector<T> = DataSelector<EntitySchemaData<T>> &
+  RelationsSelector<EntitySchemaRelations<T>>;
 
-export type WherePermission<T> = WhereRule<T> & {
-  $or?: WherePermission<T>[];
-  $and?: WherePermission<T>[];
+export type PermissionRule<T> = PermissionSelector<T> & {
+  $or?: PermissionRule<T>[];
+  $and?: PermissionRule<T>[];
 };
 
 export type DefaultInput<T> = {
@@ -69,21 +69,29 @@ export type DefaultInput<T> = {
 
 export type PermissionOperationType = "read" | "create" | "update" | "remove";
 
+export type EntityReadPermissionConfig<T> = {
+  rule: PermissionRule<T>;
+  fields?: Array<EntitySchemaDataKeys<T>>;
+};
+
+export type EntityCreatePermissionConfig<T> = {
+  rule: PermissionRule<T>;
+  fields?: Array<EntitySchemaDataKeys<T>>;
+  preset?: DefaultInput<T>;
+};
+
+export type EntityUpdatePermissionConfig<T> = {
+  rule: PermissionRule<T>;
+  fields?: Array<EntitySchemaDataKeys<T>>;
+};
+
+export type EntityRemovePermissionConfig<T> = PermissionRule<T>;
+
 export type EntityPermissionsConfig<T> = {
-  read?: {
-    check: WherePermission<T>;
-    fields?: Array<EntitySchemaDataKeys<T>>;
-  };
-  create?: {
-    check?: WherePermission<T>;
-    fields?: Array<EntitySchemaDataKeys<T>>;
-    preset?: DefaultInput<T>;
-  };
-  update?: {
-    check: WherePermission<T>;
-    fields?: Array<EntitySchemaDataKeys<T>>;
-  };
-  remove?: WherePermission<T>;
+  read?: EntityReadPermissionConfig<T>;
+  create?: EntityCreatePermissionConfig<T>;
+  update?: EntityUpdatePermissionConfig<T>;
+  remove?: EntityRemovePermissionConfig<T>;
 };
 
 export type SchemaPermissions<S> = {
@@ -91,7 +99,7 @@ export type SchemaPermissions<S> = {
 };
 
 export type SchemaWhere<S> = {
-  [K in keyof S]: WhereRule<S[K]>;
+  [K in keyof S]: PermissionSelector<S[K]>;
 };
 
 export function currentUser(ctx: SyncRequestContext) {
