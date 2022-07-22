@@ -1,16 +1,19 @@
 import { SchemaEntity } from "./schema";
+import { validate } from "uuid";
 
 function getIsDataTypeValid(input: unknown, type: string) {
   // TODO: all pg types
   switch (type) {
     case "string":
+    case "text":
       return typeof input === "string";
     case "number":
       return typeof input === "number";
+    case "bool":
     case "boolean":
       return typeof input === "boolean";
     case "uuid":
-      return typeof input === "string" && input.length === 36;
+      return validate(input as string);
     case "date":
       return typeof input === "string" && !!input.match(/^\d{4}-\d{2}-\d{2}$/);
     case "datetime":
@@ -42,7 +45,9 @@ export function validateEntityDataProp(
   }
 
   if (!getIsDataTypeValid(value, attribute.type)) {
-    throw new Error(`Attribute ${prop} has invalid type ${attribute.type}`);
+    throw new Error(
+      `Attribute '${prop}' of entity '${schema.name}' has invalid value for type '${attribute.type}' (${value})`
+    );
   }
 }
 

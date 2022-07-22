@@ -121,7 +121,7 @@ This means that we can subscribe to any piece of data from the database and alwa
 import { autorun } from "mobx";
 
 autorun(() => {
-  console.log(db.entity(todoEntity).count);
+  console.info(db.entity(todoEntity).count);
 });
 
 db.add(todoEntity, {

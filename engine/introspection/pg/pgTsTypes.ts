@@ -55,9 +55,8 @@ export function pgTypeToTsType(udtName: string): string {
     default:
       if (udtName.startsWith("_")) {
         const singularName = udtName.slice(1);
-        console.log({ singularName });
       }
-      console.log(
+      console.info(
         `Type ${udtName} has been mapped to [any] because no specific type has been found.`
       );
       return "any";

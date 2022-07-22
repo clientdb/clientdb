@@ -6,9 +6,9 @@ import {
 import { EntityChange, getEntityChangeSchema } from "./change";
 import { SyncRequestContext } from "./context";
 
-export async function getIsChangeDataValid(
+export async function getIsChangeDataValid<T, D>(
   context: SyncRequestContext,
-  change: EntityChange
+  change: EntityChange<T, D>
 ): Promise<boolean> {
   const schema = getEntityChangeSchema(change, context);
 

@@ -4,21 +4,13 @@ import { getIsChangeAllowed } from "./changePermission";
 import { getIsChangeDataValid } from "./changeValidation";
 import { SyncRequestContext } from "./context";
 
-function getIdKeyForEntity(schema: DbSchema, entity: string) {
-  const entitySchema = schema.entities.find((e) => e.name === entity);
-
-  if (!entitySchema) {
-    throw new Error(`Unknown entity ${entity}`);
-  }
-
-  return entitySchema.idField;
-}
-
-export async function performMutation(
+export async function performMutation<T, D>(
   context: SyncRequestContext,
-  input: EntityChange
+  input: EntityChange<T, D>
 ): Promise<void> {
   const { schema, db } = context;
+
+  const entityName = input.entity as any as string;
 
   if (!getIsChangeDataValid(context, input)) {
     throw new Error("Invalid change data");
@@ -28,19 +20,19 @@ export async function performMutation(
     throw new Error("Change is not allowed");
   }
 
-  const idField = getIdKeyForEntity(schema, input.entity);
+  const idField = schema.getIdField(entityName)!;
 
   switch (input.type) {
     case "remove": {
-      db.table(input.entity).where(idField, input.id).delete();
+      await db.table(entityName).where(idField, input.id).delete();
       return;
     }
     case "update": {
-      db.table(input.entity).where(idField, input.id).update(input.data);
+      await db.table(entityName).where(idField, input.id).update(input.data);
       return;
     }
     case "create": {
-      db.table(input.entity).insert(input.data);
+      await db.table(entityName).insert(input.data);
       return;
     }
   }

@@ -1,40 +1,61 @@
+import { PermissionOperationType } from "../schema/types";
+import { unsafeAssertType } from "../utils/assert";
 import { SyncRequestContext } from "./context";
 
-export type EntityRemoveChange = {
+export type EntityRemoveChange<T> = {
   type: "remove";
-  entity: string;
+  entity: T;
   id: string;
 };
 
-export type EntityUpdateChange = {
+export type EntityUpdateChange<T, D> = {
   type: "update";
-  entity: string;
+  entity: T;
   id: string;
-  data: object;
+  data: Partial<D>;
 };
 
-export type EntityCreateChange = {
+export type EntityCreateChange<T, D> = {
   type: "create";
-  entity: string;
-  data: object;
+  entity: T;
+  data: Partial<D>;
 };
 
-export type EntityChange =
-  | EntityRemoveChange
-  | EntityUpdateChange
-  | EntityCreateChange;
+export type EntityChange<T, D> =
+  | EntityRemoveChange<T>
+  | EntityUpdateChange<T, D>
+  | EntityCreateChange<T, D>;
 
-export function getEntityChangeSchema(
-  change: EntityChange,
+export function getEntityChangeSchema<T, D>(
+  change: EntityChange<T, D>,
   context: SyncRequestContext
 ) {
   const { entity } = change;
 
-  const schema = context.schema.entities.find((e) => e.name === entity);
+  const schema = context.schema.getEntity(entity as any as string);
 
   if (!schema) {
     throw new Error(`No schema found for entity ${entity}`);
   }
 
   return schema;
+}
+
+export function pickPermissions<T extends PermissionOperationType>(
+  context: SyncRequestContext,
+  entity: string,
+  operation: T
+) {
+  const { permissions } = context;
+
+  return permissions[entity]?.[operation]?.check ?? null;
+}
+
+export function pickChangePermission<T, D>(
+  change: EntityChange<T, D>,
+  context: SyncRequestContext
+) {
+  const { entity, type } = change;
+
+  return pickPermissions(context, entity as any as string, type);
 }

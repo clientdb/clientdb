@@ -29,3 +29,5 @@ export function createRealTimeManager(server: SocketServer) {
     requestEveryoneToSync,
   };
 }
+
+export type RealTimeManager = ReturnType<typeof createRealTimeManager>;

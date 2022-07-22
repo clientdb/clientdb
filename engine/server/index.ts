@@ -1,13 +1,20 @@
 import { DbSchema } from "../schema/schema";
 import { createRequestContext, RequestDataHandlers } from "./request";
 import express, { Request } from "express";
-import knex from "knex";
+import knex, { Knex } from "knex";
 import { fetchInitialData } from "./init";
 import { performMutation } from "./mutation";
 import { fetchSyncDelta } from "./fetchSyncDelta";
 import http from "http";
 import { Server as SocketServer } from "socket.io";
 import { createRealTimeManager } from "./realtime";
+import { initializeTablesFromSchema } from "./db/schema";
+import { createSchemaModel } from "../schema/model";
+import { initializeSystemTables } from "./db/core";
+import { createSyncHandler } from "./handler";
+import { attachSyncRouter } from "./router";
+import { createSyncAdmin } from "./admin";
+import { SchemaPermissions } from "../schema/types";
 
 interface SyncServerDatabaseConnectionConfig {
   host: string;
@@ -17,84 +24,75 @@ interface SyncServerDatabaseConnectionConfig {
   database: string;
 }
 
-interface SyncServerConfig {
+interface SyncServerConfig<Schema> {
   schema: DbSchema;
   requestHandlers: RequestDataHandlers;
-  dbConnection: SyncServerDatabaseConnectionConfig;
+  dbConnection?: SyncServerDatabaseConnectionConfig;
+  /**
+   * Knex instance for the database. Used for testing.
+   * @internal
+   */
+  db?: Knex;
+  permissions: SchemaPermissions<Schema>;
 }
 
-/**
- * /init
- * /mutate
- * /sync
- *
- * socket -> connnect , 'sync trigger',
- */
-
-export function createSyncServer(config: SyncServerConfig) {
+export function createSyncServer<Schema = any>(
+  config: SyncServerConfig<Schema>
+) {
   const app = express();
   const httpServer = http.createServer(app);
   const socketServer = new SocketServer(httpServer);
 
   const realTimeManager = createRealTimeManager(socketServer);
 
-  const dbConnection = knex({
-    connection: config.dbConnection,
+  const schemaModel = createSchemaModel(config.schema);
+
+  const dbConnection =
+    config.db ??
+    knex({
+      connection: config.dbConnection,
+    });
+
+  const handler = createSyncHandler();
+
+  const admin = createSyncAdmin<Schema>({
+    db: dbConnection,
+    schema: schemaModel,
+    handler,
+    permissions: config.permissions!,
   });
 
-  const { requestHandlers, schema } = config;
+  attachSyncRouter({
+    app,
+    config,
+    handler,
+    realtime: realTimeManager,
+    db: dbConnection,
+  });
 
-  async function createContext(req: Request) {
-    const context = await createRequestContext(
-      req,
-      requestHandlers,
-      schema,
-      dbConnection
-    );
-
-    return context;
+  async function bootstrapTables() {
+    await initializeTablesFromSchema(dbConnection, schemaModel);
   }
 
-  app.get("/init", async (req, res) => {
-    const context = await createContext(req);
+  async function initialize() {
+    await initializeSystemTables(dbConnection);
 
-    const bootData = await fetchInitialData(context);
-    res.json(bootData);
-  });
+    await bootstrapTables();
+  }
 
-  app.get("/sync", async (req, res) => {
-    const context = await createContext(req);
-
-    const result = await fetchSyncDelta(context);
-
-    res.json(result);
-  });
-
-  app.post("/mutate", async (req, res) => {
-    const context = await createContext(req);
-
-    const {
-      body: { input },
-    } = req;
-
-    const result = await performMutation(context, input);
-
-    res.json(result);
-
-    realTimeManager.requestEveryoneToSync();
-  });
-
-  function listen(port: number) {
+  async function listen(port: number) {
     return new Promise<void>((resolve) => {
       app.listen(port, () => {
-        console.log(`Sync server listening on port ${port}`);
+        console.info(`Sync server listening on port ${port}`);
         resolve();
       });
     });
   }
 
   return {
+    initialize,
     listen,
     app,
+    admin,
   };
 }

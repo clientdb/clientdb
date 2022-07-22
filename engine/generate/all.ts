@@ -238,5 +238,5 @@ export function generateClient(schema: DbSchema) {
 
   const output = printTs(nodes);
 
-  console.log(output);
+  console.info(output);
 }
