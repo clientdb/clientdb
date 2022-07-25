@@ -3,67 +3,80 @@ import { createTestServer } from "./server";
 
 import { v4 as uuidv4 } from "uuid";
 import { InitialLoadData } from "../server/init";
+import { createTestData } from "./data";
 
 function parseBootLoad(load: InitialLoadData) {
   const users = load.data.find((item) => item.kind === "user")?.items;
-  const todos = load.data.find((item) => item.kind === "todo")?.items;
+  const labels = load.data.find((item) => item.kind === "label")?.items;
   const lists = load.data.find((item) => item.kind === "list")?.items;
 
-  return { users, todos, lists };
+  return { users, labels, lists };
 }
 
 describe("server", () => {
   it("returns proper initial load basing on permissions", async () => {
     const server = await createTestServer();
 
-    expect("foo").toBe("foo");
+    const ids = await createTestData(server);
 
-    const userId = uuidv4();
-    const userBId = uuidv4();
+    const ownerInit = await server.admin.getInit({ userId: ids.user.owner });
+    const memberInit = await server.admin.getInit({ userId: ids.user.member });
+    const outInit = await server.admin.getInit({ userId: ids.user.out });
 
-    await server.admin.create("user", {
-      id: userId,
-      name: "user-1",
-      password: "aaa",
-    });
-    await server.admin.create("user", {
-      id: userBId,
-      name: "user-2",
-      password: "bbb",
-    });
+    console.log(parseBootLoad(ownerInit).labels);
+    console.log(parseBootLoad(memberInit).labels);
+    console.log(parseBootLoad(outInit).labels);
 
-    const listId = uuidv4();
+    // console.log(ownerInit.data, memberInit.data, outInit.data);
 
-    await server.admin.create("list", {
-      id: listId,
-      name: "test",
-      is_private: true,
-      user_id: userId,
-    });
+    // expect("foo").toBe("foo");
 
-    await server.admin.create("todo", {
-      id: uuidv4(),
-      list_id: listId,
-      user_id: userId,
-      name: "test",
-    });
+    // const userId = uuidv4();
+    // const userBId = uuidv4();
 
-    const initForUserA = await server.admin.getInit({ userId });
-    const initForUserB = await server.admin.getInit({ userId: userBId });
+    // await server.admin.create("user", {
+    //   id: userId,
+    //   name: "user-1",
+    //   password: "aaa",
+    // });
+    // await server.admin.create("user", {
+    //   id: userBId,
+    //   name: "user-2",
+    //   password: "bbb",
+    // });
 
-    const aData = parseBootLoad(initForUserA);
-    const bData = parseBootLoad(initForUserB);
+    // const listId = uuidv4();
 
-    expect(aData.users).toHaveLength(1);
-    expect(aData.todos).toHaveLength(1);
-    expect(aData.lists).toHaveLength(1);
+    // await server.admin.create("list", {
+    //   id: listId,
+    //   name: "test",
+    //   is_private: true,
+    //   user_id: userId,
+    // });
 
-    expect(bData.users).toHaveLength(1);
-    expect(bData.todos).toHaveLength(0);
-    expect(bData.lists).toHaveLength(0);
+    // await server.admin.create("todo", {
+    //   id: uuidv4(),
+    //   list_id: listId,
+    //   user_id: userId,
+    //   name: "test",
+    // });
 
-    expect(aData.users![0].id).toBe(userId);
-    expect(aData.users![0].name).toBe("user-1");
-    expect(aData.users![0].password).toBeUndefined();
+    // const initForUserA = await server.admin.getInit({ userId });
+    // const initForUserB = await server.admin.getInit({ userId: userBId });
+
+    // const aData = parseBootLoad(initForUserA);
+    // const bData = parseBootLoad(initForUserB);
+
+    // expect(aData.users).toHaveLength(1);
+    // expect(aData.todos).toHaveLength(1);
+    // expect(aData.lists).toHaveLength(1);
+
+    // expect(bData.users).toHaveLength(1);
+    // expect(bData.todos).toHaveLength(0);
+    // expect(bData.lists).toHaveLength(0);
+
+    // expect(aData.users![0].id).toBe(userId);
+    // expect(aData.users![0].name).toBe("user-1");
+    // expect(aData.users![0].password).toBeUndefined();
   });
 });

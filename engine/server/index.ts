@@ -96,3 +96,5 @@ export function createSyncServer<Schema = any>(
     admin,
   };
 }
+
+export type SyncServer<Schema> = ReturnType<typeof createSyncServer<Schema>>;

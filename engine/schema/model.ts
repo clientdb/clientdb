@@ -59,6 +59,22 @@ export function createSchemaModel(schema: DbSchema) {
     return getEntity(relation.referencedEntity);
   }
 
+  function getFieldTargetEntity(entityName: string, field: string) {
+    const relation = getRelation(entityName, field);
+
+    if (!relation) return null;
+
+    if (relation.type === "reference") {
+      return getEntity(relation.referencedEntity);
+    }
+
+    if (relation.type === "collection") {
+      return getEntity(relation.referencedByEntity);
+    }
+
+    throw new Error(`Unsupported relation type`);
+  }
+
   function getRelationsBetween(from: string, to: string) {
     if (from === to) {
       return [];
@@ -96,6 +112,7 @@ export function createSchemaModel(schema: DbSchema) {
     getIdField,
     getRelationsBetween,
     getEntityReferencedBy,
+    getFieldTargetEntity,
   };
 }
 

@@ -102,6 +102,10 @@ export type SchemaWhere<S> = {
   [K in keyof S]: PermissionSelector<S[K]>;
 };
 
+export type SchemaRules<S> = {
+  [K in keyof S]: PermissionRule<S[K]>;
+};
+
 export function currentUser(ctx: SyncRequestContext) {
   return ctx.userId;
 }

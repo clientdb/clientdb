@@ -1,4 +1,5 @@
 import { DbSchemaModel } from "../../schema/model";
+import { SchemaEntity, SchemaEntityRelation } from "../../schema/schema";
 import {
   RelationRule,
   PermissionRule,
@@ -11,21 +12,21 @@ import { parseWherePermission, parseWhereRule } from "./utils";
 
 export type ConditionGroupSegment = "and" | "or" | number;
 
-interface TraverseRelationInfo {
-  relation: RelationRule<any>;
-  key: string;
+interface TraverseStepInfo {
+  schemaPath: string[];
+  conditionPath: ConditionGroupSegment[];
+  field: string;
   table: string;
-  path: string[];
-  conditionGroup: ConditionGroupSegment[];
 }
 
-interface TraverseValueInfo {
+interface TraverseRelationInfo extends TraverseStepInfo {
+  rule: RelationRule<any>;
+  relation: SchemaEntityRelation;
+  targetEntity: SchemaEntity;
+}
+
+interface TraverseValueInfo extends TraverseStepInfo {
   value: WhereValueConfig<any>;
-  key: string;
-  table: string;
-  path: string[];
-  selectPath: string;
-  conditionGroup: ConditionGroupSegment[];
 }
 
 interface TraverseCallbacks {
@@ -33,52 +34,58 @@ interface TraverseCallbacks {
   onValue?: (info: TraverseValueInfo) => void;
 }
 
-function joinPath(path: string[]) {
-  return path.join("__");
-}
-
 function traverseRule<T>(
-  aliasPath: string[],
-  selectPath: string[],
-  conditionGroup: ConditionGroupSegment[],
-  table: string,
+  info: TraverseStepInfo,
   rule: PermissionSelector<T>,
   schema: DbSchemaModel,
   callbacks: TraverseCallbacks
 ) {
-  const { relationEntires, dataEntires } = parseWhereRule(rule, table, schema);
+  const { relationEntires, dataEntires } = parseWhereRule(
+    rule,
+    info.table,
+    schema
+  );
 
   for (const [key, fieldInfo] of dataEntires) {
-    const keyPath = [...aliasPath, key as string];
-
     const value = resolveValueInput(fieldInfo);
 
     callbacks.onValue?.({
-      key: key as string,
-      table,
-      path: keyPath,
-      selectPath: `${joinPath(selectPath)}.${key as string}`,
+      ...info,
+      field: key as string,
       value: value,
-      conditionGroup,
     });
   }
 
-  for (const [relatedEntity, relationRule] of relationEntires) {
-    const relationPath = [...aliasPath, relatedEntity as string];
+  for (const [relationField, relationRule] of relationEntires) {
+    const relation = schema.getRelation(info.table, relationField as string)!;
+    const targetEntity = schema.getFieldTargetEntity(
+      info.table,
+      relationField as string
+    );
+
+    if (!targetEntity) {
+      throw new Error(
+        `No target entity for relation ${relationField as string} in entity ${
+          info.table
+        }`
+      );
+    }
 
     callbacks.onRelation?.({
-      key: relatedEntity as string,
-      path: relationPath,
-      relation: relationRule,
-      table,
-      conditionGroup,
+      ...info,
+      field: relationField as string,
+      rule: relationRule,
+      relation,
+      targetEntity,
     });
 
     traversePermissionsWithPath(
-      relationPath,
-      relationPath,
-      conditionGroup,
-      relatedEntity as string,
+      {
+        ...info,
+        schemaPath: [...info.schemaPath, relationField as string],
+        field: relationField as string,
+        table: targetEntity.name,
+      },
       relationRule,
       schema,
       callbacks
@@ -87,33 +94,22 @@ function traverseRule<T>(
 }
 
 function traversePermissionsWithPath<T>(
-  aliasPath: string[],
-  selectPath: string[],
-  conditionGroup: ConditionGroupSegment[],
-  entity: string,
+  info: TraverseStepInfo,
   permissions: PermissionRule<T>,
   schema: DbSchemaModel,
   callbacks: TraverseCallbacks
 ) {
   const { rule, $and = [], $or = [] } = parseWherePermission(permissions);
 
-  traverseRule(
-    aliasPath,
-    selectPath,
-    conditionGroup,
-    entity,
-    rule,
-    schema,
-    callbacks
-  );
+  traverseRule(info, rule, schema, callbacks);
 
   $and
     .map((andRule, index) => {
       return traversePermissionsWithPath(
-        [...aliasPath, `and`, `${index}`],
-        selectPath,
-        [...conditionGroup, `and`, index],
-        entity,
+        {
+          ...info,
+          conditionPath: [...info.conditionPath, "and", index],
+        },
         andRule,
         schema,
         callbacks
@@ -124,10 +120,10 @@ function traversePermissionsWithPath<T>(
   $or
     .map((orRule, index) => {
       return traversePermissionsWithPath(
-        [...aliasPath, `or`, `${index}`],
-        selectPath,
-        [...conditionGroup, `or`, index],
-        entity,
+        {
+          ...info,
+          conditionPath: [...info.conditionPath, "or", index],
+        },
         orRule,
         schema,
         callbacks
@@ -143,10 +139,12 @@ export function traversePermissions<T>(
   callbacks: TraverseCallbacks
 ) {
   return traversePermissionsWithPath(
-    [entity],
-    [entity],
-    [],
-    entity,
+    {
+      schemaPath: [entity],
+      conditionPath: [],
+      field: "",
+      table: entity,
+    },
     permissions,
     schema,
     callbacks

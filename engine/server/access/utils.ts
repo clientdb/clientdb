@@ -42,6 +42,14 @@ export function pickDataPermissions<T>(
       continue;
     }
 
+    const attribute = schema.getAttribute(entity, field);
+
+    if (!attribute) {
+      throw new Error(
+        `No relation not attribute for entity ${entity} field ${field}`
+      );
+    }
+
     dataPermissions[field as keyof T] = fieldSpec as any;
   }
 
@@ -78,4 +86,30 @@ export function parseWhereRule<T>(
     dataEntires,
     relationEntires,
   };
+}
+
+export function iterateWithPrevious<T>(items: T[]) {
+  const entries = items.map((item, index) => {
+    return [item, items[index - 1] ?? null] as [T, T | null];
+  });
+
+  return entries;
+}
+
+export function insertAtIndexIfDoesntExist<T>(
+  items: T[],
+  index: number,
+  getter: () => T
+) {
+  if (items[index] !== undefined) return items[index]!;
+
+  if (items.length <= index - 1) {
+    items.length = index - 1;
+  }
+
+  const item = getter();
+
+  items[index] = item;
+
+  return item;
 }

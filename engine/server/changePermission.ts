@@ -14,12 +14,6 @@ export async function getIsChangeAllowed<T, D>(
     return false;
   }
 
-  const joins = createJoins(
-    change.entity as any as string,
-    permission,
-    context.schema
-  );
-
   // TODO: Implement permission check
   switch (change.type) {
     case "remove":

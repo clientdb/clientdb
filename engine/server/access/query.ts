@@ -15,10 +15,10 @@ const log = createLogger("Permission query", false);
 
 function applyJoins(query: QueryBuilder, joins: JoinInfo[]) {
   for (const join of joins) {
-    const { toColumn, fromColumn, alias, fromTable, toTable } = join;
+    const { toColumn, fromColumn, alias, from, table } = join;
     query = query.leftJoin(
-      `${join.toTable} as ${alias}`,
-      `${fromTable}.${fromColumn}`,
+      `${join.table} as ${alias}`,
+      `${from}.${fromColumn}`,
       "=",
       `${alias}.${toColumn}`
     );
@@ -44,35 +44,35 @@ function applyWherePointer(
   const { $eq, $ne, $gt, $gte, $lt, $lte, $in, $notIn } = config;
 
   if ($eq !== undefined) {
-    qb.where(select, "=", resolveValuePointer($eq, context));
+    qb.andWhere(select, "=", resolveValuePointer($eq, context));
   }
 
   if ($ne !== undefined) {
-    qb.where(select, "!=", resolveValuePointer($ne, context));
+    qb.andWhere(select, "!=", resolveValuePointer($ne, context));
   }
 
   if ($gt !== undefined) {
-    qb.where(select, ">", resolveValuePointer($gt, context));
+    qb.andWhere(select, ">", resolveValuePointer($gt, context));
   }
 
   if ($gte !== undefined) {
-    qb.where(select, ">=", resolveValuePointer($gte, context));
+    qb.andWhere(select, ">=", resolveValuePointer($gte, context));
   }
 
   if ($lt !== undefined) {
-    qb.where(select, "<", resolveValuePointer($lt, context));
+    qb.andWhere(select, "<", resolveValuePointer($lt, context));
   }
 
   if ($lte !== undefined) {
-    qb.where(select, "<=", resolveValuePointer($lte, context));
+    qb.andWhere(select, "<=", resolveValuePointer($lte, context));
   }
 
   if ($in !== undefined) {
-    qb.whereIn(select, resolveValuePointer($in, context));
+    qb.andWhere(select, "in", resolveValuePointer($in, context));
   }
 
   if ($notIn !== undefined) {
-    qb.whereNotIn(select, resolveValuePointer($notIn, context));
+    qb.andWhere(select, "not in", resolveValuePointer($notIn, context));
   }
 
   return qb;
@@ -95,11 +95,13 @@ function applyWhere(
     });
   }
 
-  for (const orCondition of or) {
-    query = query.orWhere((qb) => {
-      applyWhere(qb, orCondition, context);
-    });
-  }
+  query = query.andWhere((qb) => {
+    for (const orCondition of or) {
+      qb.orWhere((qb) => {
+        applyWhere(qb, orCondition, context);
+      });
+    }
+  });
 
   return query;
 }
@@ -113,12 +115,10 @@ function createBasePermissionMapQuery<T>(
 
   const joins = createJoins(entity, rule, context.schema);
 
-  const [constantWhere] = createWhereConditions(entity, rule, context.schema);
-
   let rootQuery = db.from(`${entity}`);
 
   rootQuery = applyJoins(rootQuery, joins);
-  rootQuery = applyWhere(rootQuery, constantWhere, context);
+  rootQuery = applyWhereCauses(rootQuery, entity, rule, context);
 
   return rootQuery;
 }
@@ -163,19 +163,15 @@ function applyAllowedUsersSelect(
   return query;
 }
 
-function applyContextWhere(
+function applyWhereCauses(
   query: QueryBuilder,
   entity: string,
   permission: PermissionRule<any>,
   context: SyncRequestContext
 ) {
-  const [, contextualWhere] = createWhereConditions(
-    entity,
-    permission,
-    context.schema
-  );
+  const conditions = createWhereConditions(entity, permission, context.schema);
 
-  query = applyWhere(query, contextualWhere, context);
+  query = applyWhere(query, conditions, context);
 
   return query;
 }
@@ -207,7 +203,6 @@ export function createUserAccessQuery<T>(
   let query = createBasePermissionMapQuery(entity, readRules, context);
 
   query = applyEntityIdSelect(query, entity);
-  query = applyContextWhere(query, entity, readRules, context);
 
   return query;
 }
@@ -223,7 +218,8 @@ export function createInitialLoadQuery<T>(
   let query = createBasePermissionMapQuery(entity, permission.rule, context);
 
   query = applyEntityDataSelect(query, entity, permission);
-  query = applyContextWhere(query, entity, permission.rule, context);
+
+  query = query.groupBy(`${entity}.${context.schema.getIdField(entity)}`);
 
   log("init", query.toString(), { permission });
 

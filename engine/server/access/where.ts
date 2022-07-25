@@ -2,11 +2,12 @@ import { DbSchemaModel } from "../../schema/model";
 import { PermissionRule, WhereValueConfig } from "../../schema/types";
 import { getIsWhereValueConfigConstant } from "../../schema/utils";
 import { ConditionGroupSegment, traversePermissions } from "./traverse";
+import { insertAtIndexIfDoesntExist, iterateWithPrevious } from "./utils";
 
 export interface WhereTree {
-  conditions?: WherePointer[];
-  and?: WhereTree[];
-  or?: WhereTree[];
+  conditions: WherePointer[];
+  and: WhereTree[];
+  or: WhereTree[];
 }
 
 export interface WherePointer {
@@ -19,54 +20,54 @@ interface RawWherePointer extends WherePointer {
 }
 
 function createWhereTree(): WhereTree {
-  return {};
+  return { conditions: [], and: [], or: [] };
+}
+
+function getConditionTargetTree(pointer: RawWherePointer, root: WhereTree) {
+  const { conditionGroup } = pointer;
+
+  if (!conditionGroup.length) {
+    return root;
+  }
+
+  let currentLeaf = root;
+
+  for (const [segment, previousSegment] of iterateWithPrevious(
+    conditionGroup
+  )) {
+    if (typeof segment !== "number") continue;
+
+    if (typeof previousSegment !== "string") {
+      throw new Error("Invalid condition group");
+    }
+
+    if (previousSegment === "and") {
+      currentLeaf = insertAtIndexIfDoesntExist(
+        currentLeaf.and,
+        segment,
+        createWhereTree
+      );
+    }
+
+    if (previousSegment === "or") {
+      currentLeaf = insertAtIndexIfDoesntExist(
+        currentLeaf.or,
+        segment,
+        createWhereTree
+      );
+    }
+  }
+
+  return currentLeaf;
 }
 
 function pushWherePointer(pointer: RawWherePointer, tree: WhereTree) {
   const { conditionGroup } = pointer;
 
-  if (!conditionGroup.length) {
-    tree.conditions = tree.conditions || [];
-    tree.conditions.push({
-      config: pointer.config,
-      select: pointer.select,
-    });
-    return;
-  }
-
-  let currentLeaf = tree;
-
-  for (const segment of conditionGroup) {
-    if (segment === "and") {
-      const newLeaf = createWhereTree();
-      if (!currentLeaf.and) {
-        currentLeaf.and = [];
-      }
-      currentLeaf.and.push(newLeaf);
-      currentLeaf = newLeaf;
-      continue;
-    }
-
-    if (segment === "or") {
-      const newLeaf = createWhereTree();
-      if (!currentLeaf.or) {
-        currentLeaf.or = [];
-      }
-
-      currentLeaf.or.push(newLeaf);
-      currentLeaf = newLeaf;
-      continue;
-    }
-
-    if (!currentLeaf.conditions) {
-      currentLeaf.conditions = [];
-    }
-
-    currentLeaf.conditions.push({
-      config: pointer.config,
-      select: pointer.select,
-    });
-  }
+  getConditionTargetTree(pointer, tree).conditions.push({
+    select: pointer.select,
+    config: pointer.config,
+  });
 }
 
 function parseWhereTree(pointers: RawWherePointer[]): WhereTree {
@@ -84,28 +85,19 @@ export function createWhereConditions<T>(
   permissions: PermissionRule<T>,
   schema: DbSchemaModel
 ) {
-  const constantWhere: RawWherePointer[] = [];
-  const dynamicWhere: RawWherePointer[] = [];
+  const wherePointers: RawWherePointer[] = [];
 
   traversePermissions(entity, permissions, schema, {
-    onValue({ selectPath, value, conditionGroup }) {
-      const isConstant = getIsWhereValueConfigConstant(value);
+    onValue({ schemaPath, value, conditionPath, field }) {
+      const pointer: RawWherePointer = {
+        conditionGroup: conditionPath,
+        config: value,
+        select: `${schemaPath.join("__")}.${field}`,
+      };
 
-      if (isConstant) {
-        constantWhere.push({
-          select: selectPath,
-          config: value,
-          conditionGroup,
-        });
-      } else {
-        dynamicWhere.push({
-          select: selectPath,
-          config: value,
-          conditionGroup,
-        });
-      }
+      wherePointers.push(pointer);
     },
   });
 
-  return [parseWhereTree(constantWhere), parseWhereTree(dynamicWhere)] as const;
+  return parseWhereTree(wherePointers);
 }

@@ -45,6 +45,11 @@ export function validateEntityDataProp(
   }
 
   if (!getIsDataTypeValid(value, attribute.type)) {
+    if (value === null || value === undefined) {
+      throw new Error(
+        `Attribute '${prop}' of entity '${schema.name}' is required.`
+      );
+    }
     throw new Error(
       `Attribute '${prop}' of entity '${schema.name}' has invalid value for type '${attribute.type}' (${value})`
     );
