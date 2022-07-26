@@ -1,12 +1,12 @@
-import { DbSchemaModel } from "../../schema/model";
+import { DbSchemaModel } from "../../../schema/model";
 import {
   DataSelector,
-  RelationsSelector,
-  PermissionSelector,
   PermissionRule,
-  WhereValue,
+  PermissionSelector,
   RelationRule,
-} from "../../schema/types";
+  RelationsSelector,
+  WhereValue,
+} from "../../../schema/types";
 
 export function pickRelationPermissions<T>(
   rule: PermissionSelector<T>,
@@ -86,30 +86,4 @@ export function parseWhereRule<T>(
     dataEntires,
     relationEntires,
   };
-}
-
-export function iterateWithPrevious<T>(items: T[]) {
-  const entries = items.map((item, index) => {
-    return [item, items[index - 1] ?? null] as [T, T | null];
-  });
-
-  return entries;
-}
-
-export function insertAtIndexIfDoesntExist<T>(
-  items: T[],
-  index: number,
-  getter: () => T
-) {
-  if (items[index] !== undefined) return items[index]!;
-
-  if (items.length <= index - 1) {
-    items.length = index - 1;
-  }
-
-  const item = getter();
-
-  items[index] = item;
-
-  return item;
 }

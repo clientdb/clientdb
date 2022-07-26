@@ -48,7 +48,17 @@ export function pickPermissionsRules<T extends PermissionOperationType>(
 ) {
   const { permissions } = context;
 
-  return permissions[entity]?.[operation]?.rule ?? null;
+  const operationConfig = permissions[entity]?.[operation];
+
+  if (!operationConfig) {
+    return null;
+  }
+
+  if (operation === "remove") {
+    return operationConfig;
+  }
+
+  return operationConfig.rule ?? null;
 }
 
 export function pickPermission<T extends PermissionOperationType>(

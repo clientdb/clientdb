@@ -6,77 +6,106 @@ import { InitialLoadData } from "../server/init";
 import { createTestData } from "./data";
 
 function parseBootLoad(load: InitialLoadData) {
-  const users = load.data.find((item) => item.kind === "user")?.items;
-  const labels = load.data.find((item) => item.kind === "label")?.items;
-  const lists = load.data.find((item) => item.kind === "list")?.items;
+  const users = load.data.find((item) => item.kind === "user")!.items;
+  const teams = load.data.find((item) => item.kind === "team")!.items;
+  const teamMemberships = load.data.find(
+    (item) => item.kind === "teamMembership"
+  )!.items;
+  const lists = load.data.find((item) => item.kind === "list")!.items;
+  const labels = load.data.find((item) => item.kind === "label")!.items;
+  const todos = load.data.find((item) => item.kind === "todo")!.items;
+  const todoLabels = load.data.find((item) => item.kind === "todoLabel")!.items;
+  return { users, teams, teamMemberships, lists, labels, todos, todoLabels };
+}
 
-  return { users, labels, lists };
+async function getTestServerWithData() {
+  const server = await createTestServer();
+
+  const ids = await createTestData(server);
+
+  return { server, ids };
 }
 
 describe("server", () => {
   it("returns proper initial load basing on permissions", async () => {
-    const server = await createTestServer();
+    const { server, ids } = await getTestServerWithData();
 
-    const ids = await createTestData(server);
+    const owner = parseBootLoad(
+      await server.admin.getInit({ userId: ids.user.owner })
+    );
+    const member = parseBootLoad(
+      await server.admin.getInit({ userId: ids.user.member })
+    );
+    const outsider = parseBootLoad(
+      await server.admin.getInit({ userId: ids.user.out })
+    );
 
-    const ownerInit = await server.admin.getInit({ userId: ids.user.owner });
-    const memberInit = await server.admin.getInit({ userId: ids.user.member });
-    const outInit = await server.admin.getInit({ userId: ids.user.out });
+    expect(owner.labels).toHaveLength(2);
+    expect(member.labels).toHaveLength(1);
+    expect(outsider.labels).toHaveLength(0);
 
-    console.log(parseBootLoad(ownerInit).labels);
-    console.log(parseBootLoad(memberInit).labels);
-    console.log(parseBootLoad(outInit).labels);
+    expect(owner.lists).toHaveLength(1);
+    expect(member.lists).toHaveLength(1);
+    expect(outsider.lists).toHaveLength(0);
 
-    // console.log(ownerInit.data, memberInit.data, outInit.data);
+    expect(owner.users).toHaveLength(2);
+    expect(member.users).toHaveLength(2);
+    expect(outsider.users).toHaveLength(1);
 
-    // expect("foo").toBe("foo");
+    expect(owner.todos).toHaveLength(1);
+    expect(member.todos).toHaveLength(1);
+    expect(outsider.todos).toHaveLength(0);
+  });
 
-    // const userId = uuidv4();
-    // const userBId = uuidv4();
+  it("will not allow modifying data for not allowed users", async () => {
+    const { server, ids } = await getTestServerWithData();
 
-    // await server.admin.create("user", {
-    //   id: userId,
-    //   name: "user-1",
-    //   password: "aaa",
-    // });
-    // await server.admin.create("user", {
-    //   id: userBId,
-    //   name: "user-2",
-    //   password: "bbb",
-    // });
+    await expect(
+      server.admin.mutate(
+        {
+          entity: "team",
+          type: "update",
+          id: ids.team.a,
+          data: { name: "new name" },
+        },
 
-    // const listId = uuidv4();
+        { userId: ids.user.out }
+      )
+    ).rejects.toThrowErrorMatchingInlineSnapshot(`"Not allowed to update"`);
 
-    // await server.admin.create("list", {
-    //   id: listId,
-    //   name: "test",
-    //   is_private: true,
-    //   user_id: userId,
-    // });
+    const afterRejected = await server.admin.getInit({
+      userId: ids.user.owner,
+    });
 
-    // await server.admin.create("todo", {
-    //   id: uuidv4(),
-    //   list_id: listId,
-    //   user_id: userId,
-    //   name: "test",
-    // });
+    expect(parseBootLoad(afterRejected).teams[0].name).toBe("team-1");
 
-    // const initForUserA = await server.admin.getInit({ userId });
-    // const initForUserB = await server.admin.getInit({ userId: userBId });
+    await expect(
+      server.admin.mutate(
+        {
+          entity: "team",
+          type: "update",
+          id: ids.team.a,
+          data: { name: "new name" },
+        },
 
-    // const aData = parseBootLoad(initForUserA);
-    // const bData = parseBootLoad(initForUserB);
+        { userId: ids.user.owner }
+      )
+    ).resolves.toMatchInlineSnapshot(`undefined`);
 
-    // expect(aData.users).toHaveLength(1);
-    // expect(aData.todos).toHaveLength(1);
-    // expect(aData.lists).toHaveLength(1);
+    const init = await server.admin.getInit({ userId: ids.user.owner });
 
-    // expect(bData.users).toHaveLength(1);
-    // expect(bData.todos).toHaveLength(0);
-    // expect(bData.lists).toHaveLength(0);
+    expect(parseBootLoad(init).teams[0].name).toBe("new name");
 
-    // expect(aData.users![0].id).toBe(userId);
-    // expect(aData.users![0].name).toBe("user-1");
-    // expect(aData.users![0].password).toBeUndefined();
+    await expect(
+      server.admin.mutate(
+        {
+          entity: "team",
+          type: "remove",
+          id: ids.team.a,
+        },
+
+        { userId: ids.user.out }
+      )
+    ).rejects.toThrowErrorMatchingInlineSnapshot(`"Not allowed to delete"`);
   });
 });

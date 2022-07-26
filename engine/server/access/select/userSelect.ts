@@ -1,6 +1,6 @@
-import { DbSchemaModel } from "../../schema/model";
-import { PermissionRule } from "../../schema/types";
-import { traversePermissions } from "./traverse";
+import { DbSchemaModel } from "../../../schema/model";
+import { PermissionRule } from "../../../schema/types";
+import { mapPermissions } from "../../permissions/traverse";
 
 function getIsFieldPointingToUserId(
   table: string,
@@ -35,21 +35,18 @@ export function createUserSelects<T>(
     throw new Error(`User table ${userTable} has no id field`);
   }
 
-  const userSelects: string[] = [];
-  traversePermissions(entity, permissions, schema, {
-    onValue({ key, table, selectPath }) {
+  return mapPermissions<string>(entity, permissions, schema, {
+    onValue({ field, table, value, schemaPath }) {
       const isPointingToUserId = getIsFieldPointingToUserId(
         table,
-        key,
+        field,
         schema,
         userTable
       );
 
       if (isPointingToUserId) {
-        userSelects.push(selectPath);
+        return `${schemaPath.join("__")}.${field}`;
       }
     },
   });
-
-  return userSelects;
 }

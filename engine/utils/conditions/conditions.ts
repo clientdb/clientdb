@@ -1,8 +1,5 @@
-import { DbSchemaModel } from "../../schema/model";
-import { PermissionRule, WhereValueConfig } from "../../schema/types";
-import { getIsWhereValueConfigConstant } from "../../schema/utils";
-import { ConditionGroupSegment, traversePermissions } from "./traverse";
-import { insertAtIndexIfDoesntExist, iterateWithPrevious } from "./utils";
+import { WhereValueConfig } from "../../schema/types";
+import { ConditionGroupSegment } from "./segment";
 
 export interface WhereTree {
   conditions: WherePointer[];
@@ -15,8 +12,8 @@ export interface WherePointer {
   config: WhereValueConfig<any>;
 }
 
-interface RawWherePointer extends WherePointer {
-  conditionGroup: ConditionGroupSegment[];
+export interface RawWherePointer extends WherePointer {
+  conditionPath: ConditionGroupSegment[];
 }
 
 function createWhereTree(): WhereTree {
@@ -24,17 +21,15 @@ function createWhereTree(): WhereTree {
 }
 
 function getConditionTargetTree(pointer: RawWherePointer, root: WhereTree) {
-  const { conditionGroup } = pointer;
+  const { conditionPath } = pointer;
 
-  if (!conditionGroup.length) {
+  if (!conditionPath.length) {
     return root;
   }
 
   let currentLeaf = root;
 
-  for (const [segment, previousSegment] of iterateWithPrevious(
-    conditionGroup
-  )) {
+  for (const [segment, previousSegment] of iterateWithPrevious(conditionPath)) {
     if (typeof segment !== "number") continue;
 
     if (typeof previousSegment !== "string") {
@@ -62,15 +57,13 @@ function getConditionTargetTree(pointer: RawWherePointer, root: WhereTree) {
 }
 
 function pushWherePointer(pointer: RawWherePointer, tree: WhereTree) {
-  const { conditionGroup } = pointer;
-
   getConditionTargetTree(pointer, tree).conditions.push({
     select: pointer.select,
     config: pointer.config,
   });
 }
 
-function parseWhereTree(pointers: RawWherePointer[]): WhereTree {
+export function parseWhereTree(pointers: RawWherePointer[]): WhereTree {
   const root = createWhereTree();
 
   for (const pointer of pointers) {
@@ -80,24 +73,28 @@ function parseWhereTree(pointers: RawWherePointer[]): WhereTree {
   return root;
 }
 
-export function createWhereConditions<T>(
-  entity: string,
-  permissions: PermissionRule<T>,
-  schema: DbSchemaModel
-) {
-  const wherePointers: RawWherePointer[] = [];
-
-  traversePermissions(entity, permissions, schema, {
-    onValue({ schemaPath, value, conditionPath, field }) {
-      const pointer: RawWherePointer = {
-        conditionGroup: conditionPath,
-        config: value,
-        select: `${schemaPath.join("__")}.${field}`,
-      };
-
-      wherePointers.push(pointer);
-    },
+function iterateWithPrevious<T>(items: T[]) {
+  const entries = items.map((item, index) => {
+    return [item, items[index - 1] ?? null] as [T, T | null];
   });
 
-  return parseWhereTree(wherePointers);
+  return entries;
+}
+
+function insertAtIndexIfDoesntExist<T>(
+  items: T[],
+  index: number,
+  getter: () => T
+) {
+  if (items[index] !== undefined) return items[index]!;
+
+  if (items.length <= index - 1) {
+    items.length = index - 1;
+  }
+
+  const item = getter();
+
+  items[index] = item;
+
+  return item;
 }

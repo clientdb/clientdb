@@ -19,7 +19,6 @@ export async function createTestData(server: SyncServer<TestSchema>) {
     },
     team: {
       a: uuid(),
-      b: uuid(),
     },
     list: {
       a: uuid(),

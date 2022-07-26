@@ -1,8 +1,12 @@
 import { DbSchema } from "../schema/schema";
+import { createLogger } from "../utils/logger";
+import { createAccessQuery } from "./access/query";
 import { EntityChange } from "./change";
 import { getIsChangeAllowed } from "./changePermission";
 import { getIsChangeDataValid } from "./changeValidation";
 import { SyncRequestContext } from "./context";
+
+const log = createLogger("Mutation");
 
 export async function performMutation<T, D>(
   context: SyncRequestContext,
@@ -16,19 +20,45 @@ export async function performMutation<T, D>(
     throw new Error("Invalid change data");
   }
 
-  if (!(await getIsChangeAllowed(context, input))) {
-    throw new Error("Change is not allowed");
-  }
-
   const idField = schema.getIdField(entityName)!;
 
   switch (input.type) {
     case "remove": {
-      await db.table(entityName).where(idField, input.id).delete();
+      const accessQuery = createAccessQuery(context, entityName, "remove")!;
+
+      if (!accessQuery) {
+        throw new Error("No access query found");
+      }
+
+      console.log({ accessQuery });
+      const updateQuery = db
+        .table(entityName)
+        .delete()
+        .andWhere(`${entityName}.${idField}`, "=", input.id)
+        .andWhere(`${entityName}.${idField}`, "in", accessQuery);
+
+      log(updateQuery.toString());
+      const results = await updateQuery;
+
+      if (results === 0) {
+        throw new Error("Not allowed to delete");
+      }
       return;
     }
     case "update": {
-      await db.table(entityName).where(idField, input.id).update(input.data);
+      const accessQuery = createAccessQuery(context, entityName, "update")!;
+      const updateQuery = db
+        .table(entityName)
+        .update(input.data)
+        .andWhere(`${entityName}.${idField}`, "=", input.id)
+        .andWhere(`${entityName}.${idField}`, "in", accessQuery);
+
+      log(updateQuery.toString());
+      const results = await updateQuery;
+
+      if (results === 0) {
+        throw new Error("Not allowed to update");
+      }
       return;
     }
     case "create": {

@@ -1,16 +1,17 @@
 import { DbSchemaModel } from "../../schema/model";
-import { SchemaEntity, SchemaEntityRelation } from "../../schema/schema";
+import { SchemaEntityRelation, SchemaEntity } from "../../schema/schema";
 import {
   RelationRule,
-  PermissionRule,
-  PermissionSelector,
-  WhereValue,
   WhereValueConfig,
+  PermissionSelector,
+  PermissionRule,
 } from "../../schema/types";
 import { resolveValueInput } from "../../schema/utils";
-import { parseWherePermission, parseWhereRule } from "./utils";
-
-export type ConditionGroupSegment = "and" | "or" | number;
+import { ConditionGroupSegment } from "../../utils/conditions/segment";
+import {
+  parseWhereRule,
+  parseWherePermission,
+} from "../access/utils/permissions";
 
 interface TraverseStepInfo {
   schemaPath: string[];
@@ -29,9 +30,9 @@ interface TraverseValueInfo extends TraverseStepInfo {
   value: WhereValueConfig<any>;
 }
 
-interface TraverseCallbacks {
-  onRelation?: (info: TraverseRelationInfo) => void;
-  onValue?: (info: TraverseValueInfo) => void;
+interface TraverseCallbacks<R = void> {
+  onRelation?: (info: TraverseRelationInfo) => R;
+  onValue?: (info: TraverseValueInfo) => R;
 }
 
 function traverseRule<T>(
@@ -132,9 +133,9 @@ function traversePermissionsWithPath<T>(
     .flat();
 }
 
-export function traversePermissions<T>(
+export function traversePermissions(
   entity: string,
-  permissions: PermissionRule<T>,
+  permissions: PermissionRule<unknown>,
   schema: DbSchemaModel,
   callbacks: TraverseCallbacks
 ) {
@@ -149,4 +150,64 @@ export function traversePermissions<T>(
     schema,
     callbacks
   );
+}
+
+export function mapPermissions<R>(
+  entity: string,
+  permissions: PermissionRule<unknown>,
+  schema: DbSchemaModel,
+  callbacks: TraverseCallbacks<R | undefined>
+) {
+  const results: R[] = [];
+
+  traversePermissions(entity, permissions, schema, {
+    onValue(info) {
+      if (callbacks.onValue) {
+        const result = callbacks.onValue(info);
+
+        if (result !== undefined) {
+          results.push(result);
+        }
+      }
+    },
+    onRelation(info) {
+      if (callbacks.onRelation) {
+        const result = callbacks.onRelation(info);
+
+        if (result !== undefined) {
+          results.push(result);
+        }
+      }
+    },
+  });
+
+  return results;
+}
+
+export function getHasPermission<R>(
+  entity: string,
+  permissions: PermissionRule<unknown>,
+  schema: DbSchemaModel,
+  callbacks: TraverseCallbacks<boolean>
+) {
+  let hasSome = false;
+
+  traversePermissions(entity, permissions, schema, {
+    onValue(info) {
+      if (hasSome) return;
+
+      if (!callbacks.onValue) return;
+
+      hasSome = callbacks.onValue(info);
+    },
+    onRelation(info) {
+      if (hasSome) return;
+
+      if (!callbacks.onRelation) return;
+
+      hasSome = callbacks.onRelation(info);
+    },
+  });
+
+  return hasSome;
 }
