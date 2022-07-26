@@ -30,7 +30,6 @@ export async function performMutation<T, D>(
         throw new Error("No access query found");
       }
 
-      console.log({ accessQuery });
       const updateQuery = db
         .table(entityName)
         .delete()

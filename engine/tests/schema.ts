@@ -1,18 +1,11 @@
 import { DbSchema, SchemaEntity } from "../schema/schema";
 import {
-  SchemaCollection,
-  SchemaReference,
-  SchemaPermissions,
   currentUser,
-  SchemaWhere,
+  SchemaCollection,
+  SchemaPermissions,
+  SchemaReference,
   SchemaRules,
 } from "../schema/types";
-
-import uuid from "uuid";
-
-function getUUID() {
-  return uuid.v4();
-}
 
 type Permissions = SchemaPermissions<TestSchema>;
 type Rule = SchemaRules<TestSchema>;
