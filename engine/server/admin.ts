@@ -35,6 +35,9 @@ export function createSyncAdmin<Schema>({
       db,
       schema,
       permissions,
+      config: {
+        userTable: "user",
+      },
     };
   }
 

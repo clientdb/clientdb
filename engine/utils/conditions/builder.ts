@@ -10,8 +10,13 @@ function applyWherePointer(
   where: WherePointer,
   context: SyncRequestContext
 ) {
-  const { config, select } = where;
-  const { $eq, $ne, $gt, $gte, $lt, $lte, $in, $notIn } = config;
+  const { condition, select } = where;
+
+  if (typeof condition === "string") {
+    qb.andWhere(select, "=", context.db.raw(`${condition}`));
+    return qb;
+  }
+  const { $eq, $ne, $gt, $gte, $lt, $lte, $in, $notIn } = condition;
 
   if ($eq !== undefined) {
     qb.andWhere(select, "=", resolveValuePointer($eq, context));

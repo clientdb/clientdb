@@ -10,7 +10,7 @@ interface SyncServerDatabaseConnectionConfig {
   database: string;
 }
 
-export interface SyncServerConfig {
+export interface SyncServerConfigInput {
   schema: DbSchema;
   requestHandlers: RequestDataHandlers;
   dbConnection?: SyncServerDatabaseConnectionConfig;
@@ -20,4 +20,5 @@ export interface SyncServerConfig {
    */
   db?: Knex;
   permissions?: any;
+  userTable?: string;
 }

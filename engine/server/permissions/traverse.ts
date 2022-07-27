@@ -156,7 +156,7 @@ export function mapPermissions<R>(
   entity: string,
   permissions: PermissionRule<unknown>,
   schema: DbSchemaModel,
-  callbacks: TraverseCallbacks<R | undefined>
+  callbacks: TraverseCallbacks<R | undefined | void>
 ) {
   const results: R[] = [];
 

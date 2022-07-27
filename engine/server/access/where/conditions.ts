@@ -12,10 +12,11 @@ export function createPermissionWhereConditions<T>(
   schema: DbSchemaModel
 ) {
   const wherePointers = mapPermissions(entity, permissions, schema, {
-    onValue({ schemaPath, value, conditionPath, field }) {
+    onValue({ schemaPath, value, conditionPath, field, table }) {
       const pointer: RawWherePointer = {
+        table: table,
         conditionPath: conditionPath,
-        config: value,
+        condition: value,
         select: `${schemaPath.join("__")}.${field}`,
       };
 

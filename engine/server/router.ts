@@ -1,6 +1,6 @@
 import { Express, Request } from "express";
 import { Knex } from "knex";
-import { SyncServerConfig } from "./config";
+import { SyncServerConfigInput } from "./config";
 import { initializeSystemTables } from "./db/core";
 import { fetchSyncDelta } from "./fetchSyncDelta";
 import { SyncHandler } from "./handler";
@@ -18,7 +18,7 @@ interface SyncServerDatabaseConnectionConfig {
 
 interface RouterInput {
   app: Express;
-  config: SyncServerConfig;
+  config: SyncServerConfigInput;
   handler: SyncHandler;
   realtime: RealTimeManager;
   db: Knex;

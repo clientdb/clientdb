@@ -1,4 +1,4 @@
-import { pickPermissionsRules } from "../../change";
+import { pickPermissionsRule } from "../../change";
 import { SyncRequestContext } from "../../context";
 import { getHasPermission } from "../../permissions/traverse";
 import { getIsRelationImpactedBy } from "./relation";
@@ -8,7 +8,7 @@ function getIsEntityAccessBasedOn(
   changedEntity: string,
   context: SyncRequestContext
 ): boolean {
-  const accessRules = pickPermissionsRules(context, maybeBasedEntity, "read");
+  const accessRules = pickPermissionsRule(context, maybeBasedEntity, "read");
 
   if (!accessRules) return false;
 
@@ -27,7 +27,7 @@ export function getEntitiesWithAccessBasedOn(
 
   const entitiesMaybeImpacted = Object.keys(permissions).filter(
     (otherEntity) => {
-      if (otherEntity === changedEntity) return false;
+      if (otherEntity === changedEntity) return true;
 
       return getIsEntityAccessBasedOn(otherEntity, changedEntity, context);
     }

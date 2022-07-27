@@ -1,6 +1,6 @@
 import { PermissionOperationType, PermissionRule } from "../../schema/types";
 import { createLogger } from "../../utils/logger";
-import { pickPermission, pickPermissionsRules } from "../change";
+import { pickPermission, pickPermissionsRule } from "../change";
 import { SyncRequestContext } from "../context";
 import { applyPermissionNeededJoins } from "./join/permissions";
 import { applyEntityDataSelect, applyEntityIdSelect } from "./select/kinds";
@@ -34,7 +34,7 @@ export function createAccessQuery<T>(
   entity: string,
   operation: PermissionOperationType = "read"
 ) {
-  const permission = pickPermissionsRules(context, entity, operation);
+  const permission = pickPermissionsRule(context, entity, operation);
 
   if (!permission) return null;
 

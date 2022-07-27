@@ -41,7 +41,7 @@ export function getEntityChangeSchema<T, D>(
   return schema;
 }
 
-export function pickPermissionsRules<T extends PermissionOperationType>(
+export function pickPermissionsRule<T extends PermissionOperationType>(
   context: SyncRequestContext,
   entity: string,
   operation: T
@@ -55,7 +55,7 @@ export function pickPermissionsRules<T extends PermissionOperationType>(
   }
 
   if (operation === "remove") {
-    return operationConfig;
+    return operationConfig ?? null;
   }
 
   return operationConfig.rule ?? null;
@@ -77,5 +77,5 @@ export function pickChangePermission<T, D>(
 ) {
   const { entity, type } = change;
 
-  return pickPermissionsRules(context, entity as any as string, type);
+  return pickPermissionsRule(context, entity as any as string, type);
 }

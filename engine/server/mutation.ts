@@ -1,5 +1,6 @@
 import { DbSchema } from "../schema/schema";
 import { createLogger } from "../utils/logger";
+import { createEntitiesAccessedThanksTo } from "./access/delta/query";
 import { createAccessQuery } from "./access/query";
 import { EntityChange } from "./change";
 import { getIsChangeAllowed } from "./changePermission";
@@ -53,6 +54,7 @@ export async function performMutation<T, D>(
         .andWhere(`${entityName}.${idField}`, "in", accessQuery);
 
       log(updateQuery.toString());
+
       const results = await updateQuery;
 
       if (results === 0) {
@@ -62,6 +64,17 @@ export async function performMutation<T, D>(
     }
     case "create": {
       await db.table(entityName).insert(input.data);
+
+      if (input.data.id) {
+        const delta = createEntitiesAccessedThanksTo(
+          { entity: entityName, id: input.data.id },
+          context
+        );
+
+        log(`create delta of ${entityName}`, entityName, input.data.id);
+
+        log(delta.toString());
+      }
       return;
     }
   }

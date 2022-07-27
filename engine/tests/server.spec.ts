@@ -77,6 +77,17 @@ describe("server", () => {
 
     expect(parseBootLoad(afterRejected).teams[0].name).toBe("team-1");
 
+    await server.admin.mutate(
+      {
+        entity: "team",
+        type: "update",
+        id: ids.team.a,
+        data: { name: "new name" },
+      },
+
+      { userId: ids.user.owner }
+    );
+
     await expect(
       server.admin.mutate(
         {

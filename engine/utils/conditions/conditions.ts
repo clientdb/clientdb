@@ -8,8 +8,9 @@ export interface WhereTree {
 }
 
 export interface WherePointer {
+  table: string;
   select: string;
-  config: WhereValueConfig<any>;
+  condition: WhereValueConfig<any> | string;
 }
 
 export interface RawWherePointer extends WherePointer {
@@ -59,8 +60,24 @@ function getConditionTargetTree(pointer: RawWherePointer, root: WhereTree) {
 function pushWherePointer(pointer: RawWherePointer, tree: WhereTree) {
   getConditionTargetTree(pointer, tree).conditions.push({
     select: pointer.select,
-    config: pointer.config,
+    condition: pointer.condition,
+    table: pointer.table,
   });
+}
+
+function removeEmpty<T>(items: T[]) {
+  return items.filter((item) => item !== undefined);
+}
+
+function cleanupWhereTree(tree: WhereTree) {
+  tree.conditions = removeEmpty(tree.conditions);
+  tree.and = removeEmpty(tree.and);
+  tree.or = removeEmpty(tree.or);
+
+  tree.and.forEach(cleanupWhereTree);
+  tree.or.forEach(cleanupWhereTree);
+
+  return tree;
 }
 
 export function parseWhereTree(pointers: RawWherePointer[]): WhereTree {
@@ -69,6 +86,8 @@ export function parseWhereTree(pointers: RawWherePointer[]): WhereTree {
   for (const pointer of pointers) {
     pushWherePointer(pointer, root);
   }
+
+  cleanupWhereTree(root);
 
   return root;
 }

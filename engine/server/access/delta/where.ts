@@ -4,21 +4,28 @@ import {
   parseWhereTree,
   RawWherePointer,
 } from "../../../utils/conditions/conditions";
-import { pickPermissionsRules } from "../../change";
+import { pickPermissionsRule } from "../../change";
 import { SyncRequestContext } from "../../context";
 import { mapPermissions } from "../../permissions/traverse";
 import { getIsRelationImpactedBy } from "./relation";
 
-function createExactEntityWhere(
+function createExactEntityWhereComparsion(
   impactedEntity: string,
   changedEntity: string,
   changedEntityId: string,
-  context: SyncRequestContext
+  context: SyncRequestContext,
+  compare: "=" | "!="
 ) {
-  const accessRules = pickPermissionsRules(context, impactedEntity, "read");
+  const accessRules = pickPermissionsRule(context, impactedEntity, "read");
 
   if (!accessRules) {
     throw new Error(`Impacted entity ${impactedEntity} has no access rules.`);
+  }
+
+  const idField = context.schema.getIdField(changedEntity);
+
+  if (!idField) {
+    throw new Error(`Impacted entity ${impactedEntity} has no id field.`);
   }
 
   const whereAccessedThanksTo = mapPermissions<RawWherePointer>(
@@ -26,50 +33,91 @@ function createExactEntityWhere(
     accessRules,
     context.schema,
     {
-      onRelation({ relation, schemaPath, field, conditionPath }) {
+      onValue({ table, field, conditionPath, schemaPath, value }) {
+        const referencedEntity = context.schema.getEntityReferencedBy(
+          table,
+          field
+        );
+
+        if (referencedEntity?.name === context.config.userTable) {
+          const pointer: RawWherePointer = {
+            table: table,
+            conditionPath: conditionPath,
+            condition: `user_id`,
+            select: `${schemaPath.join("__")}.${field}`,
+          };
+
+          return pointer;
+        }
+
+        const pointer: RawWherePointer = {
+          table: table,
+          conditionPath: conditionPath,
+          condition: value,
+          select: `${schemaPath.join("__")}.${field}`,
+        };
+
+        return pointer;
+      },
+      onRelation({ relation, schemaPath, field, conditionPath, table }) {
         const isImpacted = getIsRelationImpactedBy(relation, changedEntity);
 
         if (!isImpacted) return;
 
         const pointer: RawWherePointer = {
+          table,
           conditionPath,
-          select: `${schemaPath.join("__")}.${field}`,
-          config: {
-            $eq: changedEntityId,
-          },
+          select: `${[...schemaPath, field].join("__")}.${idField}`,
+          condition:
+            compare === "="
+              ? {
+                  $eq: changedEntityId,
+                }
+              : {
+                  $ne: changedEntityId,
+                },
         };
 
         return pointer;
       },
     }
   );
+
+  if (changedEntity === impactedEntity) {
+    whereAccessedThanksTo.push({
+      condition: { $eq: changedEntityId },
+      conditionPath: [],
+      select: `${changedEntity}.${idField}`,
+      table: changedEntity,
+    });
+  }
 
   const thanksToWhereTree = parseWhereTree(whereAccessedThanksTo);
 
-  const whereAccessedEvenWithout = mapPermissions<RawWherePointer>(
+  return thanksToWhereTree;
+}
+
+function createExactEntityWhere(
+  impactedEntity: string,
+  changedEntity: string,
+  changedEntityId: string,
+  context: SyncRequestContext
+) {
+  const thanksToWhereTree = createExactEntityWhereComparsion(
     impactedEntity,
-    accessRules,
-    context.schema,
-    {
-      onRelation({ relation, schemaPath, field, conditionPath }) {
-        const isImpacted = getIsRelationImpactedBy(relation, changedEntity);
-
-        if (!isImpacted) return;
-
-        const pointer: RawWherePointer = {
-          conditionPath,
-          select: `${schemaPath.join("__")}.${field}`,
-          config: {
-            $ne: changedEntityId,
-          },
-        };
-
-        return pointer;
-      },
-    }
+    changedEntity,
+    changedEntityId,
+    context,
+    "="
   );
 
-  const evenWithoutWhereTree = parseWhereTree(whereAccessedEvenWithout);
+  const evenWithoutWhereTree = createExactEntityWhereComparsion(
+    impactedEntity,
+    changedEntity,
+    changedEntityId,
+    context,
+    "!="
+  );
 
   return {
     thanksToWhereTree,
@@ -91,13 +139,15 @@ export function applyExactEntityWhere(
     context
   );
 
-  query = query
-    .andWhere((qb) => {
-      applyQueryWhere(qb, thanksToWhereTree, context);
-    })
-    .andWhere((qb) => {
+  query = query.andWhere((qb) => {
+    applyQueryWhere(qb, thanksToWhereTree, context);
+  });
+
+  if (changedEntity !== impactedEntity) {
+    query = query.andWhereNot((qb) => {
       applyQueryWhere(qb, evenWithoutWhereTree, context);
     });
+  }
 
   return query;
 }
