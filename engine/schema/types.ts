@@ -43,6 +43,7 @@ export type WhereValueConfig<T> = {
   $lte?: ValuePointer<T>;
   $in?: ValuePointer<T[]>;
   $notIn?: ValuePointer<T[]>;
+  $isNull?: ValuePointer<boolean>;
 };
 
 export type DataSelector<T> = {
@@ -58,7 +59,7 @@ export type RelationsSelector<T> = {
 export type PermissionSelector<T> = DataSelector<EntitySchemaData<T>> &
   RelationsSelector<EntitySchemaRelations<T>>;
 
-export type PermissionRule<T> = PermissionSelector<T> & {
+export type PermissionRule<T = any> = PermissionSelector<T> & {
   $or?: PermissionRule<T>[];
   $and?: PermissionRule<T>[];
 };

@@ -1,5 +1,6 @@
 import { DbSchemaModel } from "../../../schema/model";
 import { PermissionRule } from "../../../schema/types";
+import { SyncRequestContext } from "../../context";
 import { mapPermissions } from "../../permissions/traverse";
 
 function getIsFieldPointingToUserId(
@@ -23,19 +24,22 @@ function getIsFieldPointingToUserId(
   return maybeUserEntity?.name === userTable;
 }
 
-export function createUserSelects<T>(
+export function getPermissionUserSelects<T>(
   entity: string,
-  permissions: PermissionRule<T>,
-  schema: DbSchemaModel,
-  userTable: string
+  rule: PermissionRule<T>,
+  context: SyncRequestContext
 ): string[] {
+  const {
+    schema,
+    config: { userTable },
+  } = context;
   const userIdField = schema.getIdField(userTable);
 
   if (!userIdField) {
     throw new Error(`User table ${userTable} has no id field`);
   }
 
-  return mapPermissions<string>(entity, permissions, schema, {
+  return mapPermissions<string>(entity, rule, schema, {
     onValue({ field, table, value, schemaPath }) {
       const isPointingToUserId = getIsFieldPointingToUserId(
         table,

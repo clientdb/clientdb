@@ -64,7 +64,7 @@ export function createSyncAdmin<Schema>({
     input: EntitySchemaInput<Schema[T]>,
     contextInput?: AdminCreateContextInput
   ) {
-    mutate<T>({ type: "create", entity, data: input }, contextInput);
+    await mutate<T>({ type: "create", entity, data: input }, contextInput);
   }
 
   return {

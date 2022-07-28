@@ -4,7 +4,7 @@ import {
   PermissionRule,
 } from "../../../schema/types";
 import { SyncRequestContext } from "../../context";
-import { createUserSelects } from "./userSelect";
+import { getPermissionUserSelects } from "./userSelect";
 
 type QueryBuilder = Knex.QueryBuilder;
 
@@ -44,7 +44,7 @@ export function applyAllowedUsersSelect(
   permission: PermissionRule<any>,
   context: SyncRequestContext
 ) {
-  const userSelects = createUserSelects(
+  const userSelects = getPermissionUserSelects(
     entity,
     permission,
     context.schema,

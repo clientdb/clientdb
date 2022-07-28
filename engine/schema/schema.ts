@@ -13,19 +13,19 @@ export interface SchemaEntityAttribute {
   isNullable: boolean;
 }
 
-export type SchemaEntityReferenceRelation = {
-  type: "reference";
+export type SchemaEntityRelationBase = {
   name: string;
-  isNullable: boolean;
-  referencedEntity: string;
-  referenceField: string;
+  target: string;
+  field: string;
 };
 
-export type SchemaEntityListRelation = {
+export type SchemaEntityReferenceRelation = SchemaEntityRelationBase & {
+  type: "reference";
+  isNullable: boolean;
+};
+
+export type SchemaEntityListRelation = SchemaEntityRelationBase & {
   type: "collection";
-  name: string;
-  referencedByEntity: string;
-  referencedByField: string;
 };
 
 export type SchemaEntityRelation =

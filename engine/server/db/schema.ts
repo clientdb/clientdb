@@ -6,9 +6,9 @@ export async function initializeTablesFromSchema(
   db: Knex,
   schemaModel: DbSchemaModel
 ) {
-  await db.transaction(async (tr) => {
+  const schemaUpdate = db.transaction(async (tr) => {
     for (const entity of schemaModel.entities) {
-      await tr.schema.createTable(entity.name, (table) => {
+      await tr.schema.transacting(tr).createTable(entity.name, (table) => {
         for (const attribute of entity.attributes) {
           table.specificType(attribute.name, attribute.type);
         }
@@ -16,23 +16,31 @@ export async function initializeTablesFromSchema(
         if (entity.idField) {
           table.primary([entity.idField]);
         }
+      });
+    }
 
+    for (const entity of schemaModel.entities) {
+      await tr.schema.transacting(tr).alterTable(entity.name, (table) => {
         for (const relation of entity.relations) {
           if (relation.type === "reference") {
             const referencedTableIdField = schemaModel.getIdField(
-              relation.referencedEntity
+              relation.target
             );
 
             table
-              .foreign(relation.referenceField)
-              .references(
-                `${relation.referencedEntity}.${referencedTableIdField}`
-              )
+              .foreign(relation.field)
+              .references(`${relation.target}.${referencedTableIdField}`)
               .onUpdate("cascade")
               .onDelete("cascade");
+
+            // table.index(relation.referenceField, undefined, "btree");
           }
         }
       });
     }
   });
+
+  const sql = schemaUpdate.toString();
+
+  await schemaUpdate;
 }

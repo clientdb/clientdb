@@ -1,3 +1,4 @@
+import { Knex } from "knex";
 import { DbSchema } from "../schema/schema";
 import { createLogger } from "../utils/logger";
 import { createEntitiesAccessedThanksTo } from "./access/delta/query";
@@ -8,6 +9,21 @@ import { getIsChangeDataValid } from "./changeValidation";
 import { SyncRequestContext } from "./context";
 
 const log = createLogger("Mutation");
+
+async function explainQuery(db: Knex, query: Knex.QueryBuilder) {
+  const explainQuery = db.raw("explain ANALYZE ?", [db.raw(query.toString())]);
+
+  const explainResult = await explainQuery;
+
+  const explainOutput = explainResult.rows
+    .map((row: any) => {
+      return row["QUERY PLAN"];
+    })
+    .join("\n");
+
+  log("Explaining", query.toString());
+  log(explainOutput);
+}
 
 export async function performMutation<T, D>(
   context: SyncRequestContext,
@@ -63,17 +79,32 @@ export async function performMutation<T, D>(
       return;
     }
     case "create": {
-      await db.table(entityName).insert(input.data);
+      console.log("creating", input);
+      try {
+        await db.table(entityName).insert(input.data).returning(idField);
+        console.log("did create", input);
+      } catch (error) {
+        console.log("create error", input, error);
+        throw error;
+      }
 
       if (input.data.id) {
-        const delta = createEntitiesAccessedThanksTo(
+        const deltaQuery = createEntitiesAccessedThanksTo(
           { entity: entityName, id: input.data.id },
           context
         );
 
-        log(`create delta of ${entityName}`, entityName, input.data.id);
+        // const explainQuery = db.raw(`explain ?`, [deltaQuery]);
 
-        log(delta.toString());
+        const res = await deltaQuery;
+
+        const full = await db.table(entityName).select("*");
+
+        log(`create delta of ${entityName}`, entityName, input.data.id);
+        log(deltaQuery.toString());
+        console.log("res of " + entityName, res);
+        console.log("all", full.length);
+        await explainQuery(db, deltaQuery);
       }
       return;
     }

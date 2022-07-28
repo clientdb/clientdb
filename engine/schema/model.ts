@@ -43,7 +43,7 @@ export function createSchemaModel(schema: DbSchema) {
     const relation = entity.relations.find((relation) => {
       if (relation.type !== "reference") return false;
 
-      return relation.referenceField === column;
+      return relation.field === column;
     });
 
     if (relation?.type !== "reference") return null;
@@ -56,7 +56,7 @@ export function createSchemaModel(schema: DbSchema) {
 
     if (!relation) return null;
 
-    return getEntity(relation.referencedEntity);
+    return getEntity(relation.target);
   }
 
   function getFieldTargetEntity(entityName: string, field: string) {
@@ -65,11 +65,11 @@ export function createSchemaModel(schema: DbSchema) {
     if (!relation) return null;
 
     if (relation.type === "reference") {
-      return getEntity(relation.referencedEntity);
+      return getEntity(relation.target);
     }
 
     if (relation.type === "collection") {
-      return getEntity(relation.referencedByEntity);
+      return getEntity(relation.target);
     }
 
     throw new Error(`Unsupported relation type`);
@@ -87,14 +87,11 @@ export function createSchemaModel(schema: DbSchema) {
     }
 
     return fromSchema.relations.filter((relation) => {
-      if (relation.type === "reference" && relation.referencedEntity === to) {
+      if (relation.type === "reference" && relation.target === to) {
         return true;
       }
 
-      if (
-        relation.type === "collection" &&
-        relation.referencedByEntity === to
-      ) {
+      if (relation.type === "collection" && relation.target === to) {
         return true;
       }
 

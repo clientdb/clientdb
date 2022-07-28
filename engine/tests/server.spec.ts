@@ -3,6 +3,8 @@ import { createTestServer } from "./server";
 import { InitialLoadData } from "../server/init";
 import { createTestData } from "./data";
 
+jest.setTimeout(30000);
+
 function parseBootLoad(load: InitialLoadData) {
   const users = load.data.find((item) => item.kind === "user")!.items;
   const teams = load.data.find((item) => item.kind === "team")!.items;

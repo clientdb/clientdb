@@ -21,8 +21,8 @@ function convertReferenceRelationToListRelation(
   return {
     type: "collection",
     name: getPlural(entity.name),
-    referencedByEntity: entity.name,
-    referencedByField: referenceRelation.referenceField,
+    target: entity.name,
+    field: referenceRelation.field,
   };
 }
 
@@ -127,8 +127,8 @@ function getClassFkRelations(
       type: "reference",
       isNullable: !tableAttribute.notNull,
       name: getReferenceRelationNameByFieldName(tableAttribute.attributeName),
-      referencedEntity: context.classEntityLookup.get(referencedTable)!.name,
-      referenceField: tableAttribute.attributeName,
+      target: context.classEntityLookup.get(referencedTable)!.name,
+      field: tableAttribute.attributeName,
     });
   }
 
@@ -192,7 +192,7 @@ export function parseDatabaseSchemaWithContext(
 
       const referencedEntityRef = findEntityByName(
         entities,
-        referenceRelation.referencedEntity
+        referenceRelation.target
       )!;
 
       referencedEntityRef.relations.push(

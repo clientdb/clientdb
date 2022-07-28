@@ -43,7 +43,7 @@ function refPropSignature(
   attr: SchemaEntityReferenceRelation,
   ctx: GenerateClientContext
 ) {
-  const names = ctx.getNames(attr.referencedEntity)!;
+  const names = ctx.getNames(attr.target)!;
 
   const prop = $ts.createPropertySignature(
     undefined,
@@ -73,9 +73,7 @@ function listPropSignature(
   attr: SchemaEntityListRelation,
   ctx: GenerateClientContext
 ) {
-  const collectionOfEntity = collectionType(
-    ctx.getEntityByName(attr.referencedByEntity)!
-  );
+  const collectionOfEntity = collectionType(ctx.getEntityByName(attr.target)!);
 
   const prop = $ts.createPropertySignature(
     undefined,

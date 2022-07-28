@@ -2,7 +2,8 @@ import { pickPermissionsRule } from "../../change";
 import { SyncRequestContext } from "../../context";
 import { applyPermissionNeededJoins } from "../join/permissions";
 import { getEntitiesWithAccessBasedOn } from "./impact";
-import { applyExactEntityWhere } from "./where";
+import { createUserIdCoalease } from "./users";
+import { applyAccessGainedWhere } from "./where";
 
 interface AddedOrRemovedEntityInfo {
   // Entity that is either just created or about to be removed
@@ -23,6 +24,12 @@ function createQueryOfEntitiesAccessedOnlyThanksTo(
     throw new Error(`No permission rule found for ${impactedEntity}`);
   }
 
+  const idField = context.schema.getIdField(impactedEntity);
+
+  if (!idField) {
+    throw new Error(`No id field found for ${impactedEntity}`);
+  }
+
   query = applyPermissionNeededJoins(
     query,
     impactedEntity,
@@ -30,9 +37,9 @@ function createQueryOfEntitiesAccessedOnlyThanksTo(
     context.schema
   );
 
-  const entityTypeColumn = context.db.raw("? as text", [impactedEntity]);
+  const entityTypeColumn = context.db.raw("? as entity", [impactedEntity]);
 
-  query = applyExactEntityWhere(
+  query = applyAccessGainedWhere(
     query,
     impactedEntity,
     changed.entity,
@@ -40,7 +47,19 @@ function createQueryOfEntitiesAccessedOnlyThanksTo(
     context
   );
 
-  query = query.select([entityTypeColumn, `id`, "user_id"]);
+  const userIdSelect = createUserIdCoalease(
+    impactedEntity,
+    permissionRule,
+    context
+  );
+
+  query = query.select([
+    entityTypeColumn,
+    `${impactedEntity}.${idField} as id`,
+    userIdSelect,
+  ]);
+
+  // query = query.groupBy([`${impactedEntity}.${idField}`, "user_id"]);
 
   return query;
 }
@@ -67,8 +86,6 @@ export function createEntitiesAccessedThanksTo(
   query = impactInEntityQueries.reduce((query, nextImpactedQuery) => {
     return query.unionAll(nextImpactedQuery);
   }, query);
-
-  query = query.groupBy(["id", "user_id"]);
 
   return query;
 }

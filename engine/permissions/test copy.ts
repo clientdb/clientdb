@@ -113,16 +113,16 @@ function getRootQueryWithJoins(
     if (relation.type === "collection") {
       return query.innerJoin(
         table,
-        relation.referencedByEntity,
-        `${relation.referencedByEntity}.${relation.referencedByField} = ${table}.${tableSchema.idField}`
+        relation.target,
+        `${relation.target}.${relation.field} = ${table}.${tableSchema.idField}`
       );
     }
 
     if (relation.type === "reference") {
       return query.innerJoin(
         table,
-        relation.referencedEntity,
-        `${relation.referencedEntity}.${relation.referenceField} = ${table}.${tableSchema.idField}`
+        relation.target,
+        `${relation.target}.${relation.field} = ${table}.${tableSchema.idField}`
       );
     }
 

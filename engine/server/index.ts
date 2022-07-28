@@ -94,6 +94,7 @@ export function createSyncServer<Schema = any>(
     listen,
     app,
     admin,
+    db: dbConnection,
   };
 }
 

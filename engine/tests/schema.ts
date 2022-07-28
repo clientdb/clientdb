@@ -1,3 +1,4 @@
+import { createSchemaModel } from "../schema/model";
 import { DbSchema, SchemaEntity } from "../schema/schema";
 import {
   currentUser,
@@ -25,33 +26,33 @@ const userSchema: SchemaEntity = {
   idField: "id",
   attributes: [
     { name: "id", type: "uuid", isNullable: false },
-    { name: "name", type: "string", isNullable: false },
-    { name: "password", type: "string", isNullable: false },
+    { name: "name", type: "text", isNullable: false },
+    { name: "password", type: "text", isNullable: false },
   ],
   relations: [
     {
+      type: "collection",
       name: "todos",
-      type: "collection",
-      referencedByField: "user_id",
-      referencedByEntity: "todo",
+      field: "user_id",
+      target: "todo",
     },
     {
+      type: "collection",
       name: "lists",
-      type: "collection",
-      referencedByField: "user_id",
-      referencedByEntity: "list",
+      field: "user_id",
+      target: "list",
     },
     {
+      type: "collection",
       name: "teamMemberships",
-      type: "collection",
-      referencedByField: "user_id",
-      referencedByEntity: "teamMembership",
+      field: "user_id",
+      target: "teamMembership",
     },
     {
-      name: "labels",
       type: "collection",
-      referencedByField: "user_id",
-      referencedByEntity: "label",
+      name: "labels",
+      field: "user_id",
+      target: "label",
     },
   ],
 };
@@ -71,9 +72,17 @@ const userPermissions: Permissions["user"] = {
         {
           teamMemberships: {
             team: {
-              teamMemberships: {
-                user_id: currentUser,
-              },
+              $or: [
+                {
+                  owner_id: currentUser,
+                },
+                {
+                  teamMemberships: {
+                    user_id: currentUser,
+                    is_disabled: false,
+                  },
+                },
+              ],
             },
           },
         },
@@ -101,34 +110,34 @@ const teamSchema: SchemaEntity = {
   idField: "id",
   attributes: [
     { name: "id", type: "uuid", isNullable: false },
-    { name: "name", type: "string", isNullable: false },
+    { name: "name", type: "text", isNullable: false },
     { name: "owner_id", type: "uuid", isNullable: false },
   ],
   relations: [
     {
-      name: "owner",
       type: "reference",
-      referenceField: "owner_id",
-      referencedEntity: "user",
+      name: "owner",
+      field: "owner_id",
+      target: "user",
       isNullable: false,
     },
     {
+      type: "collection",
       name: "teamMemberships",
-      type: "collection",
-      referencedByField: "team_id",
-      referencedByEntity: "teamMembership",
+      field: "team_id",
+      target: "teamMembership",
     },
     {
+      type: "collection",
       name: "labels",
-      type: "collection",
-      referencedByField: "team_id",
-      referencedByEntity: "label",
+      field: "team_id",
+      target: "label",
     },
     {
-      name: "lists",
       type: "collection",
-      referencedByField: "team_id",
-      referencedByEntity: "list",
+      name: "lists",
+      field: "team_id",
+      target: "list",
     },
   ],
 };
@@ -142,6 +151,7 @@ const teamMemberOrOwner: Rule["team"] = {
     teamOwner,
     {
       teamMemberships: {
+        is_disabled: false,
         user_id: currentUser,
       },
     },
@@ -168,6 +178,7 @@ interface TeamMembership {
   id: string;
   team_id: string;
   user_id: string;
+  is_disabled: boolean;
   user: SchemaReference<User>;
   team: SchemaReference<Team>;
 }
@@ -179,20 +190,21 @@ const teamMembershipSchema: SchemaEntity = {
     { name: "id", type: "uuid", isNullable: false },
     { name: "team_id", type: "uuid", isNullable: false },
     { name: "user_id", type: "uuid", isNullable: false },
+    { name: "is_disabled", type: "boolean", isNullable: false },
   ],
   relations: [
     {
-      name: "user",
       type: "reference",
-      referenceField: "user_id",
-      referencedEntity: "user",
+      name: "user",
+      field: "user_id",
+      target: "user",
       isNullable: false,
     },
     {
-      name: "team",
       type: "reference",
-      referenceField: "team_id",
-      referencedEntity: "team",
+      name: "team",
+      field: "team_id",
+      target: "team",
       isNullable: false,
     },
   ],
@@ -235,29 +247,29 @@ const listSchema: SchemaEntity = {
   idField: "id",
   attributes: [
     { name: "id", type: "uuid", isNullable: false },
-    { name: "name", type: "string", isNullable: false },
+    { name: "name", type: "text", isNullable: false },
     { name: "user_id", type: "uuid", isNullable: false },
     { name: "team_id", type: "uuid", isNullable: false },
   ],
   relations: [
     {
-      name: "todos",
       type: "collection",
-      referencedByField: "list_id",
-      referencedByEntity: "todo",
+      name: "todos",
+      field: "list_id",
+      target: "todo",
     },
     {
-      name: "team",
       type: "reference",
-      referenceField: "team_id",
-      referencedEntity: "team",
+      name: "team",
+      field: "team_id",
+      target: "team",
       isNullable: false,
     },
     {
-      name: "user",
       type: "reference",
-      referenceField: "user_id",
-      referencedEntity: "user",
+      name: "user",
+      field: "user_id",
+      target: "user",
       isNullable: false,
     },
   ],
@@ -303,30 +315,30 @@ const labelSchema: SchemaEntity = {
   idField: "id",
   attributes: [
     { name: "id", type: "uuid", isNullable: false },
-    { name: "name", type: "string", isNullable: false },
+    { name: "name", type: "text", isNullable: false },
     { name: "user_id", type: "uuid", isNullable: false },
     { name: "team_id", type: "uuid", isNullable: false },
     { name: "is_public", type: "boolean", isNullable: false },
   ],
   relations: [
     {
-      name: "todoLabels",
       type: "collection",
-      referencedByField: "label_id",
-      referencedByEntity: "todoLabel",
+      name: "todoLabels",
+      field: "label_id",
+      target: "todoLabel",
     },
     {
-      name: "team",
       type: "reference",
-      referenceField: "team_id",
-      referencedEntity: "team",
+      name: "team",
+      field: "team_id",
+      target: "team",
       isNullable: false,
     },
     {
-      name: "user",
       type: "reference",
-      referenceField: "user_id",
-      referencedEntity: "user",
+      name: "user",
+      field: "user_id",
+      target: "user",
       isNullable: false,
     },
   ],
@@ -375,17 +387,17 @@ const todoLabelSchema: SchemaEntity = {
   ],
   relations: [
     {
-      name: "label",
       type: "reference",
-      referenceField: "label_id",
-      referencedEntity: "label",
+      name: "label",
+      field: "label_id",
+      target: "label",
       isNullable: false,
     },
     {
-      name: "todo",
       type: "reference",
-      referenceField: "todo_id",
-      referencedEntity: "todo",
+      name: "todo",
+      field: "todo_id",
+      target: "todo",
       isNullable: false,
     },
   ],
@@ -429,31 +441,31 @@ const todoSchema: SchemaEntity = {
   idField: "id",
   attributes: [
     { name: "id", type: "uuid", isNullable: false },
-    { name: "name", type: "string", isNullable: false },
-    { name: "done_at", type: "string", isNullable: true },
+    { name: "name", type: "text", isNullable: false },
+    { name: "done_at", type: "text", isNullable: true },
     { name: "list_id", type: "uuid", isNullable: false },
     { name: "user_id", type: "uuid", isNullable: false },
   ],
   relations: [
     {
+      type: "reference",
       name: "list",
-      type: "reference",
-      referenceField: "list_id",
-      referencedEntity: "list",
+      field: "list_id",
+      target: "list",
       isNullable: false,
     },
     {
+      type: "reference",
       name: "user",
-      type: "reference",
-      referenceField: "user_id",
-      referencedEntity: "user",
+      field: "user_id",
+      target: "user",
       isNullable: false,
     },
     {
-      name: "todoLabels",
       type: "collection",
-      referencedByField: "todo_id",
-      referencedByEntity: "todoLabel",
+      name: "todoLabels",
+      field: "todo_id",
+      target: "todoLabel",
     },
   ],
 };
@@ -512,6 +524,8 @@ export const schema: DbSchema = {
     todoSchema,
   ],
 };
+
+export const schemaModel = createSchemaModel(schema);
 
 export const permissions: Permissions = {
   user: userPermissions,

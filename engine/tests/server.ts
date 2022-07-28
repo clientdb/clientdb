@@ -3,11 +3,21 @@ import knex from "knex";
 import { createSyncServer } from "../server";
 import { permissions, schema, TestSchema } from "./schema";
 
+import { PostgreSqlContainer } from "testcontainers";
+
 export async function createTestServer() {
+  const postgres = await new PostgreSqlContainer()
+    .withExposedPorts(5432)
+    .start();
+
   const db = knex({
-    client: "sqlite3",
+    client: "pg",
     connection: {
-      filename: ":memory:",
+      host: postgres.getHost(),
+      password: postgres.getPassword(),
+      database: postgres.getDatabase(),
+      user: postgres.getUsername(),
+      port: postgres.getPort(),
     },
     useNullAsDefault: true,
   });

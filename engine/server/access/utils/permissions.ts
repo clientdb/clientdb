@@ -8,7 +8,7 @@ import {
   WhereValue,
 } from "../../../schema/types";
 
-export function pickRelationPermissions<T>(
+export function pickRelationPermissions<T = any>(
   rule: PermissionSelector<T>,
   entity: string,
   schema: DbSchemaModel
@@ -28,7 +28,7 @@ export function pickRelationPermissions<T>(
   return relationPermissions;
 }
 
-export function pickDataPermissions<T>(
+export function pickDataPermissions<T = any>(
   rule: PermissionSelector<T>,
   entity: string,
   schema: DbSchemaModel
@@ -46,7 +46,7 @@ export function pickDataPermissions<T>(
 
     if (!attribute) {
       throw new Error(
-        `No relation not attribute for entity ${entity} field ${field}`
+        `No relation nor attribute for entity '${entity}' field '${field}'`
       );
     }
 
@@ -66,7 +66,7 @@ export function parseWherePermission<T>(permission: PermissionRule<T>) {
   };
 }
 
-export function parseWhereRule<T>(
+export function parseWhereRule<T = any>(
   rule: PermissionSelector<T>,
   entity: string,
   schema: DbSchemaModel

@@ -1,4 +1,5 @@
 import { Knex } from "knex";
+import { PermissionRule } from "../../../schema/types";
 import { applyQueryWhere } from "../../../utils/conditions/builder";
 import {
   parseWhereTree,
@@ -6,31 +7,49 @@ import {
 } from "../../../utils/conditions/conditions";
 import { pickPermissionsRule } from "../../change";
 import { SyncRequestContext } from "../../context";
-import { mapPermissions } from "../../permissions/traverse";
+import { getHasPermission, mapPermissions } from "../../permissions/traverse";
+import { deepFilterRule } from "./deepFilterRule";
 import { getIsRelationImpactedBy } from "./relation";
+import { getIsRuleEmpty } from "./simplifyRule";
+import { splitRuleByImpactingEntity } from "./split";
 
-function createExactEntityWhereComparsion(
-  impactedEntity: string,
+function getIsRuleImpactedBy(
+  rule: PermissionRule<any>,
+  ruleEntity: string,
+  impactedBy: string,
+  context: SyncRequestContext
+) {
+  return getHasPermission(ruleEntity, rule, context.schema, {
+    onRelation(info) {
+      return getIsRelationImpactedBy(info.relation, impactedBy);
+    },
+    onValue(info) {
+      const referencedEntity = context.schema.getEntityReferencedBy(
+        info.table,
+        info.field
+      )?.name;
+
+      return referencedEntity === impactedBy;
+    },
+  });
+}
+
+function createAccessGainedWhere(
+  entity: string,
   changedEntity: string,
   changedEntityId: string,
-  context: SyncRequestContext,
-  compare: "=" | "!="
+  rule: PermissionRule<any>,
+  context: SyncRequestContext
 ) {
-  const accessRules = pickPermissionsRule(context, impactedEntity, "read");
-
-  if (!accessRules) {
-    throw new Error(`Impacted entity ${impactedEntity} has no access rules.`);
-  }
-
   const idField = context.schema.getIdField(changedEntity);
 
   if (!idField) {
-    throw new Error(`Impacted entity ${impactedEntity} has no id field.`);
+    throw new Error(`Impacted entity ${entity} has no id field.`);
   }
 
   const whereAccessedThanksTo = mapPermissions<RawWherePointer>(
-    impactedEntity,
-    accessRules,
+    entity,
+    rule,
     context.schema,
     {
       onValue({ table, field, conditionPath, schemaPath, value }) {
@@ -40,10 +59,11 @@ function createExactEntityWhereComparsion(
         );
 
         if (referencedEntity?.name === context.config.userTable) {
+          // return;
           const pointer: RawWherePointer = {
             table: table,
             conditionPath: conditionPath,
-            condition: `user_id`,
+            condition: { $isNull: false },
             select: `${schemaPath.join("__")}.${field}`,
           };
 
@@ -68,14 +88,9 @@ function createExactEntityWhereComparsion(
           table,
           conditionPath,
           select: `${[...schemaPath, field].join("__")}.${idField}`,
-          condition:
-            compare === "="
-              ? {
-                  $eq: changedEntityId,
-                }
-              : {
-                  $ne: changedEntityId,
-                },
+          condition: {
+            $eq: changedEntityId,
+          },
         };
 
         return pointer;
@@ -83,7 +98,7 @@ function createExactEntityWhereComparsion(
     }
   );
 
-  if (changedEntity === impactedEntity) {
+  if (changedEntity === entity) {
     whereAccessedThanksTo.push({
       condition: { $eq: changedEntityId },
       conditionPath: [],
@@ -97,57 +112,75 @@ function createExactEntityWhereComparsion(
   return thanksToWhereTree;
 }
 
-function createExactEntityWhere(
-  impactedEntity: string,
-  changedEntity: string,
-  changedEntityId: string,
-  context: SyncRequestContext
-) {
-  const thanksToWhereTree = createExactEntityWhereComparsion(
-    impactedEntity,
-    changedEntity,
-    changedEntityId,
-    context,
-    "="
-  );
+function json(input: unknown) {
+  return JSON.stringify(
+    input,
+    (key, value) => {
+      if (typeof value === "function") {
+        return `function ${value.name}()`;
+      }
 
-  const evenWithoutWhereTree = createExactEntityWhereComparsion(
-    impactedEntity,
-    changedEntity,
-    changedEntityId,
-    context,
-    "!="
+      return value;
+    },
+    2
   );
-
-  return {
-    thanksToWhereTree,
-    evenWithoutWhereTree,
-  };
 }
 
-export function applyExactEntityWhere(
+export function applyAccessGainedWhere(
   query: Knex.QueryBuilder,
-  impactedEntity: string,
+  entity: string,
   changedEntity: string,
   changedEntityId: string,
   context: SyncRequestContext
 ) {
-  const { thanksToWhereTree, evenWithoutWhereTree } = createExactEntityWhere(
-    impactedEntity,
+  const accessRules = pickPermissionsRule(context, entity, "read");
+
+  if (!accessRules) {
+    throw new Error(`Impacted entity ${entity} has no access rules.`);
+  }
+
+  let [impactedRule, notImpactedRule] = splitRuleByImpactingEntity(
+    accessRules,
+    entity,
+    changedEntity,
+    context.schema
+  );
+
+  if (!impactedRule && !notImpactedRule) {
+    impactedRule = accessRules;
+  }
+
+  const impactedPermission = createAccessGainedWhere(
+    entity,
     changedEntity,
     changedEntityId,
+    impactedRule! ?? accessRules,
     context
   );
 
-  query = query.andWhere((qb) => {
-    applyQueryWhere(qb, thanksToWhereTree, context);
-  });
+  const notImpactedPermission = createAccessGainedWhere(
+    entity,
+    changedEntity,
+    changedEntityId,
+    notImpactedRule,
+    context
+  );
 
-  if (changedEntity !== impactedEntity) {
-    query = query.andWhereNot((qb) => {
-      applyQueryWhere(qb, evenWithoutWhereTree, context);
+  const hasNotImpactedRule = !getIsRuleEmpty(notImpactedRule);
+
+  if (hasNotImpactedRule) {
+    query = query.andWhere((qb) => {
+      qb.orWhere((qb) => {
+        applyQueryWhere(qb, impactedPermission, context);
+      }).orWhere((qb) => {
+        applyQueryWhere(qb, notImpactedPermission, context);
+      });
     });
   }
+
+  query = query.andWhere((qb) => {
+    applyQueryWhere(qb, impactedPermission, context);
+  });
 
   return query;
 }

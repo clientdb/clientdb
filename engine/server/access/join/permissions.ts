@@ -24,7 +24,7 @@ export function createPermissionNeededJoins<T>(
         return {
           table: targetEntity.name,
           from,
-          fromColumn: relation.referenceField,
+          fromColumn: relation.field,
           toColumn: schema.getIdField(targetEntity.name)!,
           alias: [...schemaPath, field].join("__"),
         };
@@ -35,7 +35,7 @@ export function createPermissionNeededJoins<T>(
           table: targetEntity.name,
           from,
           fromColumn: schema.getIdField(table)!,
-          toColumn: relation.referencedByField,
+          toColumn: relation.field,
           alias: [...schemaPath, field].join("__"),
         };
       }

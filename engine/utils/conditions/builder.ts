@@ -16,7 +16,7 @@ function applyWherePointer(
     qb.andWhere(select, "=", context.db.raw(`${condition}`));
     return qb;
   }
-  const { $eq, $ne, $gt, $gte, $lt, $lte, $in, $notIn } = condition;
+  const { $eq, $ne, $gt, $gte, $lt, $lte, $in, $notIn, $isNull } = condition;
 
   if ($eq !== undefined) {
     qb.andWhere(select, "=", resolveValuePointer($eq, context));
@@ -48,6 +48,16 @@ function applyWherePointer(
 
   if ($notIn !== undefined) {
     qb.andWhere(select, "not in", resolveValuePointer($notIn, context));
+  }
+
+  if ($isNull !== undefined) {
+    const nullValue = resolveValuePointer($isNull, context);
+
+    if (nullValue) {
+      qb.andWhere(select, "is", null);
+    } else {
+      qb.andWhere(select, "is not", null);
+    }
   }
 
   return qb;
