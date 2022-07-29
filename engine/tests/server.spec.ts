@@ -27,7 +27,7 @@ async function getTestServerWithData() {
 }
 
 describe("server", () => {
-  it("returns proper initial load basing on permissions", async () => {
+  it.only("returns proper initial load basing on permissions", async () => {
     const { server, ids } = await getTestServerWithData();
 
     const owner = parseBootLoad(

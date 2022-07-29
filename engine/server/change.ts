@@ -1,4 +1,4 @@
-import { PermissionOperationType } from "../schema/types";
+import { PermissionOperationType, SchemaPermissions } from "../schema/types";
 import { unsafeAssertType } from "../utils/assert";
 import { SyncRequestContext } from "./context";
 
@@ -42,12 +42,10 @@ export function getEntityChangeSchema<T, D>(
 }
 
 export function pickPermissionsRule<T extends PermissionOperationType>(
-  context: SyncRequestContext,
+  permissions: SchemaPermissions,
   entity: string,
   operation: T
 ) {
-  const { permissions } = context;
-
   const operationConfig = permissions[entity]?.[operation];
 
   if (!operationConfig) {
@@ -77,5 +75,9 @@ export function pickChangePermission<T, D>(
 ) {
   const { entity, type } = change;
 
-  return pickPermissionsRule(context, entity as any as string, type);
+  return pickPermissionsRule(
+    context.permissions,
+    entity as any as string,
+    type
+  );
 }

@@ -16,7 +16,11 @@ function createExactEntityWhereComparsion(
   context: SyncRequestContext,
   compare: "=" | "!="
 ) {
-  const accessRules = pickPermissionsRule(context, impactedEntity, "read");
+  const accessRules = pickPermissionsRule(
+    context.permissions,
+    impactedEntity,
+    "read"
+  );
 
   if (!accessRules) {
     throw new Error(`Impacted entity ${impactedEntity} has no access rules.`);

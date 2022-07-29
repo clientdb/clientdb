@@ -1,7 +1,7 @@
 import { Knex } from "knex";
 import { DbSchema } from "../schema/schema";
 import { createLogger } from "../utils/logger";
-import { createEntitiesAccessedThanksTo } from "./access/delta/query";
+import { createDeltaQueriesForChange } from "./access/delta/query";
 import { createAccessQuery } from "./access/query";
 import { EntityChange } from "./change";
 import { getIsChangeAllowed } from "./changePermission";
@@ -79,32 +79,35 @@ export async function performMutation<T, D>(
       return;
     }
     case "create": {
-      console.log("creating", input);
       try {
         await db.table(entityName).insert(input.data).returning(idField);
-        console.log("did create", input);
       } catch (error) {
-        console.log("create error", input, error);
+        console.error("create error", input, error);
         throw error;
       }
 
       if (input.data.id) {
-        const deltaQuery = createEntitiesAccessedThanksTo(
+        const deltaQuery = createDeltaQueriesForChange(
           { entity: entityName, id: input.data.id },
           context
         );
 
         // const explainQuery = db.raw(`explain ?`, [deltaQuery]);
 
-        const res = await deltaQuery;
+        const deltaResults = await deltaQuery;
 
         const full = await db.table(entityName).select("*");
 
         log(`create delta of ${entityName}`, entityName, input.data.id);
-        log(deltaQuery.toString());
-        console.log("res of " + entityName, res);
+
+        console.log(
+          "delta after creating " + entityName,
+          input.data,
+          deltaResults.slice(0, 5),
+          "..."
+        );
         console.log("all", full.length);
-        await explainQuery(db, deltaQuery);
+        // await explainQuery(db, deltaQuery);
       }
       return;
     }

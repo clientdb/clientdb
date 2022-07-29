@@ -12,6 +12,6 @@ function json(input: unknown) {
   );
 }
 
-export function deepLog(...input: any[]) {
+export function debug(...input: any[]) {
   console.info(...input.map((single) => json(single)));
 }

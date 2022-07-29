@@ -71,7 +71,11 @@ export function createSyncServer<Schema = any>(
   });
 
   async function bootstrapTables() {
-    await initializeTablesFromSchema(dbConnection, schemaModel);
+    await initializeTablesFromSchema(
+      dbConnection,
+      schemaModel,
+      config.permissions
+    );
   }
 
   async function initialize() {

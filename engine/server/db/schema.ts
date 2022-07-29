@@ -1,11 +1,71 @@
 import { Knex } from "knex";
 import { DbSchemaModel } from "../../schema/model";
 import { DbSchema } from "../../schema/schema";
+import { SchemaPermissions } from "../../schema/types";
+import { pickPermissionsRule } from "../change";
+import { mapPermissions, traversePermissions } from "../permissions/traverse";
+
+function collectPermissionNeededIndices(
+  schema: DbSchemaModel,
+  permissions: SchemaPermissions
+) {
+  const indices: Record<string, Set<string>> = {};
+
+  function addIndex(entity: string, field: string) {
+    let entityIndices = indices[entity];
+
+    if (!entityIndices) {
+      entityIndices = new Set();
+      indices[entity] = entityIndices;
+    }
+
+    entityIndices.add(field);
+  }
+
+  for (const permissionEntity in permissions) {
+    const readPermissions = pickPermissionsRule(
+      permissions,
+      permissionEntity,
+      "read"
+    );
+
+    const idField = schema.getIdField(permissionEntity)!;
+
+    if (!readPermissions) continue;
+
+    traversePermissions(permissionEntity, readPermissions, schema, {
+      onValue(info) {
+        const referencedEntity = schema.getEntityReferencedBy(
+          info.table,
+          info.field
+        );
+
+        if (referencedEntity) return;
+
+        const attribute = schema.getAttribute(info.table, info.field);
+
+        if (!attribute) return;
+
+        if (info.field === idField) return;
+
+        addIndex(info.table, info.field);
+      },
+    });
+  }
+
+  return indices;
+}
 
 export async function initializeTablesFromSchema(
   db: Knex,
-  schemaModel: DbSchemaModel
+  schemaModel: DbSchemaModel,
+  permissions: SchemaPermissions<any>
 ) {
+  const permissionIndices = collectPermissionNeededIndices(
+    schemaModel,
+    permissions
+  );
+
   const schemaUpdate = db.transaction(async (tr) => {
     for (const entity of schemaModel.entities) {
       await tr.schema.transacting(tr).createTable(entity.name, (table) => {
@@ -15,6 +75,14 @@ export async function initializeTablesFromSchema(
 
         if (entity.idField) {
           table.primary([entity.idField]);
+        }
+
+        const indexesToAdd = permissionIndices[entity.name];
+
+        if (indexesToAdd) {
+          for (const index of indexesToAdd) {
+            table.index(index);
+          }
         }
       });
     }
@@ -39,8 +107,6 @@ export async function initializeTablesFromSchema(
       });
     }
   });
-
-  const sql = schemaUpdate.toString();
 
   await schemaUpdate;
 }

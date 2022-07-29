@@ -9,7 +9,7 @@ import {
 } from "../../../schema/types";
 
 export function pickRelationPermissions<T = any>(
-  rule: PermissionSelector<T>,
+  rule: PermissionRule<T>,
   entity: string,
   schema: DbSchemaModel
 ): RelationsSelector<T> {
@@ -29,7 +29,7 @@ export function pickRelationPermissions<T = any>(
 }
 
 export function pickDataPermissions<T = any>(
-  rule: PermissionSelector<T>,
+  rule: PermissionRule<T>,
   entity: string,
   schema: DbSchemaModel
 ): DataSelector<T> {
@@ -45,9 +45,7 @@ export function pickDataPermissions<T = any>(
     const attribute = schema.getAttribute(entity, field);
 
     if (!attribute) {
-      throw new Error(
-        `No relation nor attribute for entity '${entity}' field '${field}'`
-      );
+      continue;
     }
 
     dataPermissions[field as keyof T] = fieldSpec as any;
@@ -67,7 +65,7 @@ export function parseWherePermission<T>(permission: PermissionRule<T>) {
 }
 
 export function parseWhereRule<T = any>(
-  rule: PermissionSelector<T>,
+  rule: PermissionRule<T>,
   entity: string,
   schema: DbSchemaModel
 ) {

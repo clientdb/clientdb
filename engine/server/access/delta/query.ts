@@ -3,7 +3,7 @@ import { SyncRequestContext } from "../../context";
 import { applyPermissionNeededJoins } from "../join/permissions";
 import { getEntitiesWithAccessBasedOn } from "./impact";
 import { createUserIdCoalease } from "./users";
-import { applyAccessGainedWhere } from "./where";
+import { applyDeltaWhere } from "./where";
 
 interface AddedOrRemovedEntityInfo {
   // Entity that is either just created or about to be removed
@@ -11,60 +11,58 @@ interface AddedOrRemovedEntityInfo {
   id: string;
 }
 
-function createQueryOfEntitiesAccessedOnlyThanksTo(
-  impactedEntity: string,
+function createDeltaQueryForEntity(
+  entity: string,
   changed: AddedOrRemovedEntityInfo,
   context: SyncRequestContext
 ) {
-  let query = context.db.from(impactedEntity);
+  const userTable = context.config.userTable;
+  const userIdField = context.schema.getIdField(userTable)!;
 
-  const permissionRule = pickPermissionsRule(context, impactedEntity, "read");
+  let query = context.db.from(entity).crossJoin(`${userTable} as allowed_user`);
+
+  const permissionRule = pickPermissionsRule(
+    context.permissions,
+    entity,
+    "read"
+  );
 
   if (!permissionRule) {
-    throw new Error(`No permission rule found for ${impactedEntity}`);
+    throw new Error(`No permission rule found for ${entity}`);
   }
 
-  const idField = context.schema.getIdField(impactedEntity);
+  const idField = context.schema.getIdField(entity);
 
   if (!idField) {
-    throw new Error(`No id field found for ${impactedEntity}`);
+    throw new Error(`No id field found for ${entity}`);
   }
 
   query = applyPermissionNeededJoins(
     query,
-    impactedEntity,
+    entity,
     permissionRule,
     context.schema
   );
 
-  const entityTypeColumn = context.db.raw("? as entity", [impactedEntity]);
+  const entityTypeColumn = context.db.raw("? as entity", [entity]);
 
-  query = applyAccessGainedWhere(
-    query,
-    impactedEntity,
-    changed.entity,
-    changed.id,
-    context
-  );
+  query = applyDeltaWhere(query, entity, changed.entity, changed.id, context);
 
-  const userIdSelect = createUserIdCoalease(
-    impactedEntity,
-    permissionRule,
-    context
-  );
+  const entityIdSelectColumn = `${entity}.${idField}`;
+  const allowedUserIdSelectColumn = `allowed_user.${userIdField}`;
 
   query = query.select([
     entityTypeColumn,
-    `${impactedEntity}.${idField} as id`,
-    userIdSelect,
+    `${entityIdSelectColumn} as id`,
+    `${allowedUserIdSelectColumn} as user_id`,
   ]);
 
-  // query = query.groupBy([`${impactedEntity}.${idField}`, "user_id"]);
+  query = query.groupBy([entityIdSelectColumn, allowedUserIdSelectColumn]);
 
   return query;
 }
 
-export function createEntitiesAccessedThanksTo(
+export function createDeltaQueriesForChange(
   changed: AddedOrRemovedEntityInfo,
   context: SyncRequestContext
 ) {
@@ -73,17 +71,13 @@ export function createEntitiesAccessedThanksTo(
     context
   );
 
-  const impactInEntityQueries = impactedEntities.map((impactedEntity) => {
-    return createQueryOfEntitiesAccessedOnlyThanksTo(
-      impactedEntity,
-      changed,
-      context
-    );
+  const impactInEntityDeltaQueries = impactedEntities.map((impactedEntity) => {
+    return createDeltaQueryForEntity(impactedEntity, changed, context);
   });
 
   let query = context.db.queryBuilder();
 
-  query = impactInEntityQueries.reduce((query, nextImpactedQuery) => {
+  query = impactInEntityDeltaQueries.reduce((query, nextImpactedQuery) => {
     return query.unionAll(nextImpactedQuery);
   }, query);
 

@@ -20,19 +20,24 @@ interface TraverseStepInfo {
   table: string;
 }
 
-interface TraverseRelationInfo extends TraverseStepInfo {
+export interface TraverseRelationInfo extends TraverseStepInfo {
   rule: RelationRule<any>;
   relation: SchemaEntityRelation;
   targetEntity: SchemaEntity;
 }
 
-interface TraverseValueInfo extends TraverseStepInfo {
+export interface TraverseValueInfo extends TraverseStepInfo {
   value: WhereValueConfig<any>;
+}
+
+export interface TraverseLevelInfo extends TraverseStepInfo {
+  level: PermissionSelector<any>;
 }
 
 interface TraverseCallbacks<R = void> {
   onRelation?: (info: TraverseRelationInfo) => R;
   onValue?: (info: TraverseValueInfo) => R;
+  onLevel?: (info: TraverseLevelInfo) => R;
 }
 
 function traverseRule<T>(
@@ -41,6 +46,8 @@ function traverseRule<T>(
   schema: DbSchemaModel,
   callbacks: TraverseCallbacks
 ) {
+  callbacks?.onLevel?.({ ...info, level: rule });
+
   const { relationEntires, dataEntires } = parseWhereRule(
     rule,
     info.table,
@@ -96,16 +103,14 @@ function traverseRule<T>(
 
 function traversePermissionsWithPath<T>(
   info: TraverseStepInfo,
-  permissions: PermissionRule<T>,
+  inputRule: PermissionRule<T>,
   schema: DbSchemaModel,
   callbacks: TraverseCallbacks
 ) {
-  const { rule, $and = [], $or = [] } = parseWherePermission(permissions);
+  traverseRule(info, inputRule, schema, callbacks);
 
-  traverseRule(info, rule, schema, callbacks);
-
-  $and
-    .map((andRule, index) => {
+  inputRule.$and
+    ?.map((andRule, index) => {
       return traversePermissionsWithPath(
         {
           ...info,
@@ -118,8 +123,8 @@ function traversePermissionsWithPath<T>(
     })
     .flat();
 
-  $or
-    .map((orRule, index) => {
+  inputRule.$or
+    ?.map((orRule, index) => {
       return traversePermissionsWithPath(
         {
           ...info,
@@ -135,7 +140,7 @@ function traversePermissionsWithPath<T>(
 
 export function traversePermissions(
   entity: string,
-  permissions: PermissionRule<unknown>,
+  rule: PermissionRule<unknown>,
   schema: DbSchemaModel,
   callbacks: TraverseCallbacks
 ) {
@@ -146,7 +151,7 @@ export function traversePermissions(
       field: "",
       table: entity,
     },
-    permissions,
+    rule,
     schema,
     callbacks
   );

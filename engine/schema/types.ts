@@ -95,7 +95,7 @@ export type EntityPermissionsConfig<T> = {
   remove?: EntityRemovePermissionConfig<T>;
 };
 
-export type SchemaPermissions<S> = {
+export type SchemaPermissions<S = any> = {
   [K in keyof S]: EntityPermissionsConfig<S[K]>;
 };
 

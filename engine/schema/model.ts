@@ -54,9 +54,15 @@ export function createSchemaModel(schema: DbSchema) {
   function getEntityReferencedBy(tableName: string, column: string) {
     const relation = getRelationByColumn(tableName, column);
 
-    if (!relation) return null;
+    if (relation) {
+      return getEntity(relation.target);
+    }
 
-    return getEntity(relation.target);
+    if (column === getIdField(tableName)) {
+      return getEntity(tableName);
+    }
+
+    return null;
   }
 
   function getFieldTargetEntity(entityName: string, field: string) {

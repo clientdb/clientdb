@@ -1,10 +1,56 @@
 import { DbSchemaModel } from "../../../schema/model";
+import { SchemaEntityRelation } from "../../../schema/schema";
 import { PermissionRule } from "../../../schema/types";
-import { deepLog } from "../../../utils/log";
+import { debug } from "../../../utils/log";
 import { SyncRequestContext } from "../../context";
 import { getHasPermission } from "../../permissions/traverse";
 import { deepFilterRule } from "./deepFilterRule";
-import { getIsRelationImpactedBy } from "./relation";
+import { getIsRuleEmpty } from "./simplifyRule";
+
+function getIsRelationImpactedBy(
+  relation: SchemaEntityRelation,
+  changedEntity: string
+) {
+  if (relation.type === "reference" && relation.target === changedEntity) {
+    return true;
+  }
+
+  if (relation.type === "collection" && relation.target === changedEntity) {
+    return true;
+  }
+
+  return false;
+}
+
+function iterateWithPrevious<T>(items: T[]) {
+  const entries = items.map((item, index) => {
+    return [item, items[index - 1] ?? null] as [T, T | null];
+  });
+
+  return entries;
+}
+
+function getIsSchemaPathImpactedByEntity(
+  path: string[],
+  changedEntity: string,
+  schema: DbSchemaModel
+) {
+  for (const [segment, previousSegment] of iterateWithPrevious(path)) {
+    if (!previousSegment) {
+      if (segment === changedEntity) return true;
+      continue;
+    }
+
+    const referencedEntity = schema.getEntityReferencedBy(
+      previousSegment,
+      segment
+    );
+
+    if (referencedEntity?.name === changedEntity) return true;
+  }
+
+  return false;
+}
 
 function getIsRuleImpactedBy(
   rule: PermissionRule<any>,
@@ -12,6 +58,8 @@ function getIsRuleImpactedBy(
   impactedBy: string,
   schema: DbSchemaModel
 ) {
+  const impactedByIdField = schema.getIdField(impactedBy);
+
   const isImpacted = getHasPermission(ruleEntity, rule, schema, {
     onRelation(info) {
       return getIsRelationImpactedBy(info.relation, impactedBy);
@@ -55,5 +103,8 @@ export function splitRuleByImpactingEntity(
     schema
   );
 
-  return [impactedRulePart, notImpactedRulePart] as const;
+  return [
+    getIsRuleEmpty(impactedRulePart) ? null : impactedRulePart,
+    getIsRuleEmpty(notImpactedRulePart) ? null : notImpactedRulePart,
+  ] as const;
 }

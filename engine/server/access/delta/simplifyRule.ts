@@ -29,8 +29,8 @@ export function getIsRuleEmpty(rule: PermissionRule) {
 
   if (Object.keys(fields).length > 0) return false;
 
-  if ($and?.some(getIsRuleEmpty)) return false;
-  if ($or?.some(getIsRuleEmpty)) return false;
+  if ($and?.some((rule) => !getIsRuleEmpty(rule))) return false;
+  if ($or?.some((rule) => !getIsRuleEmpty(rule))) return false;
 
   return true;
 }

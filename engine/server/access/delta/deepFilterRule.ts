@@ -1,5 +1,6 @@
 import { DbSchemaModel } from "../../../schema/model";
 import { DataSelector, PermissionRule } from "../../../schema/types";
+import { isNotNullish } from "../../../utils/nullish";
 import {
   pickDataPermissions,
   pickRelationPermissions,
@@ -67,20 +68,33 @@ function cleanRule<T>(rule: PermissionRule<T>) {
   return rule;
 }
 
-export function deepFilterRule(
+function deepFilterRuleWithPath(
   rule: PermissionRule<any>,
-  entity: string,
-  filter: (rule: PermissionRule<any>, ruleEntity: string) => boolean,
+  path: string[],
+  filter: (
+    rule: PermissionRule<any>,
+    ruleEntity: string,
+    path: string[]
+  ) => boolean,
   schema: DbSchemaModel
 ): PermissionRule<any> {
+  const entity = path.at(-1)!;
   const { $and = [], $or = [], ...fields } = rule;
 
-  const passingOr = filterAndMap($or, (rule) => {
-    return deepFilterRule(rule, entity, filter, schema);
-  });
+  const passingOr = $or
+    .map((rule) => {
+      if (!filter(rule, entity, path)) return null;
+      return deepFilterRuleWithPath(rule, path, filter, schema);
+    })
+    .filter(isNotNullish);
 
   const passingAnd = $and.map((rule) => {
-    return deepFilterRule(rule, entity, filter, schema);
+    const { $or, $and, ...fields } = rule;
+
+    rule.$or = rule.$or?.map((or) => {
+      return deepFilterRuleWithPath(or, path, filter, schema);
+    });
+    return deepFilterRuleWithPath(rule, path, filter, schema);
   });
 
   const dataPermissions = pickDataPermissions(fields, entity, schema);
@@ -91,7 +105,12 @@ export function deepFilterRule(
     (value, relation) => {
       const nestedEntity = schema.getRelation(entity, relation)!.target;
 
-      return deepFilterRule(value, nestedEntity, filter, schema);
+      return deepFilterRuleWithPath(
+        value,
+        [...path, nestedEntity],
+        filter,
+        schema
+      );
     }
   );
 
@@ -100,7 +119,7 @@ export function deepFilterRule(
       [field]: value,
     };
 
-    const isPassing = filter(rule, entity);
+    const isPassing = filter(rule, entity, path);
 
     if (!isPassing) return;
 
@@ -115,4 +134,17 @@ export function deepFilterRule(
   };
 
   return simplifyRule(filteredRule);
+}
+
+export function deepFilterRule(
+  rule: PermissionRule<any>,
+  entity: string,
+  filter: (
+    rule: PermissionRule<any>,
+    ruleEntity: string,
+    path: string[]
+  ) => boolean,
+  schema: DbSchemaModel
+): PermissionRule<any> {
+  return deepFilterRuleWithPath(rule, [entity], filter, schema);
 }

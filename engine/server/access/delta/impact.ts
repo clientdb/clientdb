@@ -8,7 +8,11 @@ function getIsEntityAccessBasedOn(
   changedEntity: string,
   context: SyncRequestContext
 ): boolean {
-  const accessRules = pickPermissionsRule(context, maybeBasedEntity, "read");
+  const accessRules = pickPermissionsRule(
+    context.permissions,
+    maybeBasedEntity,
+    "read"
+  );
 
   if (!accessRules) return false;
 

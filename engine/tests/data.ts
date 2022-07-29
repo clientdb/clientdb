@@ -109,7 +109,7 @@ async function createRandomTeam(server: SyncServer<TestSchema>) {
     done_at: null,
   });
 
-  const todoInputs = Array.from({ length: 500 }).map(() => {
+  const todoInputs = Array.from({ length: 20 }).map(() => {
     return {
       id: uuid(),
       name: "todo-1",
@@ -205,6 +205,8 @@ export async function createTestData(server: SyncServer<TestSchema>) {
     user_id: ids.user.owner,
     is_disabled: false,
   });
+
+  console.log("creating new member, owner should see");
 
   await create("teamMembership", {
     id: uuid(),

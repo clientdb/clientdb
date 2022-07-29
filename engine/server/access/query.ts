@@ -34,7 +34,11 @@ export function createAccessQuery<T>(
   entity: string,
   operation: PermissionOperationType = "read"
 ) {
-  const permission = pickPermissionsRule(context, entity, operation);
+  const permission = pickPermissionsRule(
+    context.permissions,
+    entity,
+    operation
+  );
 
   if (!permission) return null;
 
