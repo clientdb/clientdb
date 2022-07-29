@@ -27,7 +27,7 @@ async function getTestServerWithData() {
 }
 
 describe("server", () => {
-  it.only("returns proper initial load basing on permissions", async () => {
+  it("returns proper initial load basing on permissions", async () => {
     const { server, ids } = await getTestServerWithData();
 
     const owner = parseBootLoad(
@@ -71,7 +71,9 @@ describe("server", () => {
 
         { userId: ids.user.out }
       )
-    ).rejects.toThrowErrorMatchingInlineSnapshot(`"Not allowed to update"`);
+    ).rejects.toThrowErrorMatchingInlineSnapshot(
+      `"Not allowed to update team"`
+    );
 
     const afterRejected = await server.admin.getInit({
       userId: ids.user.owner,
@@ -117,6 +119,20 @@ describe("server", () => {
 
         { userId: ids.user.out }
       )
-    ).rejects.toThrowErrorMatchingInlineSnapshot(`"Not allowed to delete"`);
+    ).rejects.toThrowErrorMatchingInlineSnapshot(
+      `"Not allowed to remove team"`
+    );
+
+    await expect(
+      server.admin.mutate(
+        {
+          entity: "team",
+          type: "remove",
+          id: ids.team.a,
+        },
+
+        { userId: ids.user.owner }
+      )
+    ).resolves.toMatchInlineSnapshot(`undefined`);
   });
 });

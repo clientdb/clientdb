@@ -13,7 +13,6 @@ async function guard(callback: () => any) {
 export async function restartDb(db: Knex) {
   for (const entity of schema.entities) {
     if (!(await db.schema.hasTable(entity.name))) {
-      console.log("no table");
       continue;
     }
 
@@ -34,10 +33,10 @@ export async function restartDb(db: Knex) {
     }
   }
 
+  await db.schema.dropTableIfExists("sync");
+  await db.schema.dropTableIfExists("_clientdb");
+
   for (const entity of schema.entities) {
     await db.schema.dropTableIfExists(entity.name);
   }
-
-  await db.schema.dropTableIfExists("sync");
-  await db.schema.dropTableIfExists("_clientdb");
 }

@@ -55,7 +55,7 @@ export function createInitialLoadQuery<T>(
   context: SyncRequestContext,
   entity: string
 ) {
-  const permission = pickPermission(context, entity, "read");
+  const permission = pickPermission(context.permissions, entity, "read");
 
   if (!permission) return null;
 

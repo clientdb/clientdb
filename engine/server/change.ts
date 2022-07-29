@@ -60,12 +60,10 @@ export function pickPermissionsRule<T extends PermissionOperationType>(
 }
 
 export function pickPermission<T extends PermissionOperationType>(
-  context: SyncRequestContext,
+  permissions: SchemaPermissions,
   entity: string,
   operation: T
 ) {
-  const { permissions } = context;
-
   return permissions[entity]?.[operation] ?? null;
 }
 

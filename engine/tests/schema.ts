@@ -66,6 +66,7 @@ const userPermissions: Permissions["user"] = {
     rule: {},
   },
   read: {
+    fields: ["id", "name"],
     rule: {
       $or: [
         selfUser,

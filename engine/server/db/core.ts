@@ -1,16 +1,36 @@
 import { Knex } from "knex";
 import { DbSchemaModel } from "../../schema/model";
-import { DbSchema } from "../../schema/schema";
 
-export async function initializeSystemTables(db: Knex) {
+export async function initializeSystemTables(
+  db: Knex,
+  schema: DbSchemaModel,
+  userTable: string
+) {
+  const userIdField = schema.getIdField(userTable);
+
+  if (!userIdField) {
+    throw new Error(`No id field found for ${userTable}`);
+  }
+
   await db.transaction(async (tr) => {
     await tr.schema.createTable("sync", (table) => {
       table.increments("id").primary();
+      table.enum("type", ["put", "delete"]).notNullable();
       table.string("entity").notNullable();
-      table.enum("action", ["put", "delete"]).notNullable();
+      /**
+       * We intentionally do not set FK connecting entity_id as we want sync event about given entity to persist, even if entity itself was removed
+       * so user can sync this removal later
+       */
       table.uuid("entity_id").notNullable();
+      // TODO: Assumes user id is a uuid
       table.uuid("user_id").notNullable();
       table.json("data").nullable();
+
+      table
+        .foreign("user_id")
+        .references(`${userTable}.${userIdField}`)
+        .onUpdate("cascade")
+        .onDelete("cascade");
     });
 
     await tr.schema.createTable("_clientdb", (table) => {

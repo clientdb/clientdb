@@ -43,12 +43,12 @@ export function createSyncAdmin<Schema>({
 
   async function getInit(input?: AdminCreateContextInput) {
     const context = createContext(input);
-    return handler.getInit(context);
+    return await handler.getInit(context);
   }
 
   async function getSync(input?: AdminCreateContextInput) {
     const context = createContext(input);
-    return handler.getSync(context);
+    return await handler.getSync(context);
   }
 
   async function mutate<T extends keyof Schema>(
@@ -56,7 +56,7 @@ export function createSyncAdmin<Schema>({
     contextInput?: AdminCreateContextInput
   ) {
     const context = createContext(contextInput);
-    return handler.mutate(context, input);
+    return await handler.mutate(context, input);
   }
 
   async function create<T extends keyof Schema>(
@@ -64,7 +64,10 @@ export function createSyncAdmin<Schema>({
     input: EntitySchemaInput<Schema[T]>,
     contextInput?: AdminCreateContextInput
   ) {
-    await mutate<T>({ type: "create", entity, data: input }, contextInput);
+    return await mutate<T>(
+      { type: "create", entity, data: input },
+      contextInput
+    );
   }
 
   return {

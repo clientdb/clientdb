@@ -34,6 +34,7 @@ interface SyncServerConfig<Schema> {
    */
   db?: Knex;
   permissions: SchemaPermissions<Schema>;
+  userTable?: string;
 }
 
 export function createSyncServer<Schema = any>(
@@ -79,9 +80,12 @@ export function createSyncServer<Schema = any>(
   }
 
   async function initialize() {
-    await initializeSystemTables(dbConnection);
-
     await bootstrapTables();
+    await initializeSystemTables(
+      dbConnection,
+      schemaModel,
+      config.userTable ?? "user"
+    );
   }
 
   async function listen(port: number) {

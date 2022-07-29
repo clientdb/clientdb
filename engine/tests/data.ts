@@ -148,7 +148,7 @@ async function createRandomTeams(server: SyncServer<TestSchema>, n: number) {
 }
 
 export async function createTestData(server: SyncServer<TestSchema>) {
-  await createRandomTeams(server, 500);
+  // await createRandomTeams(server, 500);
 
   const {
     admin: { create },
@@ -193,70 +193,104 @@ export async function createTestData(server: SyncServer<TestSchema>) {
     password: "aaa",
   });
 
-  await create("team", {
-    id: ids.team.a,
-    name: "team-1",
-    owner_id: ids.user.owner,
-  });
+  await create(
+    "team",
+    {
+      id: ids.team.a,
+      name: "team-1",
+      owner_id: ids.user.owner,
+    },
+    { userId: ids.user.owner }
+  );
 
-  await create("teamMembership", {
-    id: uuid(),
-    team_id: ids.team.a,
-    user_id: ids.user.owner,
-    is_disabled: false,
-  });
+  await create(
+    "teamMembership",
+    {
+      id: uuid(),
+      team_id: ids.team.a,
+      user_id: ids.user.owner,
+      is_disabled: false,
+    },
+    { userId: ids.user.owner }
+  );
 
-  console.log("creating new member, owner should see");
+  await create(
+    "teamMembership",
+    {
+      id: uuid(),
+      team_id: ids.team.a,
+      user_id: ids.user.member,
+      is_disabled: false,
+    },
+    { userId: ids.user.owner }
+  );
 
-  await create("teamMembership", {
-    id: uuid(),
-    team_id: ids.team.a,
-    user_id: ids.user.member,
-    is_disabled: false,
-  });
+  await create(
+    "list",
+    {
+      id: ids.list.a,
+      name: "list-1",
+      team_id: ids.team.a,
+      user_id: ids.user.owner,
+    },
+    { userId: ids.user.owner }
+  );
 
-  await create("list", {
-    id: ids.list.a,
-    name: "list-1",
-    team_id: ids.team.a,
-    user_id: ids.user.owner,
-  });
+  await create(
+    "label",
+    {
+      id: ids.label.public,
+      name: "label-public",
+      user_id: ids.user.owner,
+      team_id: ids.team.a,
+      is_public: true,
+    },
+    { userId: ids.user.owner }
+  );
 
-  await create("label", {
-    id: ids.label.public,
-    name: "label-public",
-    user_id: ids.user.owner,
-    team_id: ids.team.a,
-    is_public: true,
-  });
+  await create(
+    "label",
+    {
+      id: ids.label.private,
+      name: "label-private",
+      user_id: ids.user.owner,
+      team_id: ids.team.a,
+      is_public: false,
+    },
+    { userId: ids.user.owner }
+  );
 
-  await create("label", {
-    id: ids.label.private,
-    name: "label-private",
-    user_id: ids.user.owner,
-    team_id: ids.team.a,
-    is_public: false,
-  });
+  await create(
+    "todo",
+    {
+      id: ids.todo.a,
+      name: "todo-1",
+      list_id: ids.list.a,
+      user_id: ids.user.owner,
+      done_at: null,
+    },
+    { userId: ids.user.owner }
+  );
 
-  await create("todo", {
-    id: ids.todo.a,
-    name: "todo-1",
-    list_id: ids.list.a,
-    user_id: ids.user.owner,
-    done_at: null,
-  });
+  await create(
+    "todoLabel",
+    {
+      id: uuid(),
+      todo_id: ids.todo.a,
+      label_id: ids.label.public,
+    },
+    { userId: ids.user.owner }
+  );
 
-  await create("todoLabel", {
-    id: uuid(),
-    todo_id: ids.todo.a,
-    label_id: ids.label.public,
-  });
-
-  await create("todoLabel", {
-    id: uuid(),
-    todo_id: ids.todo.a,
-    label_id: ids.label.private,
-  });
+  await create(
+    "todoLabel",
+    {
+      id: uuid(),
+      todo_id: ids.todo.a,
+      label_id: ids.label.private,
+    },
+    { userId: ids.user.owner }
+  );
 
   return ids;
 }

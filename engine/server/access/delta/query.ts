@@ -1,7 +1,9 @@
 import { pickPermissionsRule } from "../../change";
 import { SyncRequestContext } from "../../context";
 import { applyPermissionNeededJoins } from "../join/permissions";
+import { createEntityDataSelect } from "./dataSelect";
 import { getEntitiesWithAccessBasedOn } from "./impact";
+import { DeltaType } from "./type";
 import { createUserIdCoalease } from "./users";
 import { applyDeltaWhere } from "./where";
 
@@ -14,10 +16,13 @@ interface AddedOrRemovedEntityInfo {
 function createDeltaQueryForEntity(
   entity: string,
   changed: AddedOrRemovedEntityInfo,
-  context: SyncRequestContext
+  context: SyncRequestContext,
+  type: DeltaType
 ) {
   const userTable = context.config.userTable;
   const userIdField = context.schema.getIdField(userTable)!;
+
+  const db = context.db;
 
   let query = context.db.from(entity).crossJoin(`${userTable} as allowed_user`);
 
@@ -45,6 +50,7 @@ function createDeltaQueryForEntity(
   );
 
   const entityTypeColumn = context.db.raw("? as entity", [entity]);
+  const deltaTypeColumn = context.db.raw("? as type", [type]);
 
   query = applyDeltaWhere(query, entity, changed.entity, changed.id, context);
 
@@ -53,8 +59,10 @@ function createDeltaQueryForEntity(
 
   query = query.select([
     entityTypeColumn,
-    `${entityIdSelectColumn} as id`,
-    `${allowedUserIdSelectColumn} as user_id`,
+    deltaTypeColumn,
+    db.ref(`${entityIdSelectColumn} as entity_id`),
+    db.ref(`${allowedUserIdSelectColumn} as user_id`),
+    createEntityDataSelect({ entity, context, alias: "data" }),
   ]);
 
   query = query.groupBy([entityIdSelectColumn, allowedUserIdSelectColumn]);
@@ -64,7 +72,8 @@ function createDeltaQueryForEntity(
 
 export function createDeltaQueriesForChange(
   changed: AddedOrRemovedEntityInfo,
-  context: SyncRequestContext
+  context: SyncRequestContext,
+  type: DeltaType
 ) {
   const impactedEntities = getEntitiesWithAccessBasedOn(
     changed.entity,
@@ -72,7 +81,7 @@ export function createDeltaQueriesForChange(
   );
 
   const impactInEntityDeltaQueries = impactedEntities.map((impactedEntity) => {
-    return createDeltaQueryForEntity(impactedEntity, changed, context);
+    return createDeltaQueryForEntity(impactedEntity, changed, context, type);
   });
 
   let query = context.db.queryBuilder();

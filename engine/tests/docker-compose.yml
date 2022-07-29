@@ -7,7 +7,7 @@ services:
       - "5438:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
-    # postgres://postgres:postgrespassword@postgres:5432/postgres
+    # postgres://postgres:postgrespassword@postgres:5438/postgres
     environment:
       POSTGRES_PASSWORD: postgrespassword
 volumes:
