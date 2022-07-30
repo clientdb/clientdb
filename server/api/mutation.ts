@@ -1,6 +1,6 @@
 import { EntityChange } from "@clientdb/common/sync/change";
-import { SyncRequestContext } from "../context";
-import { createLogger } from "../utils/logger";
+import { SyncRequestContext } from "@clientdb/server/context";
+import { createLogger } from "@clientdb/server/utils/logger";
 import { getIsChangeDataValid } from "./changeValidation";
 import { performCreate } from "./create";
 import { performRemove } from "./remove";

@@ -6,7 +6,7 @@ import {
 } from "./types";
 
 import { Primitive } from "type-fest";
-import { unsafeAssertType } from "../utils/assert";
+import { unsafeAssertType } from "@clientdb/server/utils/assert";
 import { SyncRequestContext } from "@clientdb/server/context";
 
 export function isPrimitive(input: unknown): input is Primitive {

@@ -1,5 +1,5 @@
 import { Request } from "express";
-import { SyncRequestContext } from "../context";
+import { SyncRequestContext } from "@clientdb/server/context";
 import { SyncServerConfig } from "./config";
 
 export interface RequestDataHandlers {

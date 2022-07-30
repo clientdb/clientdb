@@ -1,5 +1,5 @@
-import { SyncRequestContext } from "../context";
-import { DeltaRow } from "../db/delta";
+import { SyncRequestContext } from "@clientdb/server/context";
+import { DeltaRow } from "@clientdb/server/db/delta";
 
 export async function fetchSyncDelta(
   context: SyncRequestContext

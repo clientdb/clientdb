@@ -1,7 +1,7 @@
 import { performMutation } from "@clientdb/server/api/mutation";
 import { fetchSyncDelta } from "@clientdb/server/api/syncDelta";
 import { Express, Request } from "express";
-import { fetchInitialData } from "../api/init";
+import { fetchInitialData } from "@clientdb/server/api/init";
 import { SyncServerConfig } from "./config";
 import { RealTimeManager } from "./realtime";
 import { createRequestContext } from "./request";

@@ -1,8 +1,8 @@
-import { SyncRequestContext } from "../context";
-import { EntityPointer } from "../entity/pointer";
-import { PermissionOperationType } from "../permissions/types";
-import { createAccessQuery } from "../query/access";
-import { Transaction } from "../query/types";
+import { SyncRequestContext } from "@clientdb/server/context";
+import { EntityPointer } from "@clientdb/server/entity/pointer";
+import { PermissionOperationType } from "@clientdb/server/permissions/types";
+import { createAccessQuery } from "@clientdb/server/query/access";
+import { Transaction } from "@clientdb/server/query/types";
 
 export async function getEntityIfAccessable<T>(
   tr: Transaction,

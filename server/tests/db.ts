@@ -1,6 +1,5 @@
-import knex, { Knex } from "knex";
-import { createSyncServer } from "../server";
-import { permissions, schema, TestSchema } from "./schema";
+import { Knex } from "knex";
+import { schema } from "./schema";
 
 async function guard(callback: () => any) {
   try {

@@ -1,4 +1,4 @@
-import { SyncServer } from "../server";
+import { SyncServer } from "@clientdb/server/server";
 import { TestSchema } from "./schema";
 import { v4 } from "uuid";
 

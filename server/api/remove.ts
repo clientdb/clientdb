@@ -1,7 +1,7 @@
 import { EntityRemoveChange } from "@clientdb/common/sync/change";
-import { SyncRequestContext } from "../context";
-import { EntityPointer } from "../entity/pointer";
-import { createLogger } from "../utils/logger";
+import { SyncRequestContext } from "@clientdb/server/context";
+import { EntityPointer } from "@clientdb/server/entity/pointer";
+import { createLogger } from "@clientdb/server/utils/logger";
 import { insertDeltaForChange } from "./delta";
 import { getHasUserAccessTo } from "./entity";
 

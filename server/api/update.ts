@@ -1,8 +1,8 @@
 import { EntityUpdateChange } from "@clientdb/common/sync/change";
-import { SyncRequestContext } from "../context";
-import { EntityPointer } from "../entity/pointer";
-import { unsafeAssertType } from "../utils/assert";
-import { createLogger } from "../utils/logger";
+import { SyncRequestContext } from "@clientdb/server/context";
+import { EntityPointer } from "@clientdb/server/entity/pointer";
+import { unsafeAssertType } from "@clientdb/server/utils/assert";
+import { createLogger } from "@clientdb/server/utils/logger";
 import { getHasUserAccessTo } from "./entity";
 
 const log = createLogger("Mutation");

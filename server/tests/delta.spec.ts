@@ -1,5 +1,5 @@
-import { selectChangedEntityInRule } from "../query/delta/injectId";
-import { getRulePartNotImpactedBy } from "../query/delta/split";
+import { selectChangedEntityInRule } from "@clientdb/server/query/delta/injectId";
+import { getRulePartNotImpactedBy } from "@clientdb/server/query/delta/split";
 import { permissions, schemaModel } from "./schema";
 
 function getDeltaRules(impactedBy: string, entity: keyof typeof permissions) {

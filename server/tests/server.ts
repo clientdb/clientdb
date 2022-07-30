@@ -1,10 +1,7 @@
-import { DbSchema } from "../schema/schema";
-import knex, { Knex } from "knex";
-import { createSyncServer } from "../server";
+import knex from "knex";
+import { createSyncServer } from "@clientdb/server/server";
 import { permissions, schema, TestSchema } from "./schema";
-import cleaner from "knex-cleaner";
 
-import { PostgreSqlContainer } from "testcontainers";
 import { restartDb } from "./db";
 
 export async function createTestServer() {

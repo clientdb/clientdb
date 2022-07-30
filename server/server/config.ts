@@ -1,6 +1,6 @@
 import { createSchemaModel, DbSchema, DbSchemaModel } from "@clientdb/schema";
+import { SchemaPermissions } from "@clientdb/server/permissions/types";
 import { Knex } from "knex";
-import { SchemaPermissions } from "../permissions/types";
 import { RequestDataHandlers } from "./request";
 
 interface SyncServerDatabaseConnectionConfig {

@@ -1,9 +1,9 @@
-import { SyncRequestContext } from "../context";
-import { DeltaType } from "../db/delta";
-import { EntityPointer } from "../entity/pointer";
-import { createDeltaQueryForChange } from "../query/delta/query";
-import { Transaction } from "../query/types";
-import { log } from "../utils/logger";
+import { SyncRequestContext } from "@clientdb/server/context";
+import { DeltaType } from "@clientdb/server/db/delta";
+import { EntityPointer } from "@clientdb/server/entity/pointer";
+import { createDeltaQueryForChange } from "@clientdb/server/query/delta/query";
+import { Transaction } from "@clientdb/server/query/types";
+import { log } from "@clientdb/server/utils/logger";
 
 export async function insertDeltaForChange(
   tr: Transaction,

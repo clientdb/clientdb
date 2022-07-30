@@ -1,4 +1,4 @@
-import { PermissionRule } from "../../../schema/types";
+import { PermissionRule } from "./types";
 
 function isPrimitive(input: unknown): boolean {
   if (typeof input === "object" || typeof input === "function") {

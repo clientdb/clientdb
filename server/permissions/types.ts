@@ -1,5 +1,5 @@
+import { SyncRequestContext } from "@clientdb/server/context";
 import { ConditionalExcept, ConditionalPick } from "type-fest";
-import { SyncRequestContext } from "../context";
 
 import { SchemaCollection, SchemaReference } from "@clientdb/schema";
 

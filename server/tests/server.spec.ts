@@ -1,7 +1,7 @@
 import { createTestServer } from "./server";
 
 import { createTestData } from "./data";
-import { InitialLoadData } from "../api/init";
+import { InitialLoadData } from "@clientdb/server/api/init";
 
 jest.setTimeout(30000);
 

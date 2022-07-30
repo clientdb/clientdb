@@ -1,15 +1,15 @@
 import {
+  createSchemaModel,
+  DbSchema,
   SchemaCollection,
   SchemaEntity,
   SchemaReference,
-  DbSchema,
-  createSchemaModel,
 } from "@clientdb/schema";
 import {
+  currentUser,
   SchemaPermissions,
   SchemaRules,
-  currentUser,
-} from "../permissions/types";
+} from "@clientdb/server/permissions/types";
 
 type Permissions = SchemaPermissions<TestSchema>;
 type Rule = SchemaRules<TestSchema>;

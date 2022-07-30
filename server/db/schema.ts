@@ -1,8 +1,8 @@
+import { DbSchemaModel } from "@clientdb/schema";
 import { pickPermissionsRule } from "@clientdb/server/permissions/picker";
 import { SchemaPermissions } from "@clientdb/server/permissions/types";
 import { Knex } from "knex";
-import { DbSchemaModel } from "../../schema/model";
-import { traversePermissions } from "../permissions/traverse";
+import { traversePermissions } from "@clientdb/server/permissions/traverse";
 
 function collectPermissionNeededIndices(
   schema: DbSchemaModel,
