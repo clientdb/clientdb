@@ -1,10 +1,7 @@
 import { DbSchemaModel } from "@clientdb/schema";
 import { mapPermissions } from "@clientdb/server/permissions/traverse";
 import { PermissionRule } from "@clientdb/server/permissions/types";
-import {
-  parseWhereTree,
-  RawWherePointer,
-} from "@clientdb/server/utils/conditions/conditions";
+import { parseWhereTree, RawWherePointer } from "./tree";
 
 export function createPermissionWhereConditions<T>(
   entity: string,

@@ -7,11 +7,11 @@ import {
 } from "@clientdb/server/permissions/traverse";
 import { PermissionRule } from "@clientdb/server/permissions/types";
 import { resolveValuePointer } from "@clientdb/server/permissions/value";
-import { applyQueryWhere } from "@clientdb/server/utils/conditions/builder";
+import { applyQueryWhere } from "@clientdb/server/query/where/builder";
 import {
   parseWhereTree,
   RawWherePointer,
-} from "@clientdb/server/utils/conditions/conditions";
+} from "@clientdb/server/query/where/tree";
 import { Knex } from "knex";
 import { selectChangedEntityInRule } from "./injectId";
 import { getRulePartNotImpactedBy } from "./split";

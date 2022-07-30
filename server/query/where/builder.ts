@@ -1,7 +1,7 @@
 import { SyncRequestContext } from "@clientdb/server/context";
 import { resolveValuePointer } from "@clientdb/server/permissions/value";
 import { Knex } from "knex";
-import { WherePointer, WhereTree } from "./conditions";
+import { WherePointer, WhereTree } from "./tree";
 
 type QueryBuilder = Knex.QueryBuilder;
 

@@ -1,5 +1,7 @@
-import { WhereValueConfig } from "@clientdb/server/permissions/types";
-import { ConditionGroupSegment } from "./segment";
+import {
+  ConditionGroupSegment,
+  WhereValueConfig,
+} from "@clientdb/server/permissions/types";
 
 export interface WhereTree {
   conditions: WherePointer[];

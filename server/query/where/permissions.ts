@@ -1,7 +1,7 @@
 import { SyncRequestContext } from "@clientdb/server/context";
 import { PermissionRule } from "@clientdb/server/permissions/types";
-import { applyQueryWhere } from "@clientdb/server/utils/conditions/builder";
 import { Knex } from "knex";
+import { applyQueryWhere } from "./builder";
 import { createPermissionWhereConditions } from "./conditions";
 
 type QueryBuilder = Knex.QueryBuilder;
