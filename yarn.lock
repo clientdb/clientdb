@@ -1791,6 +1791,52 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@clientdb/cli@workspace:cli":
+  version: 0.0.0-use.local
+  resolution: "@clientdb/cli@workspace:cli"
+  dependencies:
+    "@databases/pg": ^5.4.1
+    "@databases/pg-schema-introspect": ^4.1.0
+    "@types/express": ^4.17.13
+    "@types/knex-cleaner": ^1.3.2
+    "@types/uuid": ^8.3.4
+    express: ^4.18.1
+    jest: ^28.1.3
+    knex: ^2.1.0
+    knex-cleaner: ^1.3.1
+    socket.io: ^4.5.1
+    sqlite3: ^5.0.9
+    testcontainers: ^8.12.0
+    ts-jest: ^28.0.7
+    ts-node-dev: ^2.0.0
+    type-fest: ^2.17.0
+    uuid: ^8.3.2
+  languageName: unknown
+  linkType: soft
+
+"@clientdb/common@workspace:common":
+  version: 0.0.0-use.local
+  resolution: "@clientdb/common@workspace:common"
+  dependencies:
+    "@databases/pg": ^5.4.1
+    "@databases/pg-schema-introspect": ^4.1.0
+    "@types/express": ^4.17.13
+    "@types/knex-cleaner": ^1.3.2
+    "@types/uuid": ^8.3.4
+    express: ^4.18.1
+    jest: ^28.1.3
+    knex: ^2.1.0
+    knex-cleaner: ^1.3.1
+    socket.io: ^4.5.1
+    sqlite3: ^5.0.9
+    testcontainers: ^8.12.0
+    ts-jest: ^28.0.7
+    ts-node-dev: ^2.0.0
+    type-fest: ^2.17.0
+    uuid: ^8.3.2
+  languageName: unknown
+  linkType: soft
+
 "@clientdb/core@workspace:core":
   version: 0.0.0-use.local
   resolution: "@clientdb/core@workspace:core"
@@ -1831,9 +1877,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@clientdb/engine@workspace:engine":
+"@clientdb/root@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@clientdb/engine@workspace:engine"
+  resolution: "@clientdb/root@workspace:."
+  dependencies:
+    "@parcel/packager-ts": 2.6.2
+    "@parcel/transformer-typescript-types": 2.6.2
+    mobx: 6.6.1
+    typescript: ">=3.0.0"
+  languageName: unknown
+  linkType: soft
+
+"@clientdb/schema@*, @clientdb/schema@workspace:schema":
+  version: 0.0.0-use.local
+  resolution: "@clientdb/schema@workspace:schema"
   dependencies:
     "@databases/pg": ^5.4.1
     "@databases/pg-schema-introspect": ^4.1.0
@@ -1854,14 +1911,27 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@clientdb/root@workspace:.":
+"@clientdb/server@workspace:server":
   version: 0.0.0-use.local
-  resolution: "@clientdb/root@workspace:."
+  resolution: "@clientdb/server@workspace:server"
   dependencies:
-    "@parcel/packager-ts": 2.6.2
-    "@parcel/transformer-typescript-types": 2.6.2
-    mobx: 6.6.1
-    typescript: ">=3.0.0"
+    "@clientdb/schema": "*"
+    "@databases/pg": ^5.4.1
+    "@databases/pg-schema-introspect": ^4.1.0
+    "@types/express": ^4.17.13
+    "@types/knex-cleaner": ^1.3.2
+    "@types/uuid": ^8.3.4
+    express: ^4.18.1
+    jest: ^28.1.3
+    knex: ^2.1.0
+    knex-cleaner: ^1.3.1
+    socket.io: ^4.5.1
+    sqlite3: ^5.0.9
+    testcontainers: ^8.12.0
+    ts-jest: ^28.0.7
+    ts-node-dev: ^2.0.0
+    type-fest: ^2.17.0
+    uuid: ^8.3.2
   languageName: unknown
   linkType: soft
 
