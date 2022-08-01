@@ -1,12 +1,11 @@
 import { SyncServer } from "@clientdb/server/server";
 import { TestSchema } from "./schema";
 import { v4 } from "uuid";
-
-function uuid() {
-  return v4();
-}
+import { createDeterministicUUID } from "./utils/uuid";
 
 async function createRandomTeam(server: SyncServer<TestSchema>) {
+  const uuid = createDeterministicUUID();
+
   const {
     admin: { create },
   } = server;
@@ -148,6 +147,8 @@ async function createRandomTeams(server: SyncServer<TestSchema>, n: number) {
 }
 
 export async function createTestData(server: SyncServer<TestSchema>) {
+  const uuid = createDeterministicUUID(1);
+  //
   // await createRandomTeams(server, 500);
 
   const {

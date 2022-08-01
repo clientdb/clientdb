@@ -13,7 +13,7 @@ import {
   RawWherePointer,
 } from "@clientdb/server/query/where/tree";
 import { Knex } from "knex";
-import { selectChangedEntityInRule } from "./injectId";
+import { addChangedEntityToRule } from "./injectId";
 import { getRulePartNotImpactedBy } from "./split";
 
 function getIsFieldPoinintToCurrentUser(
@@ -58,7 +58,7 @@ function createDeltaWhere(
     throw new Error(`Impacted entity ${entity} has no id field.`);
   }
 
-  const whereAccessedThanksTo = mapPermissions<RawWherePointer>(
+  const deltaWherePointers = mapPermissions<RawWherePointer>(
     entity,
     rule,
     context.schema,
@@ -89,9 +89,9 @@ function createDeltaWhere(
     }
   );
 
-  const thanksToWhereTree = parseWhereTree(whereAccessedThanksTo);
+  const deltaWhereTree = parseWhereTree(deltaWherePointers);
 
-  return thanksToWhereTree;
+  return deltaWhereTree;
 }
 
 function createInitialNarrowWherePointers(
@@ -101,7 +101,7 @@ function createInitialNarrowWherePointers(
   context: SyncRequestContext
 ) {
   const idSelects = mapPermissions<string>(entity, rule, context.schema, {
-    onValue({ table, field, conditionPath, schemaPath, value }) {
+    onValue({ table, field, schemaPath }) {
       const referencedEntity = context.schema.getEntityReferencedBy(
         table,
         field
@@ -116,6 +116,27 @@ function createInitialNarrowWherePointers(
   return Array.from(new Set(idSelects));
 }
 
+function applyNarrowQueryToChangedEntity(
+  query: Knex.QueryBuilder,
+  rule: PermissionRule,
+  entity: string,
+  changed: EntityPointer,
+  context: SyncRequestContext
+) {
+  const changedEntityIdPointers = createInitialNarrowWherePointers(
+    entity,
+    changed.entity,
+    rule,
+    context
+  );
+
+  return query.andWhere((qb) => {
+    for (const changedEntityIdPointer of changedEntityIdPointers) {
+      qb.orWhere(changedEntityIdPointer, "=", changed.id);
+    }
+  });
+}
+
 export function applyDeltaWhere(
   query: Knex.QueryBuilder,
   entity: string,
@@ -128,25 +149,20 @@ export function applyDeltaWhere(
     throw new Error(`Impacted entity ${entity} has no access rules.`);
   }
 
-  rule = selectChangedEntityInRule({
+  rule = addChangedEntityToRule({
     rule: rule,
     entity,
     changed,
     schema: context.schema,
   });
 
-  const changedEntityIdPointers = createInitialNarrowWherePointers(
-    entity,
-    changed.entity,
+  query = applyNarrowQueryToChangedEntity(
+    query,
     rule,
+    entity,
+    changed,
     context
   );
-
-  query = query.andWhere((qb) => {
-    for (const changedEntityIdPointer of changedEntityIdPointers) {
-      qb.orWhere(changedEntityIdPointer, "=", changed.id);
-    }
-  });
 
   const everyoneWithAccess = createDeltaWhere(entity, changed, rule, context);
 

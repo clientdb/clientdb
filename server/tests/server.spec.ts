@@ -72,7 +72,7 @@ describe("server", () => {
         { userId: ids.user.out }
       )
     ).rejects.toThrowErrorMatchingInlineSnapshot(
-      `"Not allowed to update team"`
+      `"Not allowed to access team"`
     );
 
     const afterRejected = await server.admin.getInit({

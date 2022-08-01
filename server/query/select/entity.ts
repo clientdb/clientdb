@@ -1,7 +1,10 @@
 import { DbSchemaModel } from "@clientdb/schema";
 import { SyncRequestContext } from "@clientdb/server/context";
 import { pickPermission } from "@clientdb/server/permissions/picker";
-import { EntityReadPermissionConfig } from "@clientdb/server/permissions/types";
+import {
+  EntityReadPermissionConfig,
+  PermissionOperationType,
+} from "@clientdb/server/permissions/types";
 import { QueryBuilder } from "@clientdb/server/query/types";
 
 interface Input {
@@ -60,15 +63,24 @@ export function applyEntityIdSelect(
 export function applyEntityDataSelect(
   query: QueryBuilder,
   entity: string,
-  permission: EntityReadPermissionConfig<any>
+  context: SyncRequestContext,
+  operation: PermissionOperationType
 ) {
-  const { fields } = permission;
-
-  if (!fields) {
-    return query.select(`${entity}.*`);
+  if (operation === "remove") {
+    return applyEntityIdSelect(query, entity, context.schema);
   }
 
-  const selectFields = fields.map((field) => {
+  const permission = pickPermission(context.permissions, entity, operation);
+
+  if (!permission) {
+    return applyEntityIdSelect(query, entity, context.schema);
+  }
+
+  if (!permission.fields) {
+    return query.select(query.client.ref(`${entity}.*`));
+  }
+
+  const selectFields = permission.fields.map((field) => {
     return `${entity}.${field}`;
   });
 

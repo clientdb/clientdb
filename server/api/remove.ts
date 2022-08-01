@@ -2,6 +2,7 @@ import { EntityRemoveChange } from "@clientdb/common/sync/change";
 import { SyncRequestContext } from "@clientdb/server/context";
 import { EntityPointer } from "@clientdb/server/entity/pointer";
 import { createLogger } from "@clientdb/server/utils/logger";
+import { UnauthorizedError } from "../error";
 import { insertDeltaForChange } from "./delta";
 import { getHasUserAccessTo } from "./entity";
 
@@ -20,7 +21,7 @@ export async function performRemove<T>(
 
   await db.transaction(async (tr) => {
     if (!(await getHasUserAccessTo(tr, entityPointer, context, "remove"))) {
-      throw new Error(`Not allowed to remove ${entity}`);
+      throw new UnauthorizedError(`Not allowed to remove ${entity}`);
     }
 
     await insertDeltaForChange(tr, entityPointer, context, "delete");

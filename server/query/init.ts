@@ -13,7 +13,7 @@ export function createInitialLoadQuery<T>(
 
   let query = createBasePermissionMapQuery(entity, permission.rule, context);
 
-  query = applyEntityDataSelect(query, entity, permission);
+  query = applyEntityDataSelect(query, entity, context, "read");
 
   query = query.groupBy(`${entity}.${context.schema.getIdField(entity)}`);
 

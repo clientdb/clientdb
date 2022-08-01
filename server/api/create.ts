@@ -3,6 +3,7 @@ import { SyncRequestContext } from "@clientdb/server/context";
 import { EntityPointer } from "@clientdb/server/entity/pointer";
 import { unsafeAssertType } from "@clientdb/server/utils/assert";
 import { createLogger } from "@clientdb/server/utils/logger";
+import { UnauthorizedError } from "../error";
 import { insertDeltaForChange } from "./delta";
 import { getHasUserAccessTo } from "./entity";
 
@@ -36,7 +37,7 @@ export async function performCreate<T, D>(
     if (
       !(await getHasUserAccessTo(tr, createdEntityPointer, context, "create"))
     ) {
-      throw new Error(`Not allowed to create ${entityName}`);
+      throw new UnauthorizedError(`Not allowed to create ${entityName}`);
     }
 
     await insertDeltaForChange(tr, createdEntityPointer, context, "put");

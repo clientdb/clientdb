@@ -1,11 +1,11 @@
-import { selectChangedEntityInRule } from "@clientdb/server/query/delta/injectId";
+import { addChangedEntityToRule } from "@clientdb/server/query/delta/injectId";
 import { getRulePartNotImpactedBy } from "@clientdb/server/query/delta/split";
 import { permissions, schemaModel } from "./schema";
 
 function getDeltaRules(impactedBy: string, entity: keyof typeof permissions) {
   let rule = permissions[entity].read!.rule;
 
-  rule = selectChangedEntityInRule({
+  rule = addChangedEntityToRule({
     entity: entity as string,
     changed: { entity: impactedBy, id: `<<changed-${impactedBy}>>` },
     rule,

@@ -1,8 +1,14 @@
 import { SyncRequestContext } from "@clientdb/server/context";
 import { EntityPointer } from "@clientdb/server/entity/pointer";
 import { PermissionOperationType } from "@clientdb/server/permissions/types";
-import { createAccessQuery } from "@clientdb/server/query/access";
+import {
+  applySingleItemWhere,
+  createAccessItemQuery,
+  createAccessQuery,
+} from "@clientdb/server/query/access";
 import { Transaction } from "@clientdb/server/query/types";
+import { UnauthorizedError } from "../error";
+import { applyEntityIdSelect } from "../query/select/entity";
 
 export async function getEntityIfAccessable<T>(
   tr: Transaction,
@@ -16,19 +22,44 @@ export async function getEntityIfAccessable<T>(
     throw new Error(`No id field for ${entityInfo.entity}`);
   }
 
-  const query = createAccessQuery(context, entityInfo.entity, inOperation)
-    ?.andWhere(`${entityInfo.entity}.${idField}`, entityInfo.id)
-    .transacting(tr);
+  let existingItemQuery = tr.table(entityInfo.entity).transacting(tr).limit(1);
 
-  if (!query) return null;
+  existingItemQuery = applyEntityIdSelect(
+    existingItemQuery,
+    entityInfo.entity,
+    context.schema
+  );
 
-  const result = await query;
+  existingItemQuery = applySingleItemWhere(
+    existingItemQuery,
+    entityInfo,
+    context
+  );
+
+  const allowedItemQuery = createAccessItemQuery(
+    context,
+    entityInfo,
+    inOperation
+  )?.transacting(tr);
+
+  if (!allowedItemQuery) return null;
+
+  const existingAndAllowedItemQuery = tr
+    .queryBuilder()
+    .unionAll(existingItemQuery, true)
+    .unionAll(allowedItemQuery, true);
+
+  const result = await existingAndAllowedItemQuery;
 
   if (result.length === 0) {
     return null;
   }
 
-  return result[0];
+  if (result.length === 1) {
+    throw new UnauthorizedError(`Not allowed to access ${entityInfo.entity}`);
+  }
+
+  return result[0] as T;
 }
 
 export async function getHasUserAccessTo(
@@ -37,11 +68,19 @@ export async function getHasUserAccessTo(
   context: SyncRequestContext,
   type: PermissionOperationType
 ) {
-  const item = await getEntityIfAccessable(tr, entityInfo, context, type);
+  try {
+    const item = await getEntityIfAccessable(tr, entityInfo, context, type);
 
-  if (!item) {
-    return false;
+    if (!item) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return false;
+    } else {
+      throw error;
+    }
   }
-
-  return true;
 }

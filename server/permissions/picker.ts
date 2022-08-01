@@ -1,10 +1,20 @@
 import {
+  EntityPermissionsConfig,
   PermissionOperationType,
+  PermissionRule,
   SchemaPermissions,
 } from "@clientdb/server/permissions/types";
 
 import { EntityChange } from "@clientdb/common/sync/change";
 import { SyncRequestContext } from "@clientdb/server/context";
+
+export function pickPermissionRule<T>(
+  permission: EntityPermissionsConfig<T>
+): PermissionRule<T> | null {
+  const { create, read, remove, update } = permission;
+
+  return create?.rule ?? read?.rule ?? update?.rule ?? remove ?? null;
+}
 
 export function pickPermissionsRule<T extends PermissionOperationType>(
   permissions: SchemaPermissions,

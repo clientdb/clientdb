@@ -11,7 +11,7 @@ interface Input {
   schema: DbSchemaModel;
 }
 
-export function selectChangedEntityInRule({
+export function addChangedEntityToRule({
   entity,
   changed,
   rule,
@@ -31,6 +31,7 @@ export function selectChangedEntityInRule({
 
       const existingRule = Reflect.get(level, changedEntityIdField);
 
+      // TODO: will happen only on user<>user impact query as user-id is present in a lot of permission rules
       if (existingRule !== undefined) {
         log.debug("Existing permission", {
           existingRule,

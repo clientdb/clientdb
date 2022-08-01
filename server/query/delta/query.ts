@@ -11,16 +11,10 @@ function createDeltaQueryForEntity(
   entity: string,
   changed: EntityPointer,
   context: SyncRequestContext,
-  type: DeltaType
+  deltaType: DeltaType
 ) {
   const userTable = context.config.userTable;
   const userIdField = context.schema.getIdField(userTable)!;
-
-  const db = context.db;
-
-  let query = context.db
-    .from(entity)
-    .crossJoin(db.ref(`${userTable} as allowed_user`));
 
   const permissionRule = pickPermissionsRule(
     context.permissions,
@@ -38,6 +32,12 @@ function createDeltaQueryForEntity(
     throw new Error(`No id field found for ${entity}`);
   }
 
+  const db = context.db;
+
+  let query = context.db
+    .from(entity)
+    .crossJoin(db.ref(`${userTable} as allowed_user`));
+
   query = applyPermissionNeededJoins(
     query,
     entity,
@@ -46,7 +46,7 @@ function createDeltaQueryForEntity(
   );
 
   const entityTypeColumn = context.db.raw("? as entity", [entity]);
-  const deltaTypeColumn = context.db.raw("? as type", [type]);
+  const deltaTypeColumn = context.db.raw("? as type", [deltaType]);
 
   query = applyDeltaWhere(query, entity, changed, context);
 
@@ -76,13 +76,13 @@ export function createDeltaQueryForChange(
     context
   );
 
-  const impactInEntityDeltaQueries = impactedEntities.map((impactedEntity) => {
+  const deltaQueriesForEntities = impactedEntities.map((impactedEntity) => {
     return createDeltaQueryForEntity(impactedEntity, changed, context, type);
   });
 
   let query = context.db.queryBuilder();
 
-  query = impactInEntityDeltaQueries.reduce((query, nextImpactedQuery) => {
+  query = deltaQueriesForEntities.reduce((query, nextImpactedQuery) => {
     return query.unionAll(nextImpactedQuery);
   }, query);
 
