@@ -10,6 +10,7 @@ import {
   SchemaPermissions,
   SchemaRules,
 } from "@clientdb/server/permissions/types";
+import { createSchemaPermissionsModel } from "../permissions/model";
 
 type Permissions = SchemaPermissions<TestSchema>;
 type Rule = SchemaRules<TestSchema>;
@@ -540,3 +541,8 @@ export const permissions: Permissions = {
   todoLabel: todoLabelPermissions,
   todo: todoPermissions,
 };
+
+export const permissionsModel = createSchemaPermissionsModel(
+  permissions,
+  schemaModel
+);

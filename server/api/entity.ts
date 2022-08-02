@@ -4,7 +4,6 @@ import { PermissionOperationType } from "@clientdb/server/permissions/types";
 import {
   applySingleItemWhere,
   createAccessItemQuery,
-  createAccessQuery,
 } from "@clientdb/server/query/access";
 import { Transaction } from "@clientdb/server/query/types";
 import { UnauthorizedError } from "../error";

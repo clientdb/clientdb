@@ -27,36 +27,6 @@ async function getTestServerWithData() {
 }
 
 describe("server", () => {
-  it("returns proper initial load basing on permissions", async () => {
-    const { server, ids } = await getTestServerWithData();
-
-    const owner = parseBootLoad(
-      await server.admin.getInit({ userId: ids.user.owner })
-    );
-    const member = parseBootLoad(
-      await server.admin.getInit({ userId: ids.user.member })
-    );
-    const outsider = parseBootLoad(
-      await server.admin.getInit({ userId: ids.user.out })
-    );
-
-    expect(owner.labels).toHaveLength(2);
-    expect(member.labels).toHaveLength(1);
-    expect(outsider.labels).toHaveLength(0);
-
-    expect(owner.lists).toHaveLength(1);
-    expect(member.lists).toHaveLength(1);
-    expect(outsider.lists).toHaveLength(0);
-
-    expect(owner.users).toHaveLength(2);
-    expect(member.users).toHaveLength(2);
-    expect(outsider.users).toHaveLength(1);
-
-    expect(owner.todos).toHaveLength(1);
-    expect(member.todos).toHaveLength(1);
-    expect(outsider.todos).toHaveLength(0);
-  });
-
   it("will not allow modifying data for not allowed users", async () => {
     const { server, ids } = await getTestServerWithData();
 

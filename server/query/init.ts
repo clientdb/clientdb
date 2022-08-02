@@ -11,7 +11,7 @@ export function createInitialLoadQuery<T>(
 
   if (!permission) return null;
 
-  let query = createBasePermissionMapQuery(entity, permission.rule, context);
+  let query = createBasePermissionMapQuery(permission.rule, context);
 
   query = applyEntityDataSelect(query, entity, context, "read");
 

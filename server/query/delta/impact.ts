@@ -1,6 +1,6 @@
 import { SyncRequestContext } from "@clientdb/server/context";
 import { pickPermissionsRule } from "@clientdb/server/permissions/picker";
-import { getHasPermission } from "@clientdb/server/permissions/traverse";
+import { getRuleHas } from "@clientdb/server/permissions/traverse";
 import { getIsRelationImpactedBy } from "./relation";
 
 function getIsEntityAccessBasedOn(
@@ -12,9 +12,9 @@ function getIsEntityAccessBasedOn(
 
   if (!accessRules) return false;
 
-  return getHasPermission(entity, accessRules, context.schema, {
-    onRelation({ relation }) {
-      return getIsRelationImpactedBy(relation, changedEntity);
+  return getRuleHas(accessRules, {
+    onRelation({ entity }) {
+      return entity === changedEntity;
     },
   });
 }

@@ -1,7 +1,7 @@
 import { QueryBuilder } from "./types";
 
 export interface JoinInfo {
-  table: string;
+  to: string;
   from: string;
   fromColumn: string;
   toColumn: string;
@@ -10,9 +10,9 @@ export interface JoinInfo {
 
 export function applyQueryJoins(query: QueryBuilder, joins: JoinInfo[]) {
   for (const join of joins) {
-    const { toColumn, fromColumn, alias, from, table } = join;
+    const { toColumn, fromColumn, alias, from, to } = join;
     query = query.leftJoin(
-      `${join.table} as ${alias}`,
+      `${join.to} as ${alias}`,
       `${from}.${fromColumn}`,
       "=",
       `${alias}.${toColumn}`

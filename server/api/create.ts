@@ -2,7 +2,7 @@ import { EntityCreateChange } from "@clientdb/common/sync/change";
 import { SyncRequestContext } from "@clientdb/server/context";
 import { EntityPointer } from "@clientdb/server/entity/pointer";
 import { unsafeAssertType } from "@clientdb/server/utils/assert";
-import { createLogger } from "@clientdb/server/utils/logger";
+import { createLogger, logAll } from "@clientdb/server/utils/logger";
 import { UnauthorizedError } from "../error";
 import { insertDeltaForChange } from "./delta";
 import { getHasUserAccessTo } from "./entity";
@@ -40,9 +40,15 @@ export async function performCreate<T, D>(
       throw new UnauthorizedError(`Not allowed to create ${entityName}`);
     }
 
-    await insertDeltaForChange(tr, createdEntityPointer, context, "put");
+    try {
+      const stop = logAll(entityName === "teamMembership");
+      await insertDeltaForChange(tr, createdEntityPointer, context, "put");
+      stop();
+    } catch (error) {
+      log.error(`Error inserting delta for ${entityName}`, error);
+    }
 
-    log.debug(`create delta of ${entityName}`, entityName, id);
+    log.debug(`created delta of ${entityName}`, entityName, id);
 
     return;
   });

@@ -1,25 +1,23 @@
-import { DbSchemaModel } from "@clientdb/schema";
-import { mapPermissions } from "@clientdb/server/permissions/traverse";
-import { PermissionRule } from "@clientdb/server/permissions/types";
+import { PermissionRuleModel } from "@clientdb/server/permissions/model";
+import { pickFromRule } from "@clientdb/server/permissions/traverse";
 import { parseWhereTree, RawWherePointer } from "./tree";
 
 export function createPermissionWhereConditions<T>(
-  entity: string,
-  permissions: PermissionRule<T>,
-  schema: DbSchemaModel
+  rule: PermissionRuleModel<T>
 ) {
-  const wherePointers = mapPermissions(entity, permissions, schema, {
-    onValue({ schemaPath, value, conditionPath, field, table }) {
+  const wherePointers = pickFromRule(rule, {
+    onValue({ schemaPath, rule, conditionPath, selector, entity }) {
       const pointer: RawWherePointer = {
-        table: table,
         conditionPath: conditionPath,
-        condition: value,
-        select: `${schemaPath.join("__")}.${field}`,
+        condition: rule,
+        select: selector,
       };
 
       return pointer;
     },
   });
 
-  return parseWhereTree(wherePointers);
+  const whereTree = parseWhereTree(wherePointers);
+
+  return whereTree;
 }

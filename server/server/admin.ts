@@ -64,6 +64,7 @@ export function createSyncAdmin<Schema>({
     getSync,
     mutate,
     create,
+    createContext,
   };
 }
 

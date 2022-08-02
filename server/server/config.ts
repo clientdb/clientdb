@@ -1,6 +1,10 @@
 import { createSchemaModel, DbSchema, DbSchemaModel } from "@clientdb/schema";
 import { SchemaPermissions } from "@clientdb/server/permissions/types";
 import { Knex } from "knex";
+import {
+  createSchemaPermissionsModel,
+  SchemaPermissionsModel,
+} from "../permissions/model";
 import { RequestDataHandlers } from "./request";
 
 interface SyncServerDatabaseConnectionConfig {
@@ -28,7 +32,7 @@ export interface SyncServerConfig<Schema = any> {
   schema: DbSchemaModel;
   requestHandlers: RequestDataHandlers;
   db: Knex;
-  permissions: SchemaPermissions<Schema>;
+  permissions: SchemaPermissionsModel<Schema>;
   userTable: string;
 }
 
@@ -36,11 +40,12 @@ export function resolveSyncServerConfigInput<Schema>(
   input: SyncServerConfigInput<Schema>,
   db: Knex
 ): SyncServerConfig<Schema> {
+  const schema = createSchemaModel(input.schema);
   return {
-    schema: createSchemaModel(input.schema),
+    schema,
     requestHandlers: input.requestHandlers,
     db,
-    permissions: input.permissions!,
+    permissions: createSchemaPermissionsModel(input.permissions!, schema)!,
     userTable: input.userTable ?? "user",
   };
 }

@@ -12,29 +12,29 @@ export interface InitialLoadData {
   data: EntityKindBootData<any>[];
 }
 
-const log = createLogger("Init Load", false);
+const log = createLogger("Init Load");
 
 async function fetchEntityIntialData(
   context: SyncRequestContext,
   entity: string
 ): Promise<EntityKindBootData<any>> {
-  const query = createInitialLoadQuery(context, entity);
+  const initQuery = createInitialLoadQuery(context, entity);
 
-  if (!query) {
+  if (!initQuery) {
+    console.warn("no init query");
     return { kind: entity, items: [] };
   }
 
-  log(`Fetching initial data for ${entity}`, query.toString());
+  log.debug(`Fetching initial data for ${entity}`, initQuery.toString());
 
-  const items = await query;
-  const kind = entity;
-  return { kind, items };
+  const initialItems = await initQuery;
+  return { kind: entity, items: initialItems };
 }
 
 export async function fetchInitialData(
   context: SyncRequestContext
 ): Promise<InitialLoadData> {
-  const { db, schema } = context;
+  const { schema } = context;
 
   const bootDataPromises = schema.entities.map(async (entity) => {
     return await fetchEntityIntialData(context, entity.name);

@@ -63,29 +63,33 @@ function applyWherePointer(
   return qb;
 }
 
-export function applyQueryWhere(
+export function applyWhereTreeToQuery(
   query: QueryBuilder,
   where: WhereTree,
   context: SyncRequestContext
 ) {
-  const { conditions = [], and = [], or = [] } = where;
-
-  for (const condition of conditions) {
-    query = applyWherePointer(query, condition, context);
-  }
-
-  for (const andCondition of and) {
-    query = query.andWhere((qb) => {
-      applyQueryWhere(qb, andCondition, context);
-    });
-  }
-
   query = query.andWhere((qb) => {
-    for (const orCondition of or) {
-      qb.orWhere((qb) => {
-        applyQueryWhere(qb, orCondition, context);
+    const { conditions = [], and = [], or = [] } = where;
+
+    for (const condition of conditions) {
+      qb = applyWherePointer(qb, condition, context);
+    }
+
+    for (const andCondition of and) {
+      qb = qb.andWhere((qb) => {
+        applyWhereTreeToQuery(qb, andCondition, context);
       });
     }
+
+    qb = qb.andWhere((qb) => {
+      for (const orCondition of or) {
+        qb.orWhere((qb) => {
+          applyWhereTreeToQuery(qb, orCondition, context);
+        });
+      }
+    });
+
+    return query;
   });
 
   return query;

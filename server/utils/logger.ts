@@ -8,7 +8,21 @@ enum LogLevel {
   Error,
 }
 
-let logLevel = LogLevel.Info;
+let enabledLogLevel = LogLevel.Info;
+
+let logAllStack = 0;
+
+export function logAll(condition = true) {
+  if (!condition) {
+    return () => void 0;
+  }
+
+  logAllStack++;
+
+  return () => {
+    logAllStack--;
+  };
+}
 
 export function createLogger(name: string, isEnabled?: boolean) {
   function prepareLogs(...msgs: any[]) {
@@ -26,14 +40,16 @@ export function createLogger(name: string, isEnabled?: boolean) {
   }
 
   function getShouldLog(level: LogLevel) {
+    if (logAllStack > 0) return true;
     if (isEnabled === true) return true;
-    if (isEnabled === false) return false;
+    if (isEnabled === false) {
+      return level >= LogLevel.Warn;
+    }
 
-    return level >= logLevel;
+    return level >= enabledLogLevel;
   }
 
   function logForLevel(level: LogLevel, ...msgs: any[]) {
-    if (!isEnabled) return;
     if (!getShouldLog(level)) return;
 
     const preparedLogs = prepareLogs(...msgs);
@@ -80,3 +96,9 @@ export function createLogger(name: string, isEnabled?: boolean) {
 }
 
 export const log = createLogger("Log");
+
+export function debug(...items: any[]) {
+  for (const item of items) {
+    console.dir(item, { depth: null });
+  }
+}

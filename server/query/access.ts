@@ -1,32 +1,24 @@
 import { SyncRequestContext } from "@clientdb/server/context";
 import { applyPermissionNeededJoins } from "@clientdb/server/permissions/joins";
 import { pickPermissionsRule } from "@clientdb/server/permissions/picker";
-import {
-  PermissionOperationType,
-  PermissionRule,
-} from "@clientdb/server/permissions/types";
+import { PermissionOperationType } from "@clientdb/server/permissions/types";
 import { EntityPointer } from "../entity/pointer";
+import { PermissionRuleModel } from "../permissions/model";
 import { applyEntityIdSelect } from "./select/entity";
 import { QueryBuilder } from "./types";
 import { applyPermissionWhereCauses } from "./where/permissions";
 
 export function createBasePermissionMapQuery<T>(
-  entity: string,
-  rule: PermissionRule<T>,
+  rule: PermissionRuleModel<T>,
   context: SyncRequestContext
 ) {
   const { db } = context;
 
-  let rootQuery = db.from(`${entity}`);
+  let rootQuery = db.from(`${rule.$entity}`);
 
-  rootQuery = applyPermissionNeededJoins(
-    rootQuery,
-    entity,
-    rule,
-    context.schema
-  );
+  rootQuery = applyPermissionNeededJoins(rootQuery, rule);
 
-  rootQuery = applyPermissionWhereCauses(rootQuery, entity, rule, context);
+  rootQuery = applyPermissionWhereCauses(rootQuery, rule, context);
 
   return rootQuery;
 }
@@ -36,15 +28,11 @@ export function createAccessQuery<T>(
   entity: string,
   operation: PermissionOperationType = "read"
 ) {
-  const permission = pickPermissionsRule(
-    context.permissions,
-    entity,
-    operation
-  );
+  const rule = pickPermissionsRule(context.permissions, entity, operation);
 
-  if (!permission) return null;
+  if (!rule) return null;
 
-  let query = createBasePermissionMapQuery(entity, permission, context);
+  let query = createBasePermissionMapQuery(rule, context);
 
   query = applyEntityIdSelect(query, entity, context.schema);
 

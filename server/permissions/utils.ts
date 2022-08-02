@@ -1,8 +1,8 @@
 import {
   ContextValuePointer,
   ValuePointer,
-  WhereValue,
-  WhereValueConfig,
+  ValueRule,
+  ValueRuleConfig,
 } from "./types";
 
 import { Primitive } from "type-fest";
@@ -17,7 +17,7 @@ export function isPrimitive(input: unknown): input is Primitive {
   return true;
 }
 
-const configKeysMap: Record<keyof WhereValueConfig<any>, true> = {
+const configKeysMap: Record<keyof ValueRuleConfig<any>, true> = {
   $eq: true,
   $ne: true,
   $gt: true,
@@ -30,13 +30,11 @@ const configKeysMap: Record<keyof WhereValueConfig<any>, true> = {
 };
 
 const configKeys = Object.keys(configKeysMap) as Array<
-  keyof WhereValueConfig<any>
+  keyof ValueRuleConfig<any>
 >;
 
-function getIsWhereValueConfig<T>(
-  input: unknown
-): input is WhereValueConfig<T> {
-  unsafeAssertType<WhereValueConfig<T>>(input);
+function getIsWhereValueConfig<T>(input: unknown): input is ValueRuleConfig<T> {
+  unsafeAssertType<ValueRuleConfig<T>>(input);
   if (typeof input !== "object") {
     return false;
   }
@@ -50,9 +48,7 @@ function getIsWhereValueConfig<T>(
   return false;
 }
 
-export function resolveValueInput<T>(
-  value: WhereValue<T>
-): WhereValueConfig<T> {
+export function resolveValueInput<T>(value: ValueRule<T>): ValueRuleConfig<T> {
   if (getIsWhereValueConfig<T>(value)) {
     return value;
   }
@@ -60,7 +56,7 @@ export function resolveValueInput<T>(
   return { $eq: value as any as T };
 }
 
-export function getIsWhereValueConfigConstant<T>(input: WhereValueConfig<T>) {
+export function getIsWhereValueConfigConstant<T>(input: ValueRuleConfig<T>) {
   return configKeys.some((key) => {
     return input[key] !== undefined && typeof input[key] !== "function";
   });

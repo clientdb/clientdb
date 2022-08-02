@@ -38,15 +38,17 @@ function createDeltaQueryForEntity(
     .from(entity)
     .crossJoin(db.ref(`${userTable} as allowed_user`));
 
-  query = applyPermissionNeededJoins(
-    query,
-    entity,
-    permissionRule,
-    context.schema
-  );
+  query = applyPermissionNeededJoins(query, permissionRule);
 
   const entityTypeColumn = context.db.raw("? as entity", [entity]);
   const deltaTypeColumn = context.db.raw("? as type", [deltaType]);
+  const nullDataColumn = context.db.raw("? as data", [null]);
+
+  const filledDataColumn = createEntityDataSelect({
+    entity,
+    context,
+    alias: "data",
+  });
 
   query = applyDeltaWhere(query, entity, changed, context);
 
@@ -58,7 +60,7 @@ function createDeltaQueryForEntity(
     deltaTypeColumn,
     db.ref(`${entityIdSelectColumn} as entity_id`),
     db.ref(`${allowedUserIdSelectColumn} as user_id`),
-    createEntityDataSelect({ entity, context, alias: "data" }),
+    deltaType === "put" ? filledDataColumn : nullDataColumn,
   ]);
 
   query = query.groupBy([entityIdSelectColumn, allowedUserIdSelectColumn]);

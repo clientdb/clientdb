@@ -1,8 +1,8 @@
-import { WhereValueConfig } from "./types";
+import { ValueRuleConfig } from "./types";
 
 export function doesValueMatchValueConfig<T>(
   value: T,
-  valueConfig: WhereValueConfig<T>
+  valueConfig: ValueRuleConfig<T>
 ) {
   const { $eq, $gt, $gte, $in, $isNull, $lt, $lte, $ne, $notIn } = valueConfig;
 

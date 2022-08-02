@@ -1,4 +1,5 @@
-import { PermissionRule } from "./types";
+import { mapValues } from "../utils/object";
+import { PermissionRuleModel } from "./model";
 
 function isPrimitive(input: unknown): boolean {
   if (typeof input === "object" || typeof input === "function") {
@@ -24,10 +25,11 @@ function getIsEmpty(input: any): boolean {
   return true;
 }
 
-export function getIsRuleEmpty(rule: PermissionRule) {
-  const { $and, $or, ...fields } = rule;
+export function getIsRuleEmpty(rule: PermissionRuleModel) {
+  const { $and, $or, $data, $relations } = rule;
 
-  if (Object.keys(fields).length > 0) return false;
+  if (Object.keys($data).length > 0) return false;
+  if (Object.keys($relations).length > 0) return false;
 
   if ($and?.some((rule) => !getIsRuleEmpty(rule))) return false;
   if ($or?.some((rule) => !getIsRuleEmpty(rule))) return false;
@@ -35,16 +37,16 @@ export function getIsRuleEmpty(rule: PermissionRule) {
   return true;
 }
 
-function removeEmptyRuleParts(rule: PermissionRule) {
-  const { $and, $or, ...fields } = rule;
-  const cleanedRule: PermissionRule<any> = {};
+function removeEmptyRuleParts(rule: PermissionRuleModel): PermissionRuleModel {
+  const { $and, $or, $data } = rule;
+  const cleanedRule: PermissionRuleModel<any> = { ...rule };
 
-  for (const fieldKey in fields) {
-    const fieldRule = fields[fieldKey]!;
+  for (const fieldKey in cleanedRule.$data) {
+    const fieldRule = Reflect.get(cleanedRule.$data, fieldKey);
 
-    if (getIsEmpty(fieldRule)) continue;
-
-    cleanedRule[fieldKey] = fieldRule;
+    if (getIsEmpty(fieldRule)) {
+      Reflect.deleteProperty(cleanedRule.$data, fieldKey);
+    }
   }
 
   if ($and && $and.length > 0) {
@@ -58,7 +60,7 @@ function removeEmptyRuleParts(rule: PermissionRule) {
   return cleanedRule;
 }
 
-function flattenRule(rule: PermissionRule): PermissionRule {
+function flattenRule(rule: PermissionRuleModel): PermissionRuleModel {
   let { $and, $or, ...fields } = rule;
 
   const fieldsKeys = Object.keys(fields);
@@ -76,8 +78,21 @@ function flattenRule(rule: PermissionRule): PermissionRule {
   return rule;
 }
 
-export function simplifyRule(rule: PermissionRule<any>): PermissionRule<any> {
-  let { $and = [], $or = [], ...fields } = rule;
+export function simplifyRule(
+  rule: PermissionRuleModel<any>
+): PermissionRuleModel<any> {
+  let { $and = [], $or = [], $data, $relations } = rule;
+
+  const simplifiedRelations = mapValues($relations, (relation, key) => {
+    if (!relation) return;
+    const simplifiedRelation = simplifyRule(relation);
+
+    if (getIsRuleEmpty(simplifiedRelation)) {
+      return;
+    }
+
+    return simplifiedRelation;
+  });
 
   $or = $or.map((rule) => simplifyRule(rule));
   $and = $and.map((rule) => simplifyRule(rule));
@@ -85,7 +100,12 @@ export function simplifyRule(rule: PermissionRule<any>): PermissionRule<any> {
   $or = $or.filter((rule) => !getIsRuleEmpty(rule));
   $and = $and.filter((rule) => !getIsRuleEmpty(rule));
 
-  const filteredRule: PermissionRule = { $or, $and, ...fields };
+  const filteredRule: PermissionRuleModel = {
+    ...rule,
+    $relations: simplifiedRelations,
+    $or,
+    $and,
+  };
 
   const clearedRule = removeEmptyRuleParts(filteredRule);
 

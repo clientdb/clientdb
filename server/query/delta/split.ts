@@ -1,43 +1,36 @@
-import { DbSchemaModel, SchemaEntityRelation } from "@clientdb/schema";
-import { deepFilterRule } from "@clientdb/server/permissions/filterRule";
+import { SchemaEntityRelation } from "@clientdb/schema";
+import { filterRule } from "@clientdb/server/permissions/filterRule";
+import { PermissionRuleModel } from "@clientdb/server/permissions/model";
 import { getIsRuleEmpty } from "@clientdb/server/permissions/simplifyRule";
-import { getHasPermission } from "@clientdb/server/permissions/traverse";
-import { PermissionRule } from "@clientdb/server/permissions/types";
+import {
+  getRuleHas,
+  TraverseValueInfo,
+} from "@clientdb/server/permissions/traverse";
 
-function getIsRelationImpactedBy(
-  relation: SchemaEntityRelation,
-  changedEntity: string
-) {
-  if (relation.type === "reference" && relation.target === changedEntity) {
-    return true;
+function getIsValueImpactedBy(info: TraverseValueInfo, impactedBy: string) {
+  if (info.entity === impactedBy) return true;
+
+  let parent: PermissionRuleModel | null = info.parentRule;
+
+  while (parent) {
+    if (parent.$entity === impactedBy) return true;
+
+    parent = parent.$parent;
   }
 
-  if (relation.type === "collection" && relation.target === changedEntity) {
-    return true;
-  }
-
-  return false;
+  return info.referencedEntity === impactedBy;
 }
 
 function getIsRuleImpactedBy(
-  rule: PermissionRule<any>,
-  ruleEntity: string,
-  impactedBy: string,
-  schema: DbSchemaModel
+  rule: PermissionRuleModel<any>,
+  impactedBy: string
 ) {
-  const isImpacted = getHasPermission(ruleEntity, rule, schema, {
+  const isImpacted = getRuleHas(rule, {
     onRelation(info) {
-      return getIsRelationImpactedBy(info.relation, impactedBy);
+      return info.entity === impactedBy;
     },
     onValue(info) {
-      if (info.table === impactedBy) return true;
-
-      const referencedEntity = schema.getEntityReferencedBy(
-        info.table,
-        info.field
-      )?.name;
-
-      return referencedEntity === impactedBy;
+      return getIsValueImpactedBy(info, impactedBy);
     },
   });
 
@@ -45,19 +38,12 @@ function getIsRuleImpactedBy(
 }
 
 export function getRulePartNotImpactedBy(
-  rule: PermissionRule<any>,
-  entity: string,
-  changedEntity: string,
-  schema: DbSchemaModel
+  rule: PermissionRuleModel<any>,
+  changedEntity: string
 ) {
-  const notImpactedRulePart = deepFilterRule(
-    rule,
-    entity,
-    (rule, ruleEntity) => {
-      return !getIsRuleImpactedBy(rule, ruleEntity, changedEntity, schema);
-    },
-    schema
-  );
+  const notImpactedRulePart = filterRule(rule, (rule) => {
+    return !getIsRuleImpactedBy(rule, changedEntity);
+  });
 
   if (getIsRuleEmpty(notImpactedRulePart)) {
     return null;

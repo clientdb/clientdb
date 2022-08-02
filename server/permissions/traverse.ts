@@ -1,123 +1,112 @@
+import { SchemaEntity, SchemaEntityRelation } from "@clientdb/schema";
+import { unsafeAssertType } from "../utils/assert";
 import {
-  DbSchemaModel,
-  SchemaEntity,
-  SchemaEntityRelation,
-} from "@clientdb/schema";
-import { parseWhereRule } from "./ruleParser";
-import {
-  ConditionGroupSegment,
-  PermissionRule,
-  PermissionSelector,
-  RelationRule,
-  WhereValueConfig,
-} from "./types";
+  EntityRulesModel,
+  getRawModelRule,
+  PermissionRuleModel,
+  RelationRuleModel,
+} from "./model";
+import { ConditionGroupSegment, ValueRuleConfig } from "./types";
 import { resolveValueInput } from "./value";
 
 interface TraverseStepInfo {
   schemaPath: string[];
+  selector: string;
   conditionPath: ConditionGroupSegment[];
-  field: string;
-  table: string;
+  entity: string;
 }
 
 export interface TraverseRelationInfo extends TraverseStepInfo {
-  rule: RelationRule<any>;
-  relation: SchemaEntityRelation;
-  targetEntity: SchemaEntity;
+  rule: RelationRuleModel<any>;
 }
 
 export interface TraverseValueInfo extends TraverseStepInfo {
-  value: WhereValueConfig<any>;
+  referencedEntity: string | null;
+  rule: ValueRuleConfig<any>;
+  parentRule: RelationRuleModel<any>;
 }
 
 export interface TraverseLevelInfo extends TraverseStepInfo {
-  level: PermissionSelector<any>;
+  rule: EntityRulesModel<any>;
 }
 
 interface TraverseCallbacks<R = void> {
   onRelation?: (info: TraverseRelationInfo) => R;
   onValue?: (info: TraverseValueInfo) => R;
-  onLevel?: (info: TraverseLevelInfo) => R;
 }
 
-function traverseRule<T>(
+function traverseRuleStep<T>(
   info: TraverseStepInfo,
-  rule: PermissionSelector<T>,
-  schema: DbSchemaModel,
+  rule: EntityRulesModel<T>,
   callbacks: TraverseCallbacks
 ) {
-  callbacks?.onLevel?.({ ...info, level: rule });
+  const schema = rule.$schema;
 
-  const { relationEntires, dataEntires } = parseWhereRule(
-    rule,
-    info.table,
-    schema
-  );
+  for (const [key, fieldInfo] of Object.entries(rule.$data ?? {})) {
+    const valueRule = resolveValueInput(fieldInfo);
 
-  for (const [key, fieldInfo] of dataEntires) {
-    const value = resolveValueInput(fieldInfo);
+    const referencedEntity =
+      schema.getEntityReferencedBy(info.entity, key as string)?.name ?? null;
 
     callbacks.onValue?.({
       ...info,
-      field: key as string,
-      value: value,
+      schemaPath: [...info.schemaPath, key],
+      rule: valueRule,
+      parentRule: rule,
+      selector: `${info.schemaPath.join("__")}.${key}`,
+      referencedEntity,
     });
   }
 
-  for (const [relationField, relationRule] of relationEntires) {
-    const relation = schema.getRelation(info.table, relationField as string)!;
+  for (const [relationField, relationRule] of Object.entries(
+    rule.$relations ?? {}
+  )) {
+    unsafeAssertType<RelationRuleModel<any>>(relationRule);
+
+    const relation = schema.getRelation(info.entity, relationField as string)!;
     const targetEntity = schema.getFieldTargetEntity(
-      info.table,
+      info.entity,
       relationField as string
     );
 
     if (!targetEntity) {
       throw new Error(
         `No target entity for relation ${relationField as string} in entity ${
-          info.table
+          info.entity
         }`
       );
     }
 
-    callbacks.onRelation?.({
-      ...info,
-      field: relationField as string,
-      rule: relationRule,
-      relation,
-      targetEntity,
-    });
+    const relationSchemaPath = [...info.schemaPath, relationField];
 
-    traversePermissionsWithPath(
-      {
-        ...info,
-        schemaPath: [...info.schemaPath, relationField as string],
-        field: relationField as string,
-        table: targetEntity.name,
-      },
-      relationRule,
-      schema,
-      callbacks
-    );
+    const nestedStep: TraverseStepInfo = {
+      ...info,
+      schemaPath: relationSchemaPath,
+      entity: targetEntity.name,
+      selector: relationSchemaPath.join("__"),
+    };
+
+    callbacks?.onRelation?.({ ...nestedStep, rule: relationRule });
+
+    traverseRuleWithPath(nestedStep, relationRule, callbacks);
   }
 }
 
-function traversePermissionsWithPath<T>(
+function traverseRuleWithPath<T>(
   info: TraverseStepInfo,
-  inputRule: PermissionRule<T>,
-  schema: DbSchemaModel,
+  inputRule: PermissionRuleModel<T>,
   callbacks: TraverseCallbacks
 ) {
-  traverseRule(info, inputRule, schema, callbacks);
+  traverseRuleStep(info, inputRule, callbacks);
 
   inputRule.$and
     ?.map((andRule, index) => {
-      return traversePermissionsWithPath(
+      return traverseRuleWithPath(
         {
           ...info,
           conditionPath: [...info.conditionPath, "and", index],
         },
         andRule,
-        schema,
         callbacks
       );
     })
@@ -125,47 +114,40 @@ function traversePermissionsWithPath<T>(
 
   inputRule.$or
     ?.map((orRule, index) => {
-      return traversePermissionsWithPath(
+      return traverseRuleWithPath(
         {
           ...info,
           conditionPath: [...info.conditionPath, "or", index],
         },
         orRule,
-        schema,
         callbacks
       );
     })
     .flat();
 }
 
-export function traversePermissions(
-  entity: string,
-  rule: PermissionRule<unknown>,
-  schema: DbSchemaModel,
+export function traverseRule(
+  rule: PermissionRuleModel<unknown>,
   callbacks: TraverseCallbacks
 ) {
-  return traversePermissionsWithPath(
-    {
-      schemaPath: [entity],
-      conditionPath: [],
-      field: "",
-      table: entity,
-    },
-    rule,
-    schema,
-    callbacks
-  );
+  const rootStepInfo: TraverseStepInfo = {
+    schemaPath: [rule.$entity],
+    conditionPath: [],
+    selector: rule.$entity,
+    entity: rule.$entity,
+  };
+
+  callbacks.onRelation?.({ ...rootStepInfo, rule: rule });
+  return traverseRuleWithPath(rootStepInfo, rule, callbacks);
 }
 
-export function mapPermissions<R>(
-  entity: string,
-  permissions: PermissionRule<unknown>,
-  schema: DbSchemaModel,
+export function pickFromRule<R>(
+  permissions: PermissionRuleModel<unknown>,
   callbacks: TraverseCallbacks<R | undefined | void>
 ) {
   const results: R[] = [];
 
-  traversePermissions(entity, permissions, schema, {
+  traverseRule(permissions, {
     onValue(info) {
       if (callbacks.onValue) {
         const result = callbacks.onValue(info);
@@ -189,15 +171,13 @@ export function mapPermissions<R>(
   return results;
 }
 
-export function getHasPermission<R>(
-  entity: string,
-  permissions: PermissionRule<unknown>,
-  schema: DbSchemaModel,
+export function getRuleHas<R>(
+  permissions: PermissionRuleModel<unknown>,
   callbacks: TraverseCallbacks<boolean>
 ) {
   let hasSome = false;
 
-  traversePermissions(entity, permissions, schema, {
+  traverseRule(permissions, {
     onValue(info) {
       if (hasSome) return;
 

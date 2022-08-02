@@ -2,7 +2,7 @@ import { DbSchemaModel } from "@clientdb/schema";
 import { SyncRequestContext } from "@clientdb/server/context";
 import { pickPermission } from "@clientdb/server/permissions/picker";
 import {
-  EntityReadPermissionConfig,
+  ReadPermission,
   PermissionOperationType,
 } from "@clientdb/server/permissions/types";
 import { QueryBuilder } from "@clientdb/server/query/types";
@@ -13,16 +13,6 @@ interface Input {
   alias: string;
 }
 
-function getAllEntityFields(entity: string, schema: DbSchemaModel) {
-  const entityData = schema.getEntity(entity);
-
-  if (!entityData) {
-    throw new Error(`Entity ${entity} not found`);
-  }
-
-  return entityData.attributes.map((field) => field.name);
-}
-
 export function createEntityDataSelect({ entity, context, alias }: Input) {
   const db = context.db;
   const permission = pickPermission(context.permissions, entity, "read");
@@ -31,8 +21,7 @@ export function createEntityDataSelect({ entity, context, alias }: Input) {
     throw new Error(`No read permission for ${entity}`);
   }
 
-  const allowedFields =
-    permission.fields ?? getAllEntityFields(entity, context.schema);
+  const allowedFields = permission.fields as string[];
 
   const jsonFieldsSpec = allowedFields
     .map((field) => {

@@ -1,6 +1,7 @@
 import { EntityChange } from "@clientdb/common/sync/change";
 import { SyncRequestContext } from "@clientdb/server/context";
 import { createLogger } from "@clientdb/server/utils/logger";
+import { getIsKnownError } from "../error";
 import { getIsChangeDataValid } from "./changeValidation";
 import { performCreate } from "./create";
 import { performRemove } from "./remove";
@@ -34,7 +35,12 @@ export async function performMutation<T, D>(
       }
     }
   } catch (error) {
-    log.debug("Failed to perform mutation", input, error);
+    if (!getIsKnownError(error)) {
+      log.error("Failed to perform mutation", input, error);
+    } else {
+      log.verbose("Failed to perform mutation", input, error);
+    }
+
     throw error;
   }
 }

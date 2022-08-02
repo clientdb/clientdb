@@ -1,6 +1,6 @@
 import {
   ConditionGroupSegment,
-  WhereValueConfig,
+  ValueRuleConfig,
 } from "@clientdb/server/permissions/types";
 
 export interface WhereTree {
@@ -10,9 +10,8 @@ export interface WhereTree {
 }
 
 export interface WherePointer {
-  table: string;
   select: string;
-  condition: WhereValueConfig<any> | string;
+  condition: ValueRuleConfig<any> | string;
 }
 
 export interface RawWherePointer extends WherePointer {
@@ -63,7 +62,6 @@ function pushWherePointer(pointer: RawWherePointer, tree: WhereTree) {
   getConditionTargetTree(pointer, tree).conditions.push({
     select: pointer.select,
     condition: pointer.condition,
-    table: pointer.table,
   });
 }
 

@@ -3,12 +3,10 @@ import { TestSchema } from "./schema";
 import { v4 } from "uuid";
 import { createDeterministicUUID } from "./utils/uuid";
 
-async function createRandomTeam(server: SyncServer<TestSchema>) {
+export async function createRandomTeamWithoutSync(
+  server: SyncServer<TestSchema>
+) {
   const uuid = createDeterministicUUID();
-
-  const {
-    admin: { create },
-  } = server;
 
   const ids = {
     user: {
@@ -140,7 +138,7 @@ async function createRandomTeam(server: SyncServer<TestSchema>) {
 
 async function createRandomTeams(server: SyncServer<TestSchema>, n: number) {
   const promises = Array.from({ length: n }).map(() => {
-    return createRandomTeam(server);
+    return createRandomTeamWithoutSync(server);
   });
 
   await Promise.all(promises);

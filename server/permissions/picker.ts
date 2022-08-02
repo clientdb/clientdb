@@ -1,26 +1,16 @@
-import {
-  EntityPermissionsConfig,
-  PermissionOperationType,
-  PermissionRule,
-  SchemaPermissions,
-} from "@clientdb/server/permissions/types";
+import { PermissionOperationType } from "@clientdb/server/permissions/types";
 
 import { EntityChange } from "@clientdb/common/sync/change";
 import { SyncRequestContext } from "@clientdb/server/context";
-
-export function pickPermissionRule<T>(
-  permission: EntityPermissionsConfig<T>
-): PermissionRule<T> | null {
-  const { create, read, remove, update } = permission;
-
-  return create?.rule ?? read?.rule ?? update?.rule ?? remove ?? null;
-}
+import { PermissionRuleModel, SchemaPermissionsModel } from "./model";
 
 export function pickPermissionsRule<T extends PermissionOperationType>(
-  permissions: SchemaPermissions,
+  permissions: SchemaPermissionsModel,
   entity: string,
   operation: T
-) {
+): PermissionRuleModel<any> | null {
+  const entityConfig = permissions[entity];
+
   const operationConfig = permissions[entity]?.[operation];
 
   if (!operationConfig) {
@@ -28,14 +18,26 @@ export function pickPermissionsRule<T extends PermissionOperationType>(
   }
 
   if (operation === "remove") {
-    return operationConfig ?? null;
+    return entityConfig["remove"] ?? null;
   }
 
-  return operationConfig.rule ?? null;
+  if (operation === "create") {
+    return entityConfig["create"]?.rule ?? null;
+  }
+
+  if (operation === "update") {
+    return entityConfig["update"]?.rule ?? null;
+  }
+
+  if (operation === "read") {
+    return entityConfig["read"]?.rule ?? null;
+  }
+
+  throw new Error(`Unknown operation ${operation}`);
 }
 
 export function pickPermission<T extends PermissionOperationType>(
-  permissions: SchemaPermissions,
+  permissions: SchemaPermissionsModel,
   entity: string,
   operation: T
 ) {

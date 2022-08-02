@@ -1,35 +1,50 @@
-import { Knex } from "knex";
-import { mapPermissions } from "./traverse";
-import { applyQueryJoins, JoinInfo } from "@clientdb/server/query/joins";
 import { DbSchemaModel } from "@clientdb/schema";
-import { PermissionRule } from "./types";
+import { applyQueryJoins, JoinInfo } from "@clientdb/server/query/joins";
+import { Knex } from "knex";
+import { debug } from "../utils/logger";
+import { getRawModelRule, PermissionRuleModel } from "./model";
+import { pickFromRule } from "./traverse";
+
+function removeLast<T>(items: T[]) {
+  return items.slice(0, -1);
+}
 
 export function createPermissionNeededJoins<T>(
-  entity: string,
-  rule: PermissionRule<T>,
-  schema: DbSchemaModel
+  baseRule: PermissionRuleModel<T>
 ): JoinInfo[] {
-  return mapPermissions<JoinInfo>(entity, rule, schema, {
-    onRelation({ table, rule, relation, schemaPath, field, targetEntity }) {
-      const from = schemaPath.join("__");
+  const schema = baseRule.$schema;
+
+  return pickFromRule<JoinInfo>(baseRule, {
+    onRelation({ entity, rule, selector, schemaPath }) {
+      if (schemaPath.length <= 1) return;
+
+      const parentEntity = rule.$parent?.$entity!;
+
+      const relationName = schemaPath.at(-1)!;
+
+      const relation = schema.getRelation(parentEntity, relationName)!;
+
+      if (!parentEntity) return;
+
+      const selfSelector = removeLast(schemaPath).join("__");
 
       if (relation.type === "reference") {
         return {
-          table: targetEntity.name,
-          from,
+          from: selfSelector,
           fromColumn: relation.field,
-          toColumn: schema.getIdField(targetEntity.name)!,
-          alias: [...schemaPath, field].join("__"),
+          toColumn: rule.$schema.getIdField(entity)!,
+          to: entity,
+          alias: selector,
         };
       }
 
       if (relation.type === "collection") {
         return {
-          table: targetEntity.name,
-          from,
-          fromColumn: schema.getIdField(table)!,
+          from: selfSelector,
+          fromColumn: rule.$schema.getIdField(entity)!,
           toColumn: relation.field,
-          alias: [...schemaPath, field].join("__"),
+          to: entity,
+          alias: selector,
         };
       }
 
@@ -40,10 +55,8 @@ export function createPermissionNeededJoins<T>(
 
 export function applyPermissionNeededJoins<T>(
   query: Knex.QueryBuilder,
-  entity: string,
-  rule: PermissionRule<T>,
-  schema: DbSchemaModel
+  rule: PermissionRuleModel<T>
 ) {
-  const joins = createPermissionNeededJoins(entity, rule, schema);
+  const joins = createPermissionNeededJoins(rule);
   return applyQueryJoins(query, joins);
 }

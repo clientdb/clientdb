@@ -126,3 +126,5 @@ nohup.out
 
 buildinfo.tsbuild
 .vercel
+
+test.sql

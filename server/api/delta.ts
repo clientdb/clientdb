@@ -17,9 +17,13 @@ export async function insertDeltaForChange(
     type
   ).transacting(tr);
 
-  log.verbose("delta query", deltaQuery.toString());
+  log.verbose("delta query", change, deltaQuery.toString());
 
   const deltaResults = await deltaQuery;
+
+  if (!deltaResults.length) {
+    return;
+  }
 
   await tr.table("sync").insert(deltaResults);
 }

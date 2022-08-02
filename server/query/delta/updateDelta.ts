@@ -1,9 +1,9 @@
 import { SyncRequestContext } from "@clientdb/server/context";
 import { doesValueMatchValueConfig } from "@clientdb/server/permissions/compareValue";
-import { deepFilterRule } from "@clientdb/server/permissions/filterRule";
+import { filterRule } from "@clientdb/server/permissions/filterRule";
 import { pickPermissionsRule } from "@clientdb/server/permissions/picker";
 import {
-  getHasPermission,
+  getRuleHas,
   TraverseValueInfo,
 } from "@clientdb/server/permissions/traverse";
 import { Changes } from "@clientdb/server/utils/changes";
@@ -13,7 +13,7 @@ function getChangeImpactOnRule(
   changes: Changes<any>,
   info: TraverseValueInfo
 ) {
-  if (info.table !== entity) return null;
+  if (info.entity !== entity) return null;
 
   const changeInfo = changes[info.field];
 
@@ -21,8 +21,8 @@ function getChangeImpactOnRule(
 
   const [valueBefore, valueNow] = changeInfo;
 
-  const didMatch = doesValueMatchValueConfig(valueBefore, info.value);
-  const doesMatch = doesValueMatchValueConfig(valueNow, info.value);
+  const didMatch = doesValueMatchValueConfig(valueBefore, info.rule);
+  const doesMatch = doesValueMatchValueConfig(valueNow, info.rule);
 
   if (didMatch === doesMatch) return null;
 
@@ -44,11 +44,11 @@ export function getUpdateDelta(
 
   if (!rule) return null;
 
-  const enabledRules = deepFilterRule(
+  const enabledRules = filterRule(
     rule,
     entity,
     (rule, ruleEntity) => {
-      return getHasPermission(ruleEntity, rule, context.schema, {
+      return getRuleHas(ruleEntity, rule, context.schema, {
         onValue(info) {
           return getChangeImpactOnRule(entity, changes, info) === true;
         },
@@ -57,11 +57,11 @@ export function getUpdateDelta(
     context.schema
   );
 
-  const disabledRules = deepFilterRule(
+  const disabledRules = filterRule(
     rule,
     entity,
     (rule, ruleEntity) => {
-      return getHasPermission(ruleEntity, rule, context.schema, {
+      return getRuleHas(ruleEntity, rule, context.schema, {
         onValue(info) {
           return getChangeImpactOnRule(entity, changes, info) === true;
         },
@@ -70,5 +70,5 @@ export function getUpdateDelta(
     context.schema
   );
 
-  deepFilterRule;
+  filterRule;
 }

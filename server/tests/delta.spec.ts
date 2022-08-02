@@ -1,33 +1,39 @@
-import { addChangedEntityToRule } from "@clientdb/server/query/delta/injectId";
 import { getRulePartNotImpactedBy } from "@clientdb/server/query/delta/split";
+import {
+  createSchemaPermissionsModel,
+  getRawModelRule,
+} from "../permissions/model";
 import { permissions, schemaModel } from "./schema";
 
-function getDeltaRules(impactedBy: string, entity: keyof typeof permissions) {
-  let rule = permissions[entity].read!.rule;
+const permissionsModel = createSchemaPermissionsModel(permissions, schemaModel);
 
-  rule = addChangedEntityToRule({
-    entity: entity as string,
-    changed: { entity: impactedBy, id: `<<changed-${impactedBy}>>` },
-    rule,
-    schema: schemaModel,
-  });
+function getDeltaRules(
+  impactedBy: string,
+  entity: keyof typeof permissionsModel
+) {
+  let rule = permissionsModel[entity].read!.rule;
 
-  const notImpacted = getRulePartNotImpactedBy(
-    rule,
-    entity as string,
-    impactedBy,
-    schemaModel
-  );
+  // rule = addChangedEntityToRule(
+  //   { entity: impactedBy, id: `<<changed-${impactedBy}>>` },
+  //   rule
+  // );
 
-  return [rule, notImpacted] as const;
+  const excluding = getRulePartNotImpactedBy(rule, impactedBy);
+
+  getRawModelRule<any>(rule);
+
+  return [
+    getRawModelRule<any>(rule),
+    excluding ? getRawModelRule<any>(excluding) : null,
+  ] as const;
 }
 
 describe("delta", () => {
   describe("splits permission by impacted or not by changed entity", () => {
     it("teamMembership > team", () => {
-      const [impacted, notImpacted] = getDeltaRules("teamMembership", "team");
+      const [rule, exluding] = getDeltaRules("teamMembership", "team");
 
-      expect(impacted).toMatchInlineSnapshot(`
+      expect(rule).toMatchInlineSnapshot(`
         Object {
           "$or": Array [
             Object {
@@ -35,7 +41,6 @@ describe("delta", () => {
             },
             Object {
               "teamMemberships": Object {
-                "id": "<<changed-teamMembership>>",
                 "is_disabled": false,
                 "user_id": [Function],
               },
@@ -44,17 +49,48 @@ describe("delta", () => {
         }
       `);
 
-      expect(notImpacted).toMatchInlineSnapshot(`
+      expect(exluding).toMatchInlineSnapshot(`
         Object {
-          "owner_id": [Function],
+          "$or": Array [
+            Object {
+              "owner_id": [Function],
+            },
+          ],
         }
       `);
     });
 
-    it("teamMembership > todo", () => {
-      const [impacted, notImpacted] = getDeltaRules("teamMembership", "todo");
+    it("teamMembership > teamMembership", () => {
+      const [rule, exluding] = getDeltaRules(
+        "teamMembership",
+        "teamMembership"
+      );
 
-      expect(impacted).toMatchInlineSnapshot(`
+      expect(rule).toMatchInlineSnapshot(`
+        Object {
+          "team": Object {
+            "$or": Array [
+              Object {
+                "owner_id": [Function],
+              },
+              Object {
+                "teamMemberships": Object {
+                  "is_disabled": false,
+                  "user_id": [Function],
+                },
+              },
+            ],
+          },
+        }
+      `);
+
+      expect(exluding).toMatchInlineSnapshot(`null`);
+    });
+
+    it("teamMembership > todo", () => {
+      const [rule, exclusion] = getDeltaRules("teamMembership", "todo");
+
+      expect(rule).toMatchInlineSnapshot(`
         Object {
           "list": Object {
             "team": Object {
@@ -64,7 +100,6 @@ describe("delta", () => {
                 },
                 Object {
                   "teamMemberships": Object {
-                    "id": "<<changed-teamMembership>>",
                     "is_disabled": false,
                     "user_id": [Function],
                   },
@@ -75,11 +110,15 @@ describe("delta", () => {
         }
       `);
 
-      expect(notImpacted).toMatchInlineSnapshot(`
+      expect(exclusion).toMatchInlineSnapshot(`
         Object {
           "list": Object {
             "team": Object {
-              "owner_id": [Function],
+              "$or": Array [
+                Object {
+                  "owner_id": [Function],
+                },
+              ],
             },
           },
         }
@@ -97,106 +136,6 @@ describe("delta", () => {
             },
             Object {
               "teamMemberships": Object {
-                "id": "<<changed-teamMembership>>",
-                "team": Object {
-                  "$or": Array [
-                    Object {
-                      "owner_id": [Function],
-                    },
-                    Object {
-                      "teamMemberships": Object {
-                        "id": "<<changed-teamMembership>>",
-                        "is_disabled": false,
-                        "user_id": [Function],
-                      },
-                    },
-                  ],
-                },
-              },
-            },
-          ],
-        }
-      `);
-
-      expect(notImpacted).toMatchInlineSnapshot(`
-        Object {
-          "id": [Function],
-        }
-      `);
-    });
-
-    it("team > teamMembership", () => {
-      const [impacted, notImpacted] = getDeltaRules("team", "teamMembership");
-
-      expect(impacted).toMatchInlineSnapshot(`
-        Object {
-          "team": Object {
-            "$or": Array [
-              Object {
-                "id": "<<changed-team>>",
-                "owner_id": [Function],
-              },
-              Object {
-                "id": "<<changed-team>>",
-                "teamMemberships": Object {
-                  "is_disabled": false,
-                  "user_id": [Function],
-                },
-              },
-            ],
-            "id": "<<changed-team>>",
-          },
-        }
-      `);
-
-      expect(notImpacted).toMatchInlineSnapshot(`null`);
-    });
-
-    it("label > label", () => {
-      const [impacted, notImpacted] = getDeltaRules("label", "label");
-
-      expect(impacted).toMatchInlineSnapshot(`
-        Object {
-          "$or": Array [
-            Object {
-              "id": "<<changed-label>>",
-              "is_public": true,
-              "team": Object {
-                "$or": Array [
-                  Object {
-                    "owner_id": [Function],
-                  },
-                  Object {
-                    "teamMemberships": Object {
-                      "is_disabled": false,
-                      "user_id": [Function],
-                    },
-                  },
-                ],
-              },
-            },
-            Object {
-              "id": "<<changed-label>>",
-              "user_id": [Function],
-            },
-          ],
-          "id": "<<changed-label>>",
-        }
-      `);
-
-      expect(notImpacted).toMatchInlineSnapshot(`null`);
-    });
-
-    it("label > todoLabel", () => {
-      const [impacted, notImpacted] = getDeltaRules("label", "todoLabel");
-
-      expect(impacted).toMatchInlineSnapshot(`
-        Object {
-          "label": Object {
-            "$or": Array [
-              Object {
-                "id": "<<changed-label>>",
-                "is_public": true,
                 "team": Object {
                   "$or": Array [
                     Object {
@@ -211,136 +150,18 @@ describe("delta", () => {
                   ],
                 },
               },
-              Object {
-                "id": "<<changed-label>>",
-                "user_id": [Function],
-              },
-            ],
-            "id": "<<changed-label>>",
-          },
-        }
-      `);
-
-      expect(notImpacted).toMatchInlineSnapshot(`null`);
-    });
-
-    it("list > list", () => {
-      const [impacted, notImpacted] = getDeltaRules("list", "list");
-
-      expect(impacted).toMatchInlineSnapshot(`
-        Object {
-          "id": "<<changed-list>>",
-          "team": Object {
-            "$or": Array [
-              Object {
-                "owner_id": [Function],
-              },
-              Object {
-                "teamMemberships": Object {
-                  "is_disabled": false,
-                  "user_id": [Function],
-                },
-              },
-            ],
-          },
+            },
+          ],
         }
       `);
 
       expect(notImpacted).toMatchInlineSnapshot(`
-        Object {
-          "team": Object {
-            "$or": Array [
-              Object {
-                "owner_id": [Function],
-              },
-              Object {
-                "teamMemberships": Object {
-                  "is_disabled": false,
-                  "user_id": [Function],
-                },
-              },
-            ],
-          },
-        }
-      `);
-    });
-
-    it("user > user", () => {
-      const [impacted, notImpacted] = getDeltaRules("user", "user");
-
-      expect(impacted).toMatchInlineSnapshot(`
         Object {
           "$or": Array [
             Object {
               "id": [Function],
             },
-            Object {
-              "id": "<<changed-user>>",
-              "teamMemberships": Object {
-                "team": Object {
-                  "$or": Array [
-                    Object {
-                      "owner_id": [Function],
-                    },
-                    Object {
-                      "teamMemberships": Object {
-                        "is_disabled": false,
-                        "user_id": [Function],
-                      },
-                    },
-                  ],
-                },
-              },
-            },
           ],
-          "id": "<<changed-user>>",
-        }
-      `);
-
-      expect(notImpacted).toMatchInlineSnapshot(`null`);
-    });
-
-    it("list > todo", () => {
-      const [impacted, notImpacted] = getDeltaRules("list", "todo");
-
-      expect(impacted).toMatchInlineSnapshot(`
-        Object {
-          "list": Object {
-            "id": "<<changed-list>>",
-            "team": Object {
-              "$or": Array [
-                Object {
-                  "owner_id": [Function],
-                },
-                Object {
-                  "teamMemberships": Object {
-                    "is_disabled": false,
-                    "user_id": [Function],
-                  },
-                },
-              ],
-            },
-          },
-        }
-      `);
-
-      expect(notImpacted).toMatchInlineSnapshot(`
-        Object {
-          "list": Object {
-            "team": Object {
-              "$or": Array [
-                Object {
-                  "owner_id": [Function],
-                },
-                Object {
-                  "teamMemberships": Object {
-                    "is_disabled": false,
-                    "user_id": [Function],
-                  },
-                },
-              ],
-            },
-          },
         }
       `);
     });

@@ -1,24 +1,19 @@
 import { SyncRequestContext } from "@clientdb/server/context";
-import { PermissionRule } from "@clientdb/server/permissions/types";
+import { PermissionRuleModel } from "@clientdb/server/permissions/model";
 import { Knex } from "knex";
-import { applyQueryWhere } from "./builder";
+import { applyWhereTreeToQuery } from "./builder";
 import { createPermissionWhereConditions } from "./conditions";
 
 type QueryBuilder = Knex.QueryBuilder;
 
 export function applyPermissionWhereCauses(
   query: QueryBuilder,
-  entity: string,
-  permission: PermissionRule<any>,
+  rule: PermissionRuleModel<any>,
   context: SyncRequestContext
 ) {
-  const conditions = createPermissionWhereConditions(
-    entity,
-    permission,
-    context.schema
-  );
+  const conditions = createPermissionWhereConditions(rule);
 
-  query = applyQueryWhere(query, conditions, context);
+  query = applyWhereTreeToQuery(query, conditions, context);
 
   return query;
 }

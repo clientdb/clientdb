@@ -1,12 +1,12 @@
 import { DbSchemaModel } from "@clientdb/schema";
 import { pickPermissionsRule } from "@clientdb/server/permissions/picker";
-import { SchemaPermissions } from "@clientdb/server/permissions/types";
+import { traverseRule } from "@clientdb/server/permissions/traverse";
 import { Knex } from "knex";
-import { traversePermissions } from "@clientdb/server/permissions/traverse";
+import { SchemaPermissionsModel } from "../permissions/model";
 
 function collectPermissionNeededIndices(
   schema: DbSchemaModel,
-  permissions: SchemaPermissions
+  permissions: SchemaPermissionsModel
 ) {
   const indices: Record<string, Set<string>> = {};
 
@@ -32,22 +32,22 @@ function collectPermissionNeededIndices(
 
     if (!readPermissions) continue;
 
-    traversePermissions(permissionEntity, readPermissions, schema, {
+    traverseRule(readPermissions, {
       onValue(info) {
         const referencedEntity = schema.getEntityReferencedBy(
-          info.table,
+          info.entity,
           info.field
         );
 
         if (referencedEntity) return;
 
-        const attribute = schema.getAttribute(info.table, info.field);
+        const attribute = schema.getAttribute(info.entity, info.field);
 
         if (!attribute) return;
 
         if (info.field === idField) return;
 
-        addIndex(info.table, info.field);
+        addIndex(info.entity, info.field);
       },
     });
   }
@@ -58,7 +58,7 @@ function collectPermissionNeededIndices(
 export async function initializeTablesFromSchema(
   db: Knex,
   schemaModel: DbSchemaModel,
-  permissions: SchemaPermissions<any>
+  permissions: SchemaPermissionsModel<any>
 ) {
   const permissionIndices = collectPermissionNeededIndices(
     schemaModel,
