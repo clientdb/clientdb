@@ -105,4 +105,19 @@ describe("server", () => {
       )
     ).resolves.toMatchInlineSnapshot(`undefined`);
   });
+
+  it("will not generate proper delta for changing team owner", async () => {
+    const { server, ids } = await getTestServerWithData();
+
+    await server.admin.mutate(
+      {
+        entity: "team",
+        type: "update",
+        id: ids.team.a,
+        data: { owner_id: ids.user.out },
+      },
+
+      { userId: ids.user.owner }
+    );
+  });
 });

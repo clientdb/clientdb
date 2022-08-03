@@ -1,11 +1,11 @@
-import { DbSchemaModel } from "@clientdb/schema";
+import { EntitiesSchemaModel } from "@clientdb/schema";
 import { pickPermissionsRule } from "@clientdb/server/permissions/picker";
 import { traverseRule } from "@clientdb/server/permissions/traverse";
 import { Knex } from "knex";
 import { SchemaPermissionsModel } from "../permissions/model";
 
 function collectPermissionNeededIndices(
-  schema: DbSchemaModel,
+  schema: EntitiesSchemaModel,
   permissions: SchemaPermissionsModel
 ) {
   const indices: Record<string, Set<string>> = {};
@@ -57,7 +57,7 @@ function collectPermissionNeededIndices(
 
 export async function initializeTablesFromSchema(
   db: Knex,
-  schemaModel: DbSchemaModel,
+  schemaModel: EntitiesSchemaModel,
   permissions: SchemaPermissionsModel<any>
 ) {
   const permissionIndices = collectPermissionNeededIndices(

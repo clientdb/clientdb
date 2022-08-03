@@ -1,7 +1,6 @@
 import { SyncRequestContext } from "@clientdb/server/context";
 import { pickPermissionsRule } from "@clientdb/server/permissions/picker";
 import { getRuleHas } from "@clientdb/server/permissions/traverse";
-import { getIsRelationImpactedBy } from "./relation";
 
 function getIsEntityAccessBasedOn(
   entity: string,

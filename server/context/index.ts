@@ -1,4 +1,4 @@
-import { DbSchemaModel } from "@clientdb/schema";
+import { EntitiesSchemaModel } from "@clientdb/schema";
 import { Knex } from "knex";
 import { SchemaPermissionsModel } from "../permissions/model";
 
@@ -9,7 +9,7 @@ export interface SyncServerContextConfig {
 export interface SyncRequestContext<Schema = any> {
   userId: string | null;
   lastSyncId: number | null;
-  schema: DbSchemaModel;
+  schema: EntitiesSchemaModel;
   db: Knex;
   permissions: SchemaPermissionsModel<Schema>;
   config: SyncServerContextConfig;

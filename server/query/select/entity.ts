@@ -1,10 +1,7 @@
-import { DbSchemaModel } from "@clientdb/schema";
+import { EntitiesSchemaModel } from "@clientdb/schema";
 import { SyncRequestContext } from "@clientdb/server/context";
-import { pickPermission } from "@clientdb/server/permissions/picker";
-import {
-  ReadPermission,
-  PermissionOperationType,
-} from "@clientdb/server/permissions/types";
+import { pickPermissionConfig } from "@clientdb/server/permissions/picker";
+import { PermissionOperationType } from "@clientdb/server/permissions/types";
 import { QueryBuilder } from "@clientdb/server/query/types";
 
 interface Input {
@@ -15,7 +12,7 @@ interface Input {
 
 export function createEntityDataSelect({ entity, context, alias }: Input) {
   const db = context.db;
-  const permission = pickPermission(context.permissions, entity, "read");
+  const permission = pickPermissionConfig(context.permissions, entity, "read");
 
   if (!permission) {
     throw new Error(`No read permission for ${entity}`);
@@ -38,7 +35,7 @@ export function createEntityDataSelect({ entity, context, alias }: Input) {
 export function applyEntityIdSelect(
   query: QueryBuilder,
   entity: string,
-  schema: DbSchemaModel
+  schema: EntitiesSchemaModel
 ) {
   const idField = schema.getIdField(entity);
 
@@ -59,7 +56,11 @@ export function applyEntityDataSelect(
     return applyEntityIdSelect(query, entity, context.schema);
   }
 
-  const permission = pickPermission(context.permissions, entity, operation);
+  const permission = pickPermissionConfig(
+    context.permissions,
+    entity,
+    operation
+  );
 
   if (!permission) {
     return applyEntityIdSelect(query, entity, context.schema);

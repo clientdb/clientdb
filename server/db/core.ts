@@ -1,9 +1,9 @@
-import { DbSchemaModel } from "@clientdb/schema";
+import { EntitiesSchemaModel } from "@clientdb/schema";
 import { Knex } from "knex";
 
 export async function initializeSystemTables(
   db: Knex,
-  schema: DbSchemaModel,
+  schema: EntitiesSchemaModel,
   userTable: string
 ) {
   const userIdField = schema.getIdField(userTable);

@@ -114,6 +114,7 @@ describe("traverse", () => {
             0,
           ],
           "entity": "team",
+          "field": "owner_id",
           "parentRule": Object {
             "owner_id": [Function],
           },
@@ -153,6 +154,7 @@ describe("traverse", () => {
             1,
           ],
           "entity": "teamMembership",
+          "field": "is_disabled",
           "parentRule": Object {
             "is_disabled": false,
             "user_id": [Function],
@@ -176,6 +178,7 @@ describe("traverse", () => {
             1,
           ],
           "entity": "teamMembership",
+          "field": "user_id",
           "parentRule": Object {
             "is_disabled": false,
             "user_id": [Function],

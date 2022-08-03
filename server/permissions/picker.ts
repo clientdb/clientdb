@@ -36,23 +36,10 @@ export function pickPermissionsRule<T extends PermissionOperationType>(
   throw new Error(`Unknown operation ${operation}`);
 }
 
-export function pickPermission<T extends PermissionOperationType>(
+export function pickPermissionConfig<T extends PermissionOperationType>(
   permissions: SchemaPermissionsModel,
   entity: string,
   operation: T
 ) {
   return permissions[entity]?.[operation] ?? null;
-}
-
-export function pickChangePermission<T, D>(
-  change: EntityChange<T, D>,
-  context: SyncRequestContext
-) {
-  const { entity, type } = change;
-
-  return pickPermissionsRule(
-    context.permissions,
-    entity as any as string,
-    type
-  );
 }

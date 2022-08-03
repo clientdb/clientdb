@@ -1,8 +1,8 @@
 import {
   createSchemaModel,
-  DbSchema,
+  EntitiesSchemaInput,
   SchemaCollection,
-  SchemaEntity,
+  SchemaEntityInput,
   SchemaReference,
 } from "@clientdb/schema";
 import {
@@ -25,7 +25,7 @@ interface User {
   labels: SchemaCollection<Label>;
 }
 
-const userSchema: SchemaEntity = {
+const userSchema: SchemaEntityInput = {
   name: "user",
   idField: "id",
   attributes: [
@@ -110,7 +110,7 @@ interface Team {
   lists: SchemaCollection<List>;
 }
 
-const teamSchema: SchemaEntity = {
+const teamSchema: SchemaEntityInput = {
   name: "team",
   idField: "id",
   attributes: [
@@ -188,7 +188,7 @@ interface TeamMembership {
   team: SchemaReference<Team>;
 }
 
-const teamMembershipSchema: SchemaEntity = {
+const teamMembershipSchema: SchemaEntityInput = {
   name: "teamMembership",
   idField: "id",
   attributes: [
@@ -247,7 +247,7 @@ interface List {
   user: SchemaReference<User>;
 }
 
-const listSchema: SchemaEntity = {
+const listSchema: SchemaEntityInput = {
   name: "list",
   idField: "id",
   attributes: [
@@ -315,7 +315,7 @@ interface Label {
   user: SchemaReference<User>;
 }
 
-const labelSchema: SchemaEntity = {
+const labelSchema: SchemaEntityInput = {
   name: "label",
   idField: "id",
   attributes: [
@@ -382,7 +382,7 @@ interface TodoLabel {
   todo: SchemaReference<Todo>;
 }
 
-const todoLabelSchema: SchemaEntity = {
+const todoLabelSchema: SchemaEntityInput = {
   name: "todoLabel",
   idField: "id",
   attributes: [
@@ -441,7 +441,7 @@ interface Todo {
   todoLabels: SchemaCollection<TodoLabel>;
 }
 
-const todoSchema: SchemaEntity = {
+const todoSchema: SchemaEntityInput = {
   name: "todo",
   idField: "id",
   attributes: [
@@ -518,7 +518,7 @@ export interface TestSchema {
   todo: Todo;
 }
 
-export const schema: DbSchema = {
+export const schema: EntitiesSchemaInput = {
   entities: [
     userSchema,
     teamSchema,

@@ -1,19 +1,18 @@
-import { DbSchemaModel } from "@clientdb/schema";
+import { EntitiesSchemaModel } from "@clientdb/schema";
 import {
-  DataRules,
-  PermissionRule,
-  EntityRules,
-  RelationRule,
-  RelationRules,
-  ValueRule,
+  DataRulesInput,
+  PermissionRuleInput,
+  RelationRuleInput,
+  RelationRulesInput,
+  ValueRuleInput,
 } from "./types";
 
 export function pickRelationPermissions<T = any>(
-  rule: PermissionRule<T>,
+  rule: PermissionRuleInput<T>,
   entity: string,
-  schema: DbSchemaModel
-): RelationRules<T> {
-  const relationPermissions: RelationRules<T> = {};
+  schema: EntitiesSchemaModel
+): RelationRulesInput<T> {
+  const relationPermissions: RelationRulesInput<T> = {};
 
   for (const [field, fieldSpec] of Object.entries(rule)) {
     const relation = schema.getRelation(entity, field);
@@ -29,11 +28,11 @@ export function pickRelationPermissions<T = any>(
 }
 
 export function pickDataPermissions<T = any>(
-  rule: PermissionRule<T>,
+  rule: PermissionRuleInput<T>,
   entity: string,
-  schema: DbSchemaModel
-): DataRules<T> {
-  const dataPermissions: DataRules<T> = {};
+  schema: EntitiesSchemaModel
+): DataRulesInput<T> {
+  const dataPermissions: DataRulesInput<T> = {};
 
   for (const [field, fieldSpec] of Object.entries(rule)) {
     const relation = schema.getRelation(entity, field);
@@ -52,29 +51,4 @@ export function pickDataPermissions<T = any>(
   }
 
   return dataPermissions;
-}
-
-export function parseRule<T = any>(
-  rule: PermissionRule<T>,
-  entity: string,
-  schema: DbSchemaModel
-) {
-  const { $and, $or } = rule;
-  const dataPermissions = pickDataPermissions(rule, entity, schema);
-  const relationPermissions = pickRelationPermissions(rule, entity, schema);
-
-  const dataEntires = Object.entries(dataPermissions) as Array<
-    [keyof T, ValueRule<T[keyof T]>]
-  >;
-
-  const relationEntires = Object.entries(relationPermissions) as Array<
-    [keyof T, RelationRule<T[keyof T]>]
-  >;
-
-  return {
-    dataEntires,
-    relationEntires,
-    $and,
-    $or,
-  };
 }

@@ -15,7 +15,7 @@ export type ContextValuePointer<T> = (ctx: SyncRequestContext) => Maybe<T>;
 
 export type ValuePointer<T> = T | ContextValuePointer<T>;
 
-export type ValueRule<T> = ValuePointer<T> | ValueRuleConfig<T>;
+export type ValueRuleInput<T = unknown> = ValuePointer<T> | ValueRuleConfig<T>;
 
 export type ValueRuleConfig<T> = {
   $eq?: ValuePointer<T>;
@@ -29,27 +29,28 @@ export type ValueRuleConfig<T> = {
   $isNull?: ValuePointer<boolean>;
 };
 
-export type DataRules<EntitySchema> = {
-  [K in keyof EntitySchema]?: ValueRule<EntitySchema[K]>;
+export type DataRulesInput<EntitySchema> = {
+  [K in keyof EntitySchema]?: ValueRuleInput<EntitySchema[K]>;
 };
 
-export type RelationRule<RelationPointer> = PermissionRule<
+export type RelationRuleInput<RelationPointer> = PermissionRuleInput<
   RelationSchemaType<RelationPointer>
 >;
 
-export type RelationRules<EntityRelations> = {
-  [K in keyof EntityRelations]?: RelationRule<EntityRelations[K]>;
+export type RelationRulesInput<EntityRelations> = {
+  [K in keyof EntityRelations]?: RelationRuleInput<EntityRelations[K]>;
 };
 
-export type EntityRules<EntitySchema> = DataRules<
+export type EntityRulesInput<EntitySchema> = DataRulesInput<
   EntitySchemaData<EntitySchema>
 > &
-  RelationRules<EntitySchemaRelations<EntitySchema>>;
+  RelationRulesInput<EntitySchemaRelations<EntitySchema>>;
 
-export type PermissionRule<EntitySchema = any> = EntityRules<EntitySchema> & {
-  $or?: PermissionRule<EntitySchema>[];
-  $and?: PermissionRule<EntitySchema>[];
-};
+export type PermissionRuleInput<EntitySchema = any> =
+  EntityRulesInput<EntitySchema> & {
+    $or?: PermissionRuleInput<EntitySchema>[];
+    $and?: PermissionRuleInput<EntitySchema>[];
+  };
 
 export type EntityInputPreset<T> = {
   [K in keyof T]?: ValuePointer<T[K]>;
@@ -58,32 +59,32 @@ export type EntityInputPreset<T> = {
 export type PermissionOperationType = "read" | "create" | "update" | "remove";
 
 export type ReadPermission<T> = {
-  rule: PermissionRule<T>;
+  rule: PermissionRuleInput<T>;
   fields?: Array<EntitySchemaDataKeys<T>>;
 };
 
-export type CreatePermission<T> = {
-  rule: PermissionRule<T>;
+export type CreatePermissionInput<T> = {
+  rule: PermissionRuleInput<T>;
   fields?: Array<EntitySchemaDataKeys<T>>;
   preset?: EntityInputPreset<T>;
 };
 
-export type UpdatePermission<T> = {
-  rule: PermissionRule<T>;
+export type UpdatePermissionInput<T> = {
+  rule: PermissionRuleInput<T>;
   fields?: Array<EntitySchemaDataKeys<T>>;
 };
 
-export type RemovePermission<T> = PermissionRule<T>;
+export type RemovePermissionInput<T> = PermissionRuleInput<T>;
 
-export type EntityPermissionsConfig<T> = {
+export type EntityPermissionsInput<T> = {
   read?: ReadPermission<T>;
-  create?: CreatePermission<T>;
-  update?: UpdatePermission<T>;
-  remove?: RemovePermission<T>;
+  create?: CreatePermissionInput<T>;
+  update?: UpdatePermissionInput<T>;
+  remove?: RemovePermissionInput<T>;
 };
 
 export type SchemaPermissions<S = any> = {
-  [K in keyof S]: EntityPermissionsConfig<S[K]>;
+  [K in keyof S]: EntityPermissionsInput<S[K]>;
 };
 
 /**
@@ -91,11 +92,11 @@ export type SchemaPermissions<S = any> = {
  */
 
 export type SchemaWhere<S> = {
-  [K in keyof S]: EntityRules<S[K]>;
+  [K in keyof S]: EntityRulesInput<S[K]>;
 };
 
 export type SchemaRules<S> = {
-  [K in keyof S]: PermissionRule<S[K]>;
+  [K in keyof S]: PermissionRuleInput<S[K]>;
 };
 
 export function currentUser(ctx: SyncRequestContext) {

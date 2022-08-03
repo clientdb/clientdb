@@ -1,6 +1,6 @@
 import { PermissionRuleModel } from "@clientdb/server/permissions/model";
 import { pickFromRule } from "@clientdb/server/permissions/traverse";
-import { parseWhereTree, RawWherePointer } from "./tree";
+import { buildWhereTree, RawWherePointer } from "./tree";
 
 export function createPermissionWhereConditions<T>(
   rule: PermissionRuleModel<T>
@@ -10,14 +10,14 @@ export function createPermissionWhereConditions<T>(
       const pointer: RawWherePointer = {
         conditionPath: conditionPath,
         condition: rule,
-        select: selector,
+        selector: selector,
       };
 
       return pointer;
     },
   });
 
-  const whereTree = parseWhereTree(wherePointers);
+  const whereTree = buildWhereTree(wherePointers);
 
   return whereTree;
 }

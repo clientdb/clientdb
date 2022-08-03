@@ -1,6 +1,6 @@
-import { DbSchema } from "./schema";
+import { EntitiesSchemaInput } from "./schema";
 
-export function createSchemaModel(schema: DbSchema) {
+export function createSchemaModel(schema: EntitiesSchemaInput) {
   function getEntity(name: string) {
     const entity = schema.entities.find((e) => e.name === name);
     if (!entity) {
@@ -119,4 +119,4 @@ export function createSchemaModel(schema: DbSchema) {
   };
 }
 
-export type DbSchemaModel = ReturnType<typeof createSchemaModel>;
+export type EntitiesSchemaModel = ReturnType<typeof createSchemaModel>;

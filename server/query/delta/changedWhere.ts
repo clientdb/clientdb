@@ -1,9 +1,9 @@
 import { EntityPointer } from "@clientdb/server/entity/pointer";
 import { PermissionRuleModel } from "@clientdb/server/permissions/model";
 import { pickFromRule } from "@clientdb/server/permissions/traverse";
-import { parseWhereTree, RawWherePointer } from "../where/tree";
+import { buildWhereTree, RawWherePointer } from "../where/tree";
 
-export function createChangedEntityWhere(
+export function getChangedEntityPointerWhere(
   changed: EntityPointer,
   rule: PermissionRuleModel
 ) {
@@ -22,7 +22,7 @@ export function createChangedEntityWhere(
           $eq: changed.id,
         },
         conditionPath: [],
-        select: `${selector}.${changedIdField}`,
+        selector: `${selector}.${changedIdField}`,
       };
     },
     onValue({ referencedEntity, selector }) {
@@ -32,7 +32,7 @@ export function createChangedEntityWhere(
             $eq: changed.id,
           },
           conditionPath: [],
-          select: selector,
+          selector: selector,
         };
       }
     },
@@ -47,7 +47,7 @@ export function createChangedEntityWhere(
     }
   );
 
-  const whereTree = parseWhereTree(anyIdMatchingSelectors);
+  const whereTree = buildWhereTree(anyIdMatchingSelectors);
 
   return whereTree;
 }

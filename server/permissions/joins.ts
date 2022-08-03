@@ -1,8 +1,6 @@
-import { DbSchemaModel } from "@clientdb/schema";
 import { applyQueryJoins, JoinInfo } from "@clientdb/server/query/joins";
 import { Knex } from "knex";
-import { debug } from "../utils/logger";
-import { getRawModelRule, PermissionRuleModel } from "./model";
+import { PermissionRuleModel } from "./model";
 import { pickFromRule } from "./traverse";
 
 function removeLast<T>(items: T[]) {

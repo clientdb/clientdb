@@ -1,8 +1,8 @@
 import { SyncRequestContext } from "@clientdb/server/context";
 import { DeltaType } from "@clientdb/server/db/delta";
 import { EntityPointer } from "@clientdb/server/entity/pointer";
-import { createDeltaQueryForChange } from "@clientdb/server/query/delta/query";
-import { Transaction } from "@clientdb/server/query/types";
+import { createDeltaQueryForCreatedOrRemoved } from "@clientdb/server/query/delta/query";
+import { QueryBuilder, Transaction } from "@clientdb/server/query/types";
 import { log } from "@clientdb/server/utils/logger";
 
 export async function insertDeltaForChange(
@@ -11,7 +11,7 @@ export async function insertDeltaForChange(
   context: SyncRequestContext,
   type: DeltaType
 ) {
-  const deltaQuery = createDeltaQueryForChange(
+  const deltaQuery = createDeltaQueryForCreatedOrRemoved(
     change,
     context,
     type
@@ -20,6 +20,23 @@ export async function insertDeltaForChange(
   log.verbose("delta query", change, deltaQuery.toString());
 
   const deltaResults = await deltaQuery;
+
+  if (!deltaResults.length) {
+    return;
+  }
+
+  await tr.table("sync").insert(deltaResults);
+}
+
+export async function insertDeltaWithQuery(
+  tr: Transaction,
+  query: QueryBuilder
+) {
+  log("insertDeltaWithQuery delta query", query.toString());
+
+  const deltaResults = await query;
+
+  console.log("DELRES", { deltaResults });
 
   if (!deltaResults.length) {
     return;

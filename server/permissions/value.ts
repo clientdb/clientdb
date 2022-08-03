@@ -1,7 +1,7 @@
 import {
   ContextValuePointer,
   ValuePointer,
-  ValueRule,
+  ValueRuleInput,
   ValueRuleConfig,
 } from "./types";
 
@@ -48,7 +48,9 @@ function getIsWhereValueConfig<T>(input: unknown): input is ValueRuleConfig<T> {
   return false;
 }
 
-export function resolveValueInput<T>(value: ValueRule<T>): ValueRuleConfig<T> {
+export function resolveValueInput<T>(
+  value: ValueRuleInput<T>
+): ValueRuleConfig<T> {
   if (getIsWhereValueConfig<T>(value)) {
     return value;
   }

@@ -1,4 +1,4 @@
-import { SchemaEntity } from "./schema";
+import { SchemaEntityInput } from "./schema";
 import { validate } from "uuid";
 
 function getIsDataTypeValid(input: unknown, type: string) {
@@ -33,7 +33,7 @@ function getIsDataTypeValid(input: unknown, type: string) {
 export function validateEntityDataProp(
   prop: string,
   value: unknown,
-  schema: SchemaEntity
+  schema: SchemaEntityInput
 ) {
   const attribute = schema.attributes.find((a) => a.name === prop);
   if (!attribute) {
@@ -58,7 +58,7 @@ export function validateEntityDataProp(
 
 export function validateEntityData(
   data: Record<any, any>,
-  schema: SchemaEntity
+  schema: SchemaEntityInput
 ) {
   for (const attr of schema.attributes) {
     const value = data[attr.name];
@@ -69,7 +69,7 @@ export function validateEntityData(
 
 export function validateEntityUpdateData(
   data: Record<any, any>,
-  schema: SchemaEntity
+  schema: SchemaEntityInput
 ) {
   const keys = Object.keys(data);
 

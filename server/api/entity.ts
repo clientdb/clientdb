@@ -7,13 +7,17 @@ import {
 } from "@clientdb/server/query/access";
 import { Transaction } from "@clientdb/server/query/types";
 import { UnauthorizedError } from "../error";
-import { applyEntityIdSelect } from "../query/select/entity";
+import {
+  applyEntityDataSelect,
+  applyEntityIdSelect,
+} from "../query/select/entity";
 
 export async function getEntityIfAccessable<T>(
   tr: Transaction,
   entityInfo: EntityPointer,
   context: SyncRequestContext,
-  inOperation: PermissionOperationType
+  inOperation: PermissionOperationType,
+  includeData = false
 ) {
   const idField = context.schema.getIdField(entityInfo.entity);
 
@@ -35,13 +39,28 @@ export async function getEntityIfAccessable<T>(
     context
   );
 
-  const allowedItemQuery = createAccessItemQuery(
+  let allowedItemQuery = createAccessItemQuery(
     context,
     entityInfo,
     inOperation
   )?.transacting(tr);
 
   if (!allowedItemQuery) return null;
+
+  if (includeData) {
+    existingItemQuery = applyEntityDataSelect(
+      existingItemQuery,
+      entityInfo.entity,
+      context,
+      inOperation
+    );
+    allowedItemQuery = applyEntityDataSelect(
+      allowedItemQuery,
+      entityInfo.entity,
+      context,
+      inOperation
+    );
+  }
 
   const existingAndAllowedItemQuery = tr
     .queryBuilder()

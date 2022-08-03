@@ -1,4 +1,8 @@
-import { createSchemaModel, DbSchema, DbSchemaModel } from "@clientdb/schema";
+import {
+  createSchemaModel,
+  EntitiesSchemaInput,
+  EntitiesSchemaModel,
+} from "@clientdb/schema";
 import { SchemaPermissions } from "@clientdb/server/permissions/types";
 import { Knex } from "knex";
 import {
@@ -16,7 +20,7 @@ interface SyncServerDatabaseConnectionConfig {
 }
 
 export interface SyncServerConfigInput<Schema> {
-  schema: DbSchema;
+  schema: EntitiesSchemaInput;
   requestHandlers: RequestDataHandlers;
   dbConnection?: SyncServerDatabaseConnectionConfig;
   /**
@@ -29,7 +33,7 @@ export interface SyncServerConfigInput<Schema> {
 }
 
 export interface SyncServerConfig<Schema = any> {
-  schema: DbSchemaModel;
+  schema: EntitiesSchemaModel;
   requestHandlers: RequestDataHandlers;
   db: Knex;
   permissions: SchemaPermissionsModel<Schema>;

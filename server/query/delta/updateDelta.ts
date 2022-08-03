@@ -1,74 +1,207 @@
 import { SyncRequestContext } from "@clientdb/server/context";
+import { EntityChangesPointer } from "@clientdb/server/entity/pointer";
 import { doesValueMatchValueConfig } from "@clientdb/server/permissions/compareValue";
 import { filterRule } from "@clientdb/server/permissions/filterRule";
+import {
+  getRawModelRule,
+  PermissionRuleModel,
+} from "@clientdb/server/permissions/model";
 import { pickPermissionsRule } from "@clientdb/server/permissions/picker";
 import {
   getRuleHas,
+  pickFromRule,
   TraverseValueInfo,
 } from "@clientdb/server/permissions/traverse";
-import { Changes } from "@clientdb/server/utils/changes";
+import {
+  Changes,
+  pickAfterFromChanges,
+  pickBeforeFromChanges,
+} from "@clientdb/server/utils/changes";
+import { debug } from "@clientdb/server/utils/logger";
+import { applyWhereTreeToQuery } from "../where/builder";
+import { buildWhereTree, RawWherePointer } from "../where/tree";
+import { createBaseDeltaQuery } from "./baseQuery";
 
-function getChangeImpactOnRule(
-  entity: string,
-  changes: Changes<any>,
+function convertValueInfoToWherePointer(
   info: TraverseValueInfo
+): RawWherePointer {
+  return {
+    condition: info.rule,
+    conditionPath: info.conditionPath,
+    selector: info.selector,
+  };
+}
+
+function getIsFieldValueImpactedByChange(
+  info: TraverseValueInfo,
+  changed: EntityChangesPointer<any>
 ) {
-  if (info.entity !== entity) return null;
+  console.log({ info, changed });
+  if (info.entity !== changed.entity) return false;
 
-  const changeInfo = changes[info.field];
+  const field = info.schemaPath.at(-1)!;
 
-  if (changeInfo === undefined) return null;
+  const inputValue = changed.changes[field];
 
-  const [valueBefore, valueNow] = changeInfo;
+  console.log({ inputValue, changed });
 
-  const didMatch = doesValueMatchValueConfig(valueBefore, info.rule);
-  const doesMatch = doesValueMatchValueConfig(valueNow, info.rule);
+  return inputValue !== undefined;
+}
 
-  if (didMatch === doesMatch) return null;
+function getRuleWhereWithInjectedInput<T>(
+  rule: PermissionRuleModel<any>,
+  changedEntity: string,
+  input: Partial<T>,
+  context: SyncRequestContext
+) {
+  const userTable = context.config.userTable;
 
-  if (didMatch) {
-    // Did stop matching
-    return false;
-  }
+  const wherePointers = pickFromRule<RawWherePointer>(rule, {
+    onValue(info) {
+      if (info.entity !== changedEntity) {
+        return convertValueInfoToWherePointer(info);
+      }
 
-  // Did start matching
-  return true;
+      const field = info.schemaPath.at(-1)!;
+
+      const inputValue = input[field as keyof T]!;
+
+      if (inputValue === undefined) {
+        return convertValueInfoToWherePointer(info);
+      }
+
+      if (info.referencedEntity === userTable) {
+        return {
+          condition: { $eq: inputValue },
+          conditionPath: info.conditionPath,
+          selector: context.db.ref("allowed_user.id"),
+        };
+      }
+
+      return {
+        condition: info.rule,
+        conditionPath: info.conditionPath,
+        selector: context.db.raw("?", [inputValue as any]),
+      };
+    },
+  });
+
+  return buildWhereTree(wherePointers);
 }
 
 export function getUpdateDelta(
   entity: string,
-  changes: Changes<any>,
+  changed: EntityChangesPointer<any>,
   context: SyncRequestContext
 ) {
   const rule = pickPermissionsRule(context.permissions, entity, "read");
 
-  if (!rule) return null;
+  if (!rule) {
+    throw new Error(`No read permission for ${entity}`);
+  }
 
-  const enabledRules = filterRule(
+  const dataBefore = pickBeforeFromChanges(changed.changes);
+  const dataAfter = pickAfterFromChanges(changed.changes);
+
+  console.log({ dataBefore, dataAfter });
+
+  const ruleBefore = getRuleWhereWithInjectedInput(
     rule,
-    entity,
-    (rule, ruleEntity) => {
-      return getRuleHas(ruleEntity, rule, context.schema, {
-        onValue(info) {
-          return getChangeImpactOnRule(entity, changes, info) === true;
-        },
-      });
-    },
-    context.schema
+    changed.entity,
+    dataBefore,
+    context
+  );
+  const ruleAfter = getRuleWhereWithInjectedInput(
+    rule,
+    changed.entity,
+    dataAfter,
+    context
   );
 
-  const disabledRules = filterRule(
-    rule,
-    entity,
-    (rule, ruleEntity) => {
-      return getRuleHas(ruleEntity, rule, context.schema, {
-        onValue(info) {
-          return getChangeImpactOnRule(entity, changes, info) === true;
-        },
-      });
-    },
-    context.schema
-  );
+  return {
+    ruleBefore,
+    ruleAfter,
+  };
+}
 
-  filterRule;
+function getEntitiesImpactedByUpdate(
+  changed: EntityChangesPointer<any>,
+  context: SyncRequestContext
+) {
+  const entities: string[] = [];
+
+  for (const entity in context.permissions) {
+    const rule = pickPermissionsRule(context.permissions, entity, "read")!;
+
+    const isImpacted = getRuleHas(rule, {
+      onValue(info) {
+        return getIsFieldValueImpactedByChange(info, changed);
+      },
+    });
+
+    if (isImpacted) {
+      entities.push(entity);
+    }
+  }
+
+  return entities;
+}
+
+export function createUpdateDeltaQuery(
+  changed: EntityChangesPointer<any>,
+  context: SyncRequestContext
+) {
+  const impacted = getEntitiesImpactedByUpdate(changed, context);
+
+  if (!impacted.length) {
+    return null;
+  }
+
+  const gainedAccess = createBaseDeltaQuery({
+    changed,
+    context,
+    deltaType: "put",
+    impactedEntities: impacted,
+    whereGetter: ({ context, entity, query }) => {
+      const { ruleBefore, ruleAfter } = getUpdateDelta(
+        entity,
+        changed,
+        context
+      );
+
+      return query
+        .andWhere((qb) => {
+          return applyWhereTreeToQuery(qb, ruleAfter, context);
+        })
+        .andWhereNot((qb) => {
+          return applyWhereTreeToQuery(qb, ruleBefore, context);
+        });
+    },
+  });
+
+  const lostAccess = createBaseDeltaQuery({
+    changed,
+    context,
+    deltaType: "delete",
+    impactedEntities: impacted,
+    whereGetter: ({ context, entity, query }) => {
+      const { ruleBefore, ruleAfter } = getUpdateDelta(
+        entity,
+        changed,
+        context
+      );
+
+      return query
+        .andWhere((qb) => {
+          return applyWhereTreeToQuery(qb, ruleBefore, context);
+        })
+        .andWhereNot((qb) => {
+          return applyWhereTreeToQuery(qb, ruleAfter, context);
+        });
+    },
+  });
+
+  const query = gainedAccess.unionAll(lostAccess);
+
+  return query;
 }

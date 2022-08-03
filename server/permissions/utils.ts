@@ -1,13 +1,14 @@
 import {
   ContextValuePointer,
   ValuePointer,
-  ValueRule,
+  ValueRuleInput,
   ValueRuleConfig,
 } from "./types";
 
 import { Primitive } from "type-fest";
 import { unsafeAssertType } from "@clientdb/server/utils/assert";
 import { SyncRequestContext } from "@clientdb/server/context";
+import { memoize } from "lodash";
 
 export function isPrimitive(input: unknown): input is Primitive {
   if (typeof input === "object" || typeof input === "function") {
@@ -48,7 +49,9 @@ function getIsWhereValueConfig<T>(input: unknown): input is ValueRuleConfig<T> {
   return false;
 }
 
-export function resolveValueInput<T>(value: ValueRule<T>): ValueRuleConfig<T> {
+export function resolveValueInput<T>(
+  value: ValueRuleInput<T>
+): ValueRuleConfig<T> {
   if (getIsWhereValueConfig<T>(value)) {
     return value;
   }
@@ -71,4 +74,51 @@ export function resolveValuePointer<T>(
   }
 
   return value;
+}
+
+function findTargetPropertyDescriptor<T extends object>(
+  target: T,
+  prop: keyof T
+) {
+  let descriptor = Reflect.getOwnPropertyDescriptor(target, prop);
+
+  if (descriptor) return descriptor;
+
+  let MaybeParentClass = Reflect.getPrototypeOf(target);
+
+  while (MaybeParentClass && MaybeParentClass !== Object.prototype) {
+    descriptor = Reflect.getOwnPropertyDescriptor(MaybeParentClass, prop);
+
+    if (descriptor) return descriptor;
+
+    MaybeParentClass = Reflect.getPrototypeOf(MaybeParentClass);
+  }
+}
+
+export function memoizeGetters<T extends object>(
+  object: T,
+  ...keys: Array<keyof T>
+) {
+  for (const key of keys) {
+    const descriptor = findTargetPropertyDescriptor(object, key);
+
+    if (!descriptor) {
+      throw new Error(
+        `Could not find property descriptor for ${key as string}`
+      );
+    }
+
+    if (!descriptor.get) {
+      throw new Error(`Property ${key as string} is not a getter`);
+    }
+
+    const getter = descriptor.get;
+
+    const memoizedGetter = memoize(getter);
+
+    Object.defineProperty(object, key, {
+      ...descriptor,
+      get: memoizedGetter,
+    });
+  }
 }

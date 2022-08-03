@@ -1,20 +1,15 @@
 import { SyncRequestContext } from "@clientdb/server/context";
 import { EntityPointer } from "@clientdb/server/entity/pointer";
 import { PermissionRuleModel } from "@clientdb/server/permissions/model";
-import { pickPermissionsRule } from "@clientdb/server/permissions/picker";
 import {
   pickFromRule,
   TraverseValueInfo,
 } from "@clientdb/server/permissions/traverse";
 import { resolveValuePointer } from "@clientdb/server/permissions/value";
-import { applyWhereTreeToQuery } from "@clientdb/server/query/where/builder";
 import {
-  parseWhereTree,
+  buildWhereTree,
   RawWherePointer,
 } from "@clientdb/server/query/where/tree";
-import { Knex } from "knex";
-import { createChangedEntityWhere } from "./changedWhere";
-import { getRulePartNotImpactedBy } from "./split";
 
 function getIsFieldPoinintToCurrentUser(
   info: TraverseValueInfo,
@@ -38,7 +33,7 @@ function getIsFieldPoinintToCurrentUser(
   return resolvedValue === injectedIdToCheck;
 }
 
-function createDeltaWhere(
+export function getRuleWhereMappingToAllowedUsers(
   entity: string,
   changed: EntityPointer,
   rule: PermissionRuleModel<any>,
@@ -52,13 +47,13 @@ function createDeltaWhere(
 
   const deltaWherePointers = pickFromRule<RawWherePointer>(rule, {
     onValue(info) {
-      const { entity, selector, conditionPath, schemaPath, rule } = info;
+      const { selector, conditionPath, schemaPath, rule } = info;
 
       if (getIsFieldPoinintToCurrentUser(info, context)) {
         const pointer: RawWherePointer = {
           conditionPath: conditionPath,
           condition: `allowed_user.id`,
-          select: selector,
+          selector: selector,
         };
 
         return pointer;
@@ -67,59 +62,14 @@ function createDeltaWhere(
       const pointer: RawWherePointer = {
         conditionPath: conditionPath,
         condition: rule,
-        select: selector,
+        selector: selector,
       };
 
       return pointer;
     },
   });
 
-  const deltaWhereTree = parseWhereTree(deltaWherePointers);
+  const deltaWhereTree = buildWhereTree(deltaWherePointers);
 
   return deltaWhereTree;
-}
-
-export function applyDeltaWhere(
-  query: Knex.QueryBuilder,
-  entity: string,
-  changed: EntityPointer,
-  context: SyncRequestContext
-) {
-  const rule = pickPermissionsRule(context.permissions, entity, "read")!;
-
-  if (!rule) {
-    throw new Error(`Impacted entity ${entity} has no access rules.`);
-  }
-
-  const changedWhereTree = createChangedEntityWhere(changed, rule);
-
-  console.log("AFTER", entity, changed, query.toString());
-
-  const everyoneWithAccess = createDeltaWhere(entity, changed, rule, context);
-
-  query = query
-    .andWhere((qb) => {
-      applyWhereTreeToQuery(qb, changedWhereTree, context);
-    })
-    .andWhere((qb) => {
-      applyWhereTreeToQuery(qb, everyoneWithAccess, context);
-    });
-
-  if (entity === changed.entity) {
-    return query;
-  }
-
-  const notImpactedRule = getRulePartNotImpactedBy(rule, changed.entity);
-
-  const notImpactedPermission =
-    !!notImpactedRule &&
-    createDeltaWhere(entity, changed, notImpactedRule, context);
-
-  if (notImpactedPermission) {
-    query = query.andWhereNot((qb) => {
-      applyWhereTreeToQuery(qb, notImpactedPermission, context);
-    });
-  }
-
-  return query;
 }

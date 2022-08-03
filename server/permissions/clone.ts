@@ -57,6 +57,5 @@ export function clonePermissionRule<T>(
     $relations: $relationsClone,
     $and: $and?.map((andRule) => clonePermissionRule(andRule)),
     $or: $or?.map((orRule) => clonePermissionRule(orRule)),
-    $raw: rule.$raw,
   };
 }

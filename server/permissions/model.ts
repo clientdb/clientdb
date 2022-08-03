@@ -1,21 +1,16 @@
 import {
-  DbSchemaModel,
+  EntitiesSchemaModel,
   EntitySchemaData,
   EntitySchemaDataKeys,
   EntitySchemaRelations,
   RelationSchemaType,
 } from "@clientdb/schema";
-import { mapValues } from "../utils/object";
+import { pickDataPermissions, pickRelationPermissions } from "./ruleParser";
 import {
-  parseRule,
-  pickDataPermissions,
-  pickRelationPermissions,
-} from "./ruleParser";
-import {
-  DataRules,
+  DataRulesInput,
   EntityInputPreset,
-  EntityPermissionsConfig,
-  PermissionRule,
+  EntityPermissionsInput,
+  PermissionRuleInput,
   SchemaPermissions,
 } from "./types";
 
@@ -45,15 +40,15 @@ import {
 interface RuleLocation {
   $entity: string;
   $parent: PermissionRuleModel | null;
-  $schema: DbSchemaModel;
+  $schema: EntitiesSchemaModel;
 }
 
 interface PermissionLocation {
   $entity: string;
-  $schema: DbSchemaModel;
+  $schema: EntitiesSchemaModel;
 }
 
-export type DataRulesModel<DataSchema> = DataRules<DataSchema>;
+export type DataRulesModel<DataSchema> = DataRulesInput<DataSchema>;
 
 export type RelationRuleModel<RelationPointer> = PermissionRuleModel<
   RelationSchemaType<RelationPointer>
@@ -104,9 +99,9 @@ export type SchemaPermissionsModel<S = any> = {
 
 function createRuleModel<T>(
   ruleEntity: string,
-  rule: PermissionRule<T>,
+  rule: PermissionRuleInput<T>,
   parentRule: PermissionRuleModel<any> | null,
-  schema: DbSchemaModel
+  schema: EntitiesSchemaModel
 ): PermissionRuleModel<T> {
   const location: RuleLocation = {
     $entity: ruleEntity,
@@ -176,8 +171,8 @@ function createRuleModel<T>(
 
 function createEntityPermissionsModel<T>(
   entity: string,
-  config: EntityPermissionsConfig<T>,
-  schema: DbSchemaModel
+  config: EntityPermissionsInput<T>,
+  schema: EntitiesSchemaModel
 ): EntityPermissionsModel<T> {
   const location: PermissionLocation = { $entity: entity, $schema: schema };
 
@@ -228,7 +223,7 @@ function createEntityPermissionsModel<T>(
 
 export function createSchemaPermissionsModel<S = any>(
   schemaPermissions: SchemaPermissions<S>,
-  schema: DbSchemaModel
+  schema: EntitiesSchemaModel
 ): SchemaPermissionsModel<S> {
   const model: SchemaPermissionsModel<S> = {} as SchemaPermissionsModel<S>;
 
@@ -249,10 +244,12 @@ export function createSchemaPermissionsModel<S = any>(
 
 export function getRawModelRule<T>(
   rule: PermissionRuleModel<T>
-): PermissionRule<T> {
+): PermissionRuleInput<T> {
   const { $data, $relations, $and, $or } = rule;
 
-  const rawRule: PermissionRule<T> = { ...$data } as PermissionRule<T>;
+  const rawRule: PermissionRuleInput<T> = {
+    ...$data,
+  } as PermissionRuleInput<T>;
 
   const rawAnd = $and?.map((andRule) => {
     return getRawModelRule(andRule);

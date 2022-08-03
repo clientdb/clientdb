@@ -1,8 +1,6 @@
-import { SchemaEntity, SchemaEntityRelation } from "@clientdb/schema";
 import { unsafeAssertType } from "../utils/assert";
 import {
   EntityRulesModel,
-  getRawModelRule,
   PermissionRuleModel,
   RelationRuleModel,
 } from "./model";
@@ -22,6 +20,7 @@ export interface TraverseRelationInfo extends TraverseStepInfo {
 
 export interface TraverseValueInfo extends TraverseStepInfo {
   referencedEntity: string | null;
+  field: string;
   rule: ValueRuleConfig<any>;
   parentRule: RelationRuleModel<any>;
 }
@@ -50,6 +49,7 @@ function traverseRuleStep<T>(
 
     callbacks.onValue?.({
       ...info,
+      field: key,
       schemaPath: [...info.schemaPath, key],
       rule: valueRule,
       parentRule: rule,

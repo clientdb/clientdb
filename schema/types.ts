@@ -8,7 +8,7 @@ export interface SchemaReference<T> {
   $reference: T;
 }
 
-export type EntitySchemaData<T = unknown> = ConditionalExcept<
+export type EntitySchemaData<T = {}> = ConditionalExcept<
   T,
   SchemaCollection<unknown> | SchemaReference<unknown>
 >;

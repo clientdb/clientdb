@@ -1,8 +1,6 @@
 import { isNotNullish } from "@clientdb/server/utils/nullish";
-import { clonePermissionRule } from "./clone";
 import { PermissionRuleModel } from "./model";
 import { simplifyRule } from "./simplifyRule";
-import { DataRules } from "./types";
 
 function mapObject<K extends string, V, NV>(
   object: Record<K, V | undefined>,
@@ -66,7 +64,6 @@ function filterRuleWithPath(
     return filterRuleWithPath(rule, path, filter);
   });
 
-  const dataPermissions = rule.$data;
   const relationPermissions = rule.$relations;
 
   const passingRelationRules = mapObject(
@@ -78,34 +75,11 @@ function filterRuleWithPath(
     }
   );
 
-  // const passingDataRules = mapObject<any, any, any>(
-  //   dataPermissions,
-  //   (value, field) => {
-  //     const dataRule: DataRules<any> = {
-  //       [field]: value,
-  //     };
-
-  //     const dataRuleModel = clonePermissionRule(rule);
-
-  //     delete dataRuleModel.$and;
-  //     delete dataRuleModel.$or;
-  //     dataRuleModel.$relations = {};
-  //     dataRuleModel.$data = dataRule;
-
-  //     const isPassing = filter(dataRuleModel);
-
-  //     if (!isPassing) return;
-
-  //     return value;
-  //   }
-  // );
-
   const filteredRule: PermissionRuleModel<any> = {
     ...rule,
     $and: passingAnd,
     $or: passingOr,
     $relations: passingRelationRules,
-    // $data: passingDataRules,
   };
 
   return simplifyRule(filteredRule);

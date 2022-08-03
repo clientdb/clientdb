@@ -1,4 +1,3 @@
-import { SchemaEntityRelation } from "@clientdb/schema";
 import { filterRule } from "@clientdb/server/permissions/filterRule";
 import { PermissionRuleModel } from "@clientdb/server/permissions/model";
 import { getIsRuleEmpty } from "@clientdb/server/permissions/simplifyRule";

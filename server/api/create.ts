@@ -41,9 +41,7 @@ export async function performCreate<T, D>(
     }
 
     try {
-      const stop = logAll(entityName === "teamMembership");
       await insertDeltaForChange(tr, createdEntityPointer, context, "put");
-      stop();
     } catch (error) {
       log.error(`Error inserting delta for ${entityName}`, error);
     }

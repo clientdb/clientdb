@@ -2,6 +2,7 @@ import {
   ConditionGroupSegment,
   ValueRuleConfig,
 } from "@clientdb/server/permissions/types";
+import { Knex } from "knex";
 
 export interface WhereTree {
   conditions: WherePointer[];
@@ -10,7 +11,7 @@ export interface WhereTree {
 }
 
 export interface WherePointer {
-  select: string;
+  selector: string | Knex.Raw;
   condition: ValueRuleConfig<any> | string;
 }
 
@@ -60,7 +61,7 @@ function getConditionTargetTree(pointer: RawWherePointer, root: WhereTree) {
 
 function pushWherePointer(pointer: RawWherePointer, tree: WhereTree) {
   getConditionTargetTree(pointer, tree).conditions.push({
-    select: pointer.select,
+    selector: pointer.selector,
     condition: pointer.condition,
   });
 }
@@ -80,7 +81,7 @@ function cleanupWhereTree(tree: WhereTree) {
   return tree;
 }
 
-export function parseWhereTree(pointers: RawWherePointer[]): WhereTree {
+export function buildWhereTree(pointers: RawWherePointer[]): WhereTree {
   const root = createWhereTree();
 
   for (const pointer of pointers) {

@@ -1,4 +1,4 @@
-export interface SchemaEntity {
+export interface SchemaEntityInput {
   name: string;
   idField: string;
   attributes: SchemaEntityAttribute[];
@@ -32,6 +32,6 @@ export type SchemaEntityRelation =
   | SchemaEntityReferenceRelation
   | SchemaEntityListRelation;
 
-export interface DbSchema {
-  entities: SchemaEntity[];
+export interface EntitiesSchemaInput {
+  entities: SchemaEntityInput[];
 }
