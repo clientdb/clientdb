@@ -1,12 +1,10 @@
-import { EntitiesSchemaModel } from "@clientdb/schema";
-import { pickPermissionsRule } from "@clientdb/server/permissions/picker";
-import { traverseRule } from "@clientdb/server/permissions/traverse";
+import { EntitiesSchema } from "@clientdb/schema";
 import { Knex } from "knex";
-import { SchemaPermissionsModel } from "../permissions/model";
+import { PermissionsRoot } from "../permissions/PermissionsRoot";
 
-function collectPermissionNeededIndices(
-  schema: EntitiesSchemaModel,
-  permissions: SchemaPermissionsModel
+function collectPermissionNeededIndices<Schema>(
+  schema: EntitiesSchema,
+  permissions: PermissionsRoot<Schema>
 ) {
   const indices: Record<string, Set<string>> = {};
 
@@ -21,35 +19,23 @@ function collectPermissionNeededIndices(
     entityIndices.add(field);
   }
 
-  for (const permissionEntity in permissions) {
-    const readPermissions = pickPermissionsRule(
-      permissions,
-      permissionEntity,
+  for (const permissionEntity of permissions.entities) {
+    const readRule = permissions.getPermissionRule(
+      permissionEntity as keyof Schema,
       "read"
     );
 
-    const idField = schema.getIdField(permissionEntity)!;
+    if (!readRule) {
+      continue;
+    }
 
-    if (!readPermissions) continue;
+    for (const { value } of readRule) {
+      if (!value?.referencedEntity) continue;
 
-    traverseRule(readPermissions, {
-      onValue(info) {
-        const referencedEntity = schema.getEntityReferencedBy(
-          info.entity,
-          info.field
-        );
+      if (value.isIdField) continue;
 
-        if (referencedEntity) return;
-
-        const attribute = schema.getAttribute(info.entity, info.field);
-
-        if (!attribute) return;
-
-        if (info.field === idField) return;
-
-        addIndex(info.entity, info.field);
-      },
-    });
+      addIndex(value.entity.name, value.field);
+    }
   }
 
   return indices;
@@ -57,8 +43,8 @@ function collectPermissionNeededIndices(
 
 export async function initializeTablesFromSchema(
   db: Knex,
-  schemaModel: EntitiesSchemaModel,
-  permissions: SchemaPermissionsModel<any>
+  schemaModel: EntitiesSchema,
+  permissions: PermissionsRoot<any>
 ) {
   const permissionIndices = collectPermissionNeededIndices(
     schemaModel,
@@ -90,9 +76,9 @@ export async function initializeTablesFromSchema(
       await tr.schema.transacting(tr).alterTable(entity.name, (table) => {
         for (const relation of entity.relations) {
           if (relation.type === "reference") {
-            const referencedTableIdField = schemaModel.getIdField(
+            const referencedTableIdField = schemaModel.assertEntity(
               relation.target
-            );
+            ).idField;
 
             table
               .foreign(relation.field)

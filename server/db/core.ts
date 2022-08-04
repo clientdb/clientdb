@@ -1,16 +1,9 @@
-import { EntitiesSchemaModel } from "@clientdb/schema";
+import { EntitiesSchema } from "@clientdb/schema";
 import { Knex } from "knex";
 
-export async function initializeSystemTables(
-  db: Knex,
-  schema: EntitiesSchemaModel,
-  userTable: string
-) {
-  const userIdField = schema.getIdField(userTable);
-
-  if (!userIdField) {
-    throw new Error(`No id field found for ${userTable}`);
-  }
+export async function initializeSystemTables(schema: EntitiesSchema) {
+  const { userTableName, db } = schema;
+  const userIdField = schema.assertEntity(userTableName).idField;
 
   await db.transaction(async (tr) => {
     await tr.schema.createTable("sync", (table) => {
@@ -28,7 +21,7 @@ export async function initializeSystemTables(
 
       table
         .foreign("user_id")
-        .references(`${userTable}.${userIdField}`)
+        .references(`${userTableName}.${userIdField}`)
         .onUpdate("cascade")
         .onDelete("cascade");
     });

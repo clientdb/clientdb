@@ -1,14 +1,7 @@
-import {
-  createSchemaModel,
-  EntitiesSchemaInput,
-  EntitiesSchemaModel,
-} from "@clientdb/schema";
-import { SchemaPermissions } from "@clientdb/server/permissions/types";
+import { EntitiesSchema, EntitiesSchemaInput } from "@clientdb/schema";
 import { Knex } from "knex";
-import {
-  createSchemaPermissionsModel,
-  SchemaPermissionsModel,
-} from "../permissions/model";
+import { SchemaPermissions } from "../permissions/input";
+import { PermissionsRoot } from "../permissions/PermissionsRoot";
 import { RequestDataHandlers } from "./request";
 
 interface SyncServerDatabaseConnectionConfig {
@@ -33,10 +26,10 @@ export interface SyncServerConfigInput<Schema> {
 }
 
 export interface SyncServerConfig<Schema = any> {
-  schema: EntitiesSchemaModel;
+  schema: EntitiesSchema;
   requestHandlers: RequestDataHandlers;
   db: Knex;
-  permissions: SchemaPermissionsModel<Schema>;
+  permissions: PermissionsRoot<Schema>;
   userTable: string;
 }
 
@@ -44,12 +37,16 @@ export function resolveSyncServerConfigInput<Schema>(
   input: SyncServerConfigInput<Schema>,
   db: Knex
 ): SyncServerConfig<Schema> {
-  const schema = createSchemaModel(input.schema);
-  return {
+  const schema = new EntitiesSchema(input.schema, { db, userTable: "user" });
+  const config: SyncServerConfig<Schema> = {
     schema,
     requestHandlers: input.requestHandlers,
     db,
-    permissions: createSchemaPermissionsModel(input.permissions!, schema)!,
+    get permissions() {
+      return new PermissionsRoot(input.permissions!, schema)!;
+    },
     userTable: input.userTable ?? "user",
   };
+
+  return config;
 }

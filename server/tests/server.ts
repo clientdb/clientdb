@@ -4,21 +4,21 @@ import { permissions, schema, TestSchema } from "./schema";
 
 import { restartDb } from "./db";
 
-const db = knex({
+export const testDb = knex({
   client: "pg",
   connection: `postgres://postgres:postgrespassword@localhost:5438/test`,
   useNullAsDefault: true,
 });
 
 afterAll(() => {
-  db.destroy();
+  testDb.destroy();
 });
 
 export async function createTestServer() {
-  await restartDb(db);
+  await restartDb(testDb);
 
   const server = createSyncServer<TestSchema>({
-    db,
+    db: testDb,
     schema: schema,
     requestHandlers: {
       getLastSyncId: async () => 2,

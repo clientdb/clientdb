@@ -5,7 +5,7 @@ import { createDeltaQueryForCreatedOrRemoved } from "@clientdb/server/query/delt
 import { QueryBuilder, Transaction } from "@clientdb/server/query/types";
 import { log } from "@clientdb/server/utils/logger";
 
-export async function insertDeltaForChange(
+export async function insertDeltaForAddedOrRemoved(
   tr: Transaction,
   change: EntityPointer,
   context: SyncRequestContext,
@@ -35,8 +35,6 @@ export async function insertDeltaWithQuery(
   log("insertDeltaWithQuery delta query", query.toString());
 
   const deltaResults = await query;
-
-  console.log("DELRES", { deltaResults });
 
   if (!deltaResults.length) {
     return;

@@ -29,15 +29,15 @@ async function getTestServerWithData() {
 describe("server", () => {
   it("will not allow modifying data for not allowed users", async () => {
     const { server, ids } = await getTestServerWithData();
+  });
+  it("will not allow modifying data for not allowed users", async () => {
+    const { server, ids } = await getTestServerWithData();
 
     await expect(
-      server.admin.mutate(
-        {
-          entity: "team",
-          type: "update",
-          id: ids.team.a,
-          data: { name: "new name" },
-        },
+      server.admin.update(
+        "team",
+        ids.team.a,
+        { name: "new name" },
 
         { userId: ids.user.out }
       )
@@ -51,26 +51,11 @@ describe("server", () => {
 
     expect(parseBootLoad(afterRejected).teams[0].name).toBe("team-1");
 
-    await server.admin.mutate(
-      {
-        entity: "team",
-        type: "update",
-        id: ids.team.a,
-        data: { name: "new name" },
-      },
-
-      { userId: ids.user.owner }
-    );
-
     await expect(
-      server.admin.mutate(
-        {
-          entity: "team",
-          type: "update",
-          id: ids.team.a,
-          data: { name: "new name" },
-        },
-
+      server.admin.update(
+        "team",
+        ids.team.a,
+        { name: "new name" },
         { userId: ids.user.owner }
       )
     ).resolves.toMatchInlineSnapshot(`undefined`);
@@ -80,43 +65,23 @@ describe("server", () => {
     expect(parseBootLoad(init).teams[0].name).toBe("new name");
 
     await expect(
-      server.admin.mutate(
-        {
-          entity: "team",
-          type: "remove",
-          id: ids.team.a,
-        },
-
-        { userId: ids.user.out }
-      )
+      server.admin.remove("team", ids.team.a, { userId: ids.user.out })
     ).rejects.toThrowErrorMatchingInlineSnapshot(
       `"Not allowed to remove team"`
     );
 
     await expect(
-      server.admin.mutate(
-        {
-          entity: "team",
-          type: "remove",
-          id: ids.team.a,
-        },
-
-        { userId: ids.user.owner }
-      )
+      server.admin.remove("team", ids.team.a, { userId: ids.user.owner })
     ).resolves.toMatchInlineSnapshot(`undefined`);
   });
 
-  it("will not generate proper delta for changing team owner", async () => {
+  it.only("will not generate proper delta for changing team owner", async () => {
     const { server, ids } = await getTestServerWithData();
 
-    await server.admin.mutate(
-      {
-        entity: "team",
-        type: "update",
-        id: ids.team.a,
-        data: { owner_id: ids.user.out },
-      },
-
+    await server.admin.update(
+      "team",
+      ids.team.a,
+      { owner_id: ids.user.out },
       { userId: ids.user.owner }
     );
   });

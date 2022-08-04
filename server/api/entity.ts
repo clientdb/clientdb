@@ -1,16 +1,8 @@
 import { SyncRequestContext } from "@clientdb/server/context";
 import { EntityPointer } from "@clientdb/server/entity/pointer";
-import { PermissionOperationType } from "@clientdb/server/permissions/types";
-import {
-  applySingleItemWhere,
-  createAccessItemQuery,
-} from "@clientdb/server/query/access";
 import { Transaction } from "@clientdb/server/query/types";
 import { UnauthorizedError } from "../error";
-import {
-  applyEntityDataSelect,
-  applyEntityIdSelect,
-} from "../query/select/entity";
+import { PermissionOperationType } from "../permissions/input";
 
 export async function getEntityIfAccessable<T>(
   tr: Transaction,
@@ -19,53 +11,36 @@ export async function getEntityIfAccessable<T>(
   inOperation: PermissionOperationType,
   includeData = false
 ) {
-  const idField = context.schema.getIdField(entityInfo.entity);
+  const rule = context.permissions.getPermissionRule(
+    entityInfo.entity,
+    inOperation
+  );
 
-  if (!idField) {
-    throw new Error(`No id field for ${entityInfo.entity}`);
+  if (!rule) {
+    throw new UnauthorizedError(
+      `Not allowed to ${inOperation} ${entityInfo.entity}`
+    );
   }
 
-  let existingItemQuery = tr.table(entityInfo.entity).transacting(tr).limit(1);
-
-  existingItemQuery = applyEntityIdSelect(
-    existingItemQuery,
-    entityInfo.entity,
-    context.schema
-  );
-
-  existingItemQuery = applySingleItemWhere(
-    existingItemQuery,
-    entityInfo,
-    context
-  );
-
-  let allowedItemQuery = createAccessItemQuery(
-    context,
-    entityInfo,
-    inOperation
-  )?.transacting(tr);
-
-  if (!allowedItemQuery) return null;
+  let accessedQuery = rule
+    .accessQuery()
+    .transacting(tr)
+    .applyRules(context)
+    .byId(entityInfo.id);
+  let existingQuery = rule.accessQuery().transacting(tr).byId(entityInfo.id);
 
   if (includeData) {
-    existingItemQuery = applyEntityDataSelect(
-      existingItemQuery,
-      entityInfo.entity,
-      context,
-      inOperation
-    );
-    allowedItemQuery = applyEntityDataSelect(
-      allowedItemQuery,
-      entityInfo.entity,
-      context,
-      inOperation
-    );
+    accessedQuery = accessedQuery.selectAllData();
+    existingQuery = existingQuery.selectAllData();
+  } else {
+    accessedQuery = accessedQuery.selectId();
+    existingQuery = existingQuery.selectId();
   }
 
   const existingAndAllowedItemQuery = tr
     .queryBuilder()
-    .unionAll(existingItemQuery, true)
-    .unionAll(allowedItemQuery, true);
+    .unionAll(accessedQuery.build(), true)
+    .unionAll(existingQuery.build(), true);
 
   const result = await existingAndAllowedItemQuery;
 

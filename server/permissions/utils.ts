@@ -3,7 +3,7 @@ import {
   ValuePointer,
   ValueRuleInput,
   ValueRuleConfig,
-} from "./types";
+} from "./input";
 
 import { Primitive } from "type-fest";
 import { unsafeAssertType } from "@clientdb/server/utils/assert";

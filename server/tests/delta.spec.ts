@@ -1,31 +1,22 @@
-import { getRulePartNotImpactedBy } from "@clientdb/server/query/delta/split";
-import {
-  createSchemaPermissionsModel,
-  getRawModelRule,
-} from "../permissions/model";
-import { permissions, schemaModel } from "./schema";
+import { ExistsDeltaQueryBuilder } from "../permissions/ExistsDeltaQueryBuilder";
+import { permissionsModel, permissions, schemaModel } from "./schema";
 
-const permissionsModel = createSchemaPermissionsModel(permissions, schemaModel);
+function getDeltaRules(impactedBy: string, entity: keyof typeof permissions) {
+  let rule = permissionsModel.getPermissionRule(entity, "read")!;
 
-function getDeltaRules(
-  impactedBy: string,
-  entity: keyof typeof permissionsModel
-) {
-  let rule = permissionsModel[entity].read!.rule;
+  const builder = new ExistsDeltaQueryBuilder(rule!, {
+    changed: { entity: impactedBy, id: `<<changed-${impactedBy}>>` },
+    type: "put",
+  });
 
   // rule = addChangedEntityToRule(
   //   { entity: impactedBy, id: `<<changed-${impactedBy}>>` },
   //   rule
   // );
 
-  const excluding = getRulePartNotImpactedBy(rule, impactedBy);
+  const excluding = builder.alreadyHadAccessRule;
 
-  getRawModelRule<any>(rule);
-
-  return [
-    getRawModelRule<any>(rule),
-    excluding ? getRawModelRule<any>(excluding) : null,
-  ] as const;
+  return [rule.raw, excluding.rule.isEmpty ? null : excluding.raw] as const;
 }
 
 describe("delta", () => {
@@ -84,7 +75,17 @@ describe("delta", () => {
         }
       `);
 
-      expect(exluding).toMatchInlineSnapshot(`null`);
+      expect(exluding).toMatchInlineSnapshot(`
+        Object {
+          "team": Object {
+            "$or": Array [
+              Object {
+                "owner_id": [Function],
+              },
+            ],
+          },
+        }
+      `);
     });
 
     it("teamMembership > todo", () => {
@@ -165,5 +166,31 @@ describe("delta", () => {
         }
       `);
     });
+  });
+
+  it("team > todo", () => {
+    const [impacted, notImpacted] = getDeltaRules("team", "todo");
+
+    expect(impacted).toMatchInlineSnapshot(`
+      Object {
+        "list": Object {
+          "team": Object {
+            "$or": Array [
+              Object {
+                "owner_id": [Function],
+              },
+              Object {
+                "teamMemberships": Object {
+                  "is_disabled": false,
+                  "user_id": [Function],
+                },
+              },
+            ],
+          },
+        },
+      }
+    `);
+
+    expect(notImpacted).toMatchInlineSnapshot(`null`);
   });
 });

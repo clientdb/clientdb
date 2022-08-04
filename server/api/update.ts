@@ -4,11 +4,12 @@ import { EntityPointer } from "@clientdb/server/entity/pointer";
 import { unsafeAssertType } from "@clientdb/server/utils/assert";
 import { createLogger } from "@clientdb/server/utils/logger";
 import { BadRequestError } from "../error";
-import { createUpdateDeltaQuery } from "../query/delta/updateDelta";
+import { EntityUpdatedDeltaBuilder } from "../permissions/EntityUpdatedDeltaBuilder";
+// import { createUpdateDeltaQuery } from "../query/delta/updateDelta";
 import { Transaction } from "../query/types";
 import { computeChanges } from "../utils/changes";
 import { debug } from "../utils/log";
-import { insertDeltaWithQuery } from "./delta";
+// import { insertDeltaWithQuery } from "./delta";
 import { getEntityIfAccessable } from "./entity";
 
 const log = createLogger("Mutation");
@@ -40,8 +41,6 @@ async function getAllowedEntityChanges<T, D>(
     throw new BadRequestError(`Entity ${input.entity} does not exist`);
   }
 
-  console.log({ entityData });
-
   return computeChanges(entityData, input.data);
 }
 
@@ -52,15 +51,13 @@ export async function performUpdate<T, D>(
   const { schema, db } = context;
 
   const entityName = input.entity as any as string;
-  const idField = schema.getIdField(entityName)!;
+  const idField = schema.assertEntity(entityName).idField;
 
   return await db.transaction(async (tr) => {
     unsafeAssertType<"update">(input.type);
 
     // Will throw if no access
     const changes = await getAllowedEntityChanges(tr, context, input);
-
-    debug({ changes, input });
 
     if (!changes) {
       return;
@@ -71,16 +68,12 @@ export async function performUpdate<T, D>(
       .update(input.data)
       .where(`${entityName}.${idField}`, "=", input.id);
 
-    const deltaQuery = createUpdateDeltaQuery(
-      { entity: entityName, id: input.id, changes },
+    const updateDeltaQueryBuilder = new EntityUpdatedDeltaBuilder(
+      { changes, entity: entityName, id: input.id },
       context
     );
 
-    console.log({ deltaQuery });
-
-    if (deltaQuery) {
-      await insertDeltaWithQuery(tr, deltaQuery);
-    }
+    await updateDeltaQueryBuilder.insert(tr);
 
     log.debug(updateQuery.toString());
 

@@ -13,5 +13,5 @@ function json(input: unknown) {
 }
 
 export function debug(...input: any[]) {
-  console.info(...input.map((single) => json(single)));
+  console.info("DEBUG", ...input.map((single) => json(single)));
 }

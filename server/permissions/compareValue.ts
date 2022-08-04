@@ -1,4 +1,4 @@
-import { ValueRuleConfig } from "./types";
+import { ValueRuleConfig } from "./input";
 
 export function doesValueMatchValueConfig<T>(
   value: T,

@@ -4,9 +4,10 @@ import { v4 } from "uuid";
 import { createDeterministicUUID } from "./utils/uuid";
 
 export async function createRandomTeamWithoutSync(
-  server: SyncServer<TestSchema>
+  server: SyncServer<TestSchema>,
+  seed = 10
 ) {
-  const uuid = createDeterministicUUID();
+  const uuid = createDeterministicUUID(seed);
 
   const ids = {
     user: {
@@ -137,8 +138,8 @@ export async function createRandomTeamWithoutSync(
 }
 
 async function createRandomTeams(server: SyncServer<TestSchema>, n: number) {
-  const promises = Array.from({ length: n }).map(() => {
-    return createRandomTeamWithoutSync(server);
+  const promises = Array.from({ length: n }).map((_, index) => {
+    return createRandomTeamWithoutSync(server, index + 10);
   });
 
   await Promise.all(promises);
@@ -147,7 +148,7 @@ async function createRandomTeams(server: SyncServer<TestSchema>, n: number) {
 export async function createTestData(server: SyncServer<TestSchema>) {
   const uuid = createDeterministicUUID(1);
   //
-  // await createRandomTeams(server, 500);
+  // await createRandomTeams(server, 5);
 
   const {
     admin: { create },

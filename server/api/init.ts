@@ -1,5 +1,5 @@
+import { EntitySchema } from "@clientdb/schema";
 import { SyncRequestContext } from "@clientdb/server/context";
-import { createInitialLoadQuery } from "@clientdb/server/query/init";
 import { createLogger } from "@clientdb/server/utils/logger";
 
 export interface EntityKindBootData<D = {}> {
@@ -16,19 +16,24 @@ const log = createLogger("Init Load");
 
 async function fetchEntityIntialData(
   context: SyncRequestContext,
-  entity: string
+  entity: EntitySchema
 ): Promise<EntityKindBootData<any>> {
-  const initQuery = createInitialLoadQuery(context, entity);
+  const readRule = context.permissions.getPermissionRule(entity.name, "read");
 
-  if (!initQuery) {
-    console.warn("no init query");
-    return { kind: entity, items: [] };
+  if (!readRule) {
+    return { kind: entity.name, items: [] };
   }
 
-  log.debug(`Fetching initial data for ${entity}`, initQuery.toString());
+  const query = readRule
+    .accessQuery()
+    .applyRules(context)
+    .selectAllData()
+    .build(context);
 
-  const initialItems = await initQuery;
-  return { kind: entity, items: initialItems };
+  log.debug(`Fetching initial data for ${entity.name}`, query.toString());
+
+  const initialItems = await query;
+  return { kind: entity.name, items: initialItems };
 }
 
 export async function fetchInitialData(
@@ -37,7 +42,7 @@ export async function fetchInitialData(
   const { schema } = context;
 
   const bootDataPromises = schema.entities.map(async (entity) => {
-    return await fetchEntityIntialData(context, entity.name);
+    return await fetchEntityIntialData(context, entity);
   });
 
   const bootData = await Promise.all(bootDataPromises);

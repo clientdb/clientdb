@@ -1,4 +1,4 @@
-import { createSchemaModel } from "@clientdb/schema";
+import { EntitiesSchema } from "@clientdb/schema";
 import { initializeSystemTables } from "@clientdb/server/db/core";
 import { initializeTablesFromSchema } from "@clientdb/server/db/schema";
 import express from "express";
@@ -23,13 +23,16 @@ export function createSyncServer<Schema = any>(
 
   const realTimeManager = createRealTimeManager(socketServer);
 
-  const schemaModel = createSchemaModel(configInput.schema);
-
   const dbConnection =
     configInput.db ??
     knex({
       connection: configInput.dbConnection,
     });
+
+  const schemaModel = new EntitiesSchema(configInput.schema, {
+    db: dbConnection,
+    userTable: "user",
+  });
 
   const config: SyncServerConfig<Schema> = resolveSyncServerConfigInput<Schema>(
     configInput,
@@ -54,11 +57,7 @@ export function createSyncServer<Schema = any>(
 
   async function initialize() {
     await bootstrapTables();
-    await initializeSystemTables(
-      dbConnection,
-      schemaModel,
-      config.userTable ?? "user"
-    );
+    await initializeSystemTables(schemaModel);
   }
 
   async function listen(port: number) {

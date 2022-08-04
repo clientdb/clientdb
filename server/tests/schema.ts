@@ -1,16 +1,18 @@
 import {
-  createSchemaModel,
   EntitiesSchemaInput,
   SchemaCollection,
   SchemaEntityInput,
   SchemaReference,
+  EntitiesSchema,
 } from "@clientdb/schema";
 import {
   currentUser,
   SchemaPermissions,
   SchemaRules,
-} from "@clientdb/server/permissions/types";
-import { createSchemaPermissionsModel } from "../permissions/model";
+} from "@clientdb/server/permissions/input";
+import knex from "knex";
+import { PermissionsRoot } from "../permissions/PermissionsRoot";
+import { testDb } from "./server";
 
 type Permissions = SchemaPermissions<TestSchema>;
 type Rule = SchemaRules<TestSchema>;
@@ -530,7 +532,10 @@ export const schema: EntitiesSchemaInput = {
   ],
 };
 
-export const schemaModel = createSchemaModel(schema);
+export const schemaModel = new EntitiesSchema(schema, {
+  db: testDb,
+  userTable: "user",
+});
 
 export const permissions: Permissions = {
   user: userPermissions,
@@ -542,7 +547,4 @@ export const permissions: Permissions = {
   todo: todoPermissions,
 };
 
-export const permissionsModel = createSchemaPermissionsModel(
-  permissions,
-  schemaModel
-);
+export const permissionsModel = new PermissionsRoot(permissions, schemaModel);

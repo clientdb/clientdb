@@ -36,14 +36,11 @@ function getIsFieldValueImpactedByChange(
   info: TraverseValueInfo,
   changed: EntityChangesPointer<any>
 ) {
-  console.log({ info, changed });
   if (info.entity !== changed.entity) return false;
 
   const field = info.schemaPath.at(-1)!;
 
   const inputValue = changed.changes[field];
-
-  console.log({ inputValue, changed });
 
   return inputValue !== undefined;
 }
@@ -102,8 +99,6 @@ export function getUpdateDelta(
 
   const dataBefore = pickBeforeFromChanges(changed.changes);
   const dataAfter = pickAfterFromChanges(changed.changes);
-
-  console.log({ dataBefore, dataAfter });
 
   const ruleBefore = getRuleWhereWithInjectedInput(
     rule,

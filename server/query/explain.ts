@@ -1,7 +1,7 @@
 import { Knex } from "knex";
 import { log } from "@clientdb/server/utils/logger";
 
-async function explainQuery(query: Knex.QueryBuilder) {
+export async function explainQuery(query: Knex.QueryBuilder) {
   const db = query.client;
   const explainQuery = db.raw("explain ANALYZE ?", [db.raw(query.toString())]);
 

@@ -16,6 +16,10 @@ export class EntitySchema {
     return this.input.idField;
   }
 
+  get allAttributeNames() {
+    return this.attributes.map((a) => a.name);
+  }
+
   get relations() {
     return this.input.relations;
   }
@@ -77,6 +81,10 @@ export class EntitySchema {
   }
 
   getReferencedEntity(field: string) {
+    if (field === this.idField) {
+      return this;
+    }
+
     const relation = this.getRelation(field);
 
     if (relation) {

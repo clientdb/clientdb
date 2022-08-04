@@ -59,11 +59,33 @@ export function createSyncAdmin<Schema>({
     );
   }
 
+  async function remove<T extends keyof Schema>(
+    entity: T,
+    id: string,
+    contextInput?: AdminCreateContextInput
+  ) {
+    return await mutate<T>({ type: "remove", id, entity }, contextInput);
+  }
+
+  async function update<T extends keyof Schema>(
+    entity: T,
+    id: string,
+    input: EntitySchemaInput<Schema[T]>,
+    contextInput?: AdminCreateContextInput
+  ) {
+    return await mutate<T>(
+      { type: "update", id, entity, data: input },
+      contextInput
+    );
+  }
+
   return {
     getInit,
     getSync,
     mutate,
     create,
+    update,
+    remove,
     createContext,
   };
 }
