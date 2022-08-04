@@ -102,4 +102,17 @@ export class PermissionsRoot<Schema> {
       permissions: this,
     });
   }
+
+  assertPermissionRule<T extends PermissionOperationType>(
+    entity: keyof Schema,
+    type: T
+  ): PermissionRule {
+    const rule = this.getPermissionRule(entity, type);
+
+    if (!rule) {
+      throw new Error(`No permission rule for ${entity as string} ${type}`);
+    }
+
+    return rule;
+  }
 }

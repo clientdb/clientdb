@@ -1,14 +1,29 @@
 import { Knex } from "knex";
 import { SyncRequestContext } from "../context";
 import { EntityPointer } from "../entity/pointer";
+import { Transaction } from "../query/types";
 import { DeltaType } from "./delta";
 import { PermissionQueryBuilder } from "./PermissionQueryBuilder";
 import { PermissionRule } from "./PermissionRule";
 
 export class DeltaQueryBuilder extends PermissionQueryBuilder {
-  constructor(public rule: PermissionRule) {
-    super(rule);
-    this.qb = this.db.queryBuilder().table(this.entity.name);
+  constructor(public rule: PermissionRule, public context: SyncRequestContext) {
+    super(context);
+    this.reset();
+  }
+
+  reset() {
+    super.reset();
+    this.qb = this.db.queryBuilder().table(this.entityName);
+    return this;
+  }
+
+  get entity() {
+    return this.rule.entity;
+  }
+
+  get entityName() {
+    return this.entity.name;
   }
 
   private get dataFields() {
@@ -27,6 +42,7 @@ export class DeltaQueryBuilder extends PermissionQueryBuilder {
     return {
       entityId,
       allowedUserId,
+      allowedUserIdRef: this.db.ref(allowedUserId),
       data: "data",
     };
   }
@@ -94,11 +110,24 @@ export class DeltaQueryBuilder extends PermissionQueryBuilder {
     return this;
   }
 
-  buildForType(type: DeltaType, context: SyncRequestContext) {
-    super.build(context);
+  prepareForType(type: DeltaType) {
+    this.applyRuleJoins(this.rule)
+      .applySelect(type)
+      .crossJoinUsers()
+      .groupForUniqueDelta();
 
-    this.applySelect(type).crossJoinUsers().groupForUniqueDelta();
+    return this;
+  }
 
-    return this.qb;
+  async insert(tr: Transaction) {
+    let query = this.query.transacting(tr);
+
+    const deltaResults = await query;
+
+    if (!deltaResults.length) {
+      return;
+    }
+
+    await tr.table("sync").insert(deltaResults);
   }
 }

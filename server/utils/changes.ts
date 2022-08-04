@@ -33,7 +33,7 @@ export function computeChanges<T>(
   return changes;
 }
 
-export function pickBeforeFromChanges<T>(changes: Changes<T>) {
+export function pickCurrentFromChanges<T>(changes: Changes<T>) {
   const before: Partial<T> = {} as any;
 
   for (const key in changes) {

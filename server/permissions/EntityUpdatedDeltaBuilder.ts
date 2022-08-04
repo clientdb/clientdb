@@ -2,13 +2,11 @@ import { SyncRequestContext } from "../context";
 import { EntityChangesPointer } from "../entity/pointer";
 import { Transaction } from "../query/types";
 import { isNotNullish } from "../utils/nullish";
-import { DeltaType } from "./delta";
 
+import { pickAfterFromChanges, pickCurrentFromChanges } from "../utils/changes";
 import { DeltaQueryBuilder } from "./DeltaQueryBuilder";
-import { PermissionRuleInput } from "./input";
 import { PermissionRule } from "./PermissionRule";
 import { ValueRule } from "./ValueRule";
-import { pickAfterFromChanges, pickBeforeFromChanges } from "../utils/changes";
 
 export interface SingleUpdateDeltaQueryBuilderOptions<T> {
   changed: EntityChangesPointer<T>;
@@ -18,118 +16,210 @@ export interface SingleUpdateDeltaQueryBuilderOptions<T> {
  * Creates query of impact of one entity existance on one other entity rule
  * eg. compute who lost access to team as a result of removing some team membership
  */
-class SingleUpdateDeltaQueryBuilder<T> extends DeltaQueryBuilder {
-  constructor(public rule: PermissionRule, changed: EntityChangesPointer<T>) {
-    super(rule);
-
-    this.changed = changed;
+class UpdateLostAccessDeltaQueryBuilder<T> extends DeltaQueryBuilder {
+  constructor(public rule: PermissionRule, context: SyncRequestContext) {
+    super(rule, context);
   }
 
-  readonly changed: EntityChangesPointer<T>;
+  getImpactedRule(changed: EntityChangesPointer<T>) {
+    return this.rule.filter({
+      branches: (rule) => {
+        return getIsRuleImpactedByChange(rule, changed);
+      },
+    });
+  }
 
-  applyWhereForState(
-    context: SyncRequestContext<any>,
-    state: "before" | "after",
-    qb = this.qb
-  ) {
-    const currentData = pickBeforeFromChanges(this.changed.changes);
-    const expectedData =
-      state === "after"
-        ? pickAfterFromChanges(this.changed.changes)
-        : currentData;
+  getNotImpactedRule(changed: EntityChangesPointer<T>) {
+    return this.rule.filter({
+      branches: (rule) => {
+        return !getIsRuleImpactedByChange(rule, changed);
+      },
+    });
+  }
 
-    const changedKeys = Object.keys(currentData);
+  /**
+   * Who lost access?
+   * people who:
+   * - had permission only because of part that is impacted (aka. did not have it with non-impacted part)
+   * - do not have it anymore with new values
+   */
+  private applyLostAccessWhere(changed: EntityChangesPointer<T>) {
+    const id = changed.id;
+    const current = pickCurrentFromChanges(changed.changes);
 
-    const allowedUserRef = this.db.ref(this.selectors.allowedUserId);
+    const impactedRule = this.getImpactedRule(changed);
 
-    return this.applyWhere((qb, { value }) => {
+    // Had access thanks to this rule
+    this.applyRule(impactedRule, (qb, { rule, value }) => {
+      // If rule is impacted, narrow it down to id of changed entity
+      if (rule) {
+        if (getDoesRuleOwnChangedFields(rule, changed)) {
+          qb.where(rule.idSelector, "=", id);
+        }
+        return;
+      }
+
       if (!value) return;
 
-      if (!changedKeys.includes(value.field)) {
-        value.applyToQuery(qb, context);
-        return;
+      // Value is not impacted
+      if (!getIsValueImpactedByChange(value, changed)) {
+        if (value.isPointingToUser) {
+          return qb.where(value.selector, "=", this.selectors.allowedUserIdRef);
+        }
+
+        return value.applyToQuery(qb, this.context);
       }
 
-      const expectedValue = this.db.raw("?", [
-        expectedData[value.field as keyof T] as any,
-      ]);
-      const currentValue = this.db.raw("?", [
-        currentData[value.field as keyof T] as any,
-      ]);
+      // Value is impacted
 
+      // Impacted value targets user -
       if (value.isPointingToUser) {
-        qb.where(
-          allowedUserRef,
+        return qb.where(
+          this.selectors.allowedUserIdRef,
           "=",
-          expectedData[value.field as keyof T] as any
+          current[value.field as keyof T] as any
         );
-        return;
       }
 
-      qb.where(expectedValue, "=", currentValue);
-      return;
-    }, qb);
-  }
+      // It is static value and we check for current state - we can apply normally
 
-  private applyLostAccessWhere(context: SyncRequestContext, qb = this.qb) {
-    qb = qb
-      .andWhere((qb) => {
-        this.applyWhereForState(context, "before", qb);
-      })
-      .andWhereNot((qb) => {
-        this.applyWhereForState(context, "after", qb);
-      });
-
-    return qb;
-  }
-
-  private applyGainedAccessWhere(context: SyncRequestContext, qb = this.qb) {
-    const { changed } = this;
-
-    const before = pickBeforeFromChanges(changed.changes);
-    const after = pickAfterFromChanges(changed.changes);
-
-    qb = qb
-      .andWhere((qb) => {
-        this.applyWhereForState(context, "after", qb);
-      })
-      .andWhereNot((qb) => {
-        this.applyWhereForState(context, "before", qb);
-      });
-
-    return qb;
-  }
-
-  buildGainedAndLostAccessQuery(context: SyncRequestContext) {
-    let gainedQuery = new DeltaQueryBuilder(this.rule)
-      .narrowToEntity(this.changed)
-      .buildForType("put", context);
-    let lostQuery = new DeltaQueryBuilder(this.rule)
-      .narrowToEntity(this.changed)
-      .buildForType("delete", context);
-
-    gainedQuery = gainedQuery.andWhere((qb) => {
-      return this.applyGainedAccessWhere(context, qb);
+      value.applyToQuery(qb, this.context);
     });
 
-    lostQuery = lostQuery.andWhere((qb) => {
-      return this.applyLostAccessWhere(context, qb);
-    });
+    const notImpactedRule = this.getNotImpactedRule(changed);
 
-    return this.db.queryBuilder().unionAll(gainedQuery, lostQuery);
+    this.qb = this.qb.andWhereNot((qb) => {
+      this.applyDeltaRule(notImpactedRule, qb);
+    });
   }
 
-  build(context: SyncRequestContext) {
-    return this.buildGainedAndLostAccessQuery(context);
+  private applyDeltaRule(rule: PermissionRule, qb = this.qb) {
+    this.applyRule(
+      rule,
+      (qb, { value }) => {
+        if (!value) return;
+
+        if (value.isPointingToUser) {
+          return qb.where(value.selector, "=", this.selectors.allowedUserIdRef);
+        }
+
+        value.applyToQuery(qb, this.context);
+      },
+      qb
+    );
+  }
+
+  applyForChange(changed: EntityChangesPointer<T>) {
+    super.prepareForType("delete");
+    this.applyLostAccessWhere(changed);
+
+    return this;
   }
 }
 
-export class EntityUpdatedDeltaBuilder {
-  constructor(
-    public change: EntityChangesPointer<any>,
-    public context: SyncRequestContext
-  ) {
-    this.change = change;
+class UpdateGainedAccessDeltaQueryBuilder<T> extends DeltaQueryBuilder {
+  constructor(public rule: PermissionRule, context: SyncRequestContext) {
+    super(rule, context);
+  }
+
+  getImpactedRule(changed: EntityChangesPointer<T>) {
+    return this.rule.filter({
+      branches: (rule) => {
+        return getIsRuleImpactedByChange(rule, changed);
+      },
+    });
+  }
+
+  getNotImpactedRule(changed: EntityChangesPointer<T>) {
+    return this.rule.filter({
+      branches: (rule) => {
+        return !getIsRuleImpactedByChange(rule, changed);
+      },
+    });
+  }
+
+  /**
+   * Who gained access?
+   * people who:
+   * - did not have permission for full rule before
+   * - do have permission for change impacted rule
+   */
+  private applyGainedAccessWhere(changed: EntityChangesPointer<T>) {
+    const id = changed.id;
+    const after = pickAfterFromChanges(changed.changes);
+
+    const impactedRule = this.getImpactedRule(changed);
+
+    // People who did not have any access before
+    this.qb = this.qb.andWhereNot((qb) => {
+      this.applyDeltaRule(this.rule, qb);
+    });
+
+    // Had access thanks to this rule
+    this.applyRule(impactedRule, (qb, { rule, value }) => {
+      // If rule is impacted, narrow it down to id of changed entity
+      if (rule) {
+        if (getDoesRuleOwnChangedFields(rule, changed)) {
+          qb.where(rule.idSelector, "=", id);
+        }
+        return;
+      }
+
+      if (!value) return;
+
+      // Value is not impacted
+      if (!getIsValueImpactedByChange(value, changed)) {
+        if (value.isPointingToUser) {
+          return qb.where(value.selector, "=", this.selectors.allowedUserIdRef);
+        }
+
+        return value.applyToQuery(qb, this.context);
+      }
+
+      // Value is impacted
+      const afterValue = after[value.field as keyof T] as any;
+
+      // Impacted value targets user -
+      if (value.isPointingToUser) {
+        return qb.where(this.selectors.allowedUserIdRef, "=", afterValue);
+      }
+
+      // It is static value - we pretend entity already updated and do 'hardcode' comparsion
+      // TODO: other than $eq
+      qb.where(
+        this.getRaw(afterValue),
+        "=",
+        this.getRaw(value.valueConfig.$eq)
+      );
+    });
+  }
+
+  private applyDeltaRule(rule: PermissionRule, qb = this.qb) {
+    this.applyRule(
+      rule,
+      (qb, { value }) => {
+        if (!value) return;
+
+        if (value.isPointingToUser) {
+          return qb.where(value.selector, "=", this.selectors.allowedUserIdRef);
+        }
+
+        value.applyToQuery(qb, this.context);
+      },
+      qb
+    );
+  }
+
+  applyForChange(changed: EntityChangesPointer<T>) {
+    super.prepareForType("delete");
+    this.applyGainedAccessWhere(changed);
+
+    return this;
+  }
+}
+
+export class LostOrGainedAccessUpdateDeltaBuilder {
+  constructor(public context: SyncRequestContext) {
     this.context = context;
   }
 
@@ -137,25 +227,45 @@ export class EntityUpdatedDeltaBuilder {
     return this.context.db;
   }
 
-  get impactedRules() {
+  private buildQueryForRule(
+    rule: PermissionRule,
+    changed: EntityChangesPointer<any>
+  ) {
+    const lostAccess = new UpdateLostAccessDeltaQueryBuilder(
+      rule,
+      this.context
+    ).applyForChange(changed).query;
+    const gainedAccess = new UpdateGainedAccessDeltaQueryBuilder(
+      rule,
+      this.context
+    ).applyForChange(changed).query;
+
+    const accessChangeForRule = this.db
+      .queryBuilder()
+      .unionAll(lostAccess, true)
+      .unionAll(gainedAccess, true);
+
+    return accessChangeForRule;
+  }
+
+  getImpactedRules(changed: EntityChangesPointer<any>) {
     return this.context.permissions.entities
       .map((entity) => {
         return this.context.permissions.getPermissionRule(entity, "read");
       })
       .filter(isNotNullish)
       .filter((rule) => {
-        return getIsRuleImpactedByChange(rule, this.change);
+        return getIsRuleImpactedByChange(rule, changed);
       });
   }
 
-  build() {
-    const queries = this.impactedRules
-      .map((rule) => {
-        return new SingleUpdateDeltaQueryBuilder(rule, this.change);
-      })
-      .map((builder) => {
-        return builder.build(this.context);
-      });
+  buildForChanged(changed: EntityChangesPointer<any>) {
+    const queries = this.getImpactedRules(changed).map((rule) => {
+      const query = this.buildQueryForRule(rule, changed);
+
+      console.log(`delta for ${rule.entity.name}`, query.toString());
+      return query;
+    });
 
     if (!queries.length) {
       return null;
@@ -170,8 +280,8 @@ export class EntityUpdatedDeltaBuilder {
     return allDeltaQuery;
   }
 
-  async insert(tr: Transaction) {
-    let query = this.build()?.transacting(tr);
+  async insert(tr: Transaction, changed: EntityChangesPointer<any>) {
+    let query = this.buildForChanged(changed)?.transacting(tr);
 
     if (!query) {
       return;
@@ -180,6 +290,8 @@ export class EntityUpdatedDeltaBuilder {
     console.log("del", query.toString());
 
     const deltaResults = await query;
+
+    console.log("delta update results", changed, deltaResults);
 
     if (!deltaResults.length) {
       return;
@@ -210,6 +322,23 @@ function getIsRuleImpactedByChange<T>(
 ) {
   for (const { value } of ruleToCheck) {
     if (value && getIsValueImpactedByChange(value, changed)) return true;
+  }
+
+  return false;
+}
+
+function getDoesRuleOwnChangedFields<T>(
+  ruleToCheck: PermissionRule,
+  changed: EntityChangesPointer<T>
+) {
+  const { entity, changes } = changed;
+  const changedFields = Object.keys(changes);
+  for (const value of ruleToCheck.dataRules) {
+    if (value.entity.name !== entity) continue;
+
+    if (!changedFields.includes(value.field)) continue;
+
+    return true;
   }
 
   return false;

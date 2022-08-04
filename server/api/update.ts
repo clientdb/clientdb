@@ -4,13 +4,10 @@ import { EntityPointer } from "@clientdb/server/entity/pointer";
 import { unsafeAssertType } from "@clientdb/server/utils/assert";
 import { createLogger } from "@clientdb/server/utils/logger";
 import { BadRequestError } from "../error";
-import { EntityUpdatedDeltaBuilder } from "../permissions/EntityUpdatedDeltaBuilder";
-// import { createUpdateDeltaQuery } from "../query/delta/updateDelta";
+import { AccessQueryBuilder } from "../permissions/AccessQueryBuilder";
+import { LostOrGainedAccessUpdateDeltaBuilder } from "../permissions/EntityUpdatedDeltaBuilder";
 import { Transaction } from "../query/types";
 import { computeChanges } from "../utils/changes";
-import { debug } from "../utils/log";
-// import { insertDeltaWithQuery } from "./delta";
-import { getEntityIfAccessable } from "./entity";
 
 const log = createLogger("Mutation");
 
@@ -29,12 +26,16 @@ async function getAllowedEntityChanges<T, D>(
 ) {
   const pointer = getEntityPointer(input);
 
-  const entityData = await getEntityIfAccessable<D>(
+  const rule = context.permissions.assertPermissionRule(
+    pointer.entity,
+    "update"
+  );
+
+  const accessQuery = new AccessQueryBuilder(rule, context);
+
+  const entityData = await accessQuery.getOneOrThrowIfNotAllowed(
     tr,
-    pointer,
-    context,
-    "update",
-    true
+    pointer.id
   );
 
   if (!entityData) {
@@ -68,12 +69,15 @@ export async function performUpdate<T, D>(
       .update(input.data)
       .where(`${entityName}.${idField}`, "=", input.id);
 
-    const updateDeltaQueryBuilder = new EntityUpdatedDeltaBuilder(
-      { changes, entity: entityName, id: input.id },
+    const updateDeltaQueryBuilder = new LostOrGainedAccessUpdateDeltaBuilder(
       context
     );
 
-    await updateDeltaQueryBuilder.insert(tr);
+    await updateDeltaQueryBuilder.insert(tr, {
+      changes,
+      entity: entityName,
+      id: input.id,
+    });
 
     log.debug(updateQuery.toString());
 

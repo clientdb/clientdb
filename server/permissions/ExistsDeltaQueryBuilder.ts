@@ -10,8 +10,12 @@ import { PermissionRule } from "./PermissionRule";
  * eg. compute who lost access to team as a result of removing some team membership
  */
 export class ExistsDeltaQueryBuilder extends DeltaQueryBuilder {
-  constructor(public rule: PermissionRule, public changed: EntityPointer) {
-    super(rule);
+  constructor(
+    public rule: PermissionRule,
+    public context: SyncRequestContext,
+    public changed: EntityPointer
+  ) {
+    super(rule, context);
   }
 
   get raw(): PermissionRuleInput<any> {
@@ -52,53 +56,55 @@ export class ExistsDeltaQueryBuilder extends DeltaQueryBuilder {
   }
 
   get alreadyHadAccessRule() {
-    const rule = this.rule.filter({
+    return this.rule.filter({
       branches: (branchRule) => {
         return !this.getIsRuleImpacted(branchRule);
       },
     });
-
-    return new ExistsDeltaQueryBuilder(rule, this.changed);
   }
 
-  applyRules(context: SyncRequestContext<any>, qb = this.qb) {
-    return this.applyWhere((qb, { value }) => {
-      if (value?.isPointingToUser) {
-        qb.where(
-          value.selector,
-          "=",
-          this.db.ref(this.selectors.allowedUserId)
-        );
-      } else {
-        value?.applyToQuery(qb, context);
-      }
-    }, qb);
+  applyRuleConnectingWithUser(rule: PermissionRule, qb = this.qb) {
+    return this.applyRule(
+      rule,
+      (qb, { value }) => {
+        if (value?.isPointingToUser) {
+          qb.where(
+            value.selector,
+            "=",
+            this.db.ref(this.selectors.allowedUserId)
+          );
+        } else {
+          value?.applyToQuery(qb, this.context);
+        }
+      },
+      qb
+    );
   }
 
-  private applyImpactedWhere(context: SyncRequestContext) {
+  private applyImpactedWhere() {
     this.narrowToEntity(this.changed);
 
-    const { alreadyHadAccessRule } = this;
+    const { alreadyHadAccessRule, rule } = this;
 
     if (this.isSelfImpacting) {
-      this.applyRules(context);
+      this.applyRuleConnectingWithUser(rule);
       return this;
     }
 
     this.qb = this.qb.andWhereNot((qb) => {
-      alreadyHadAccessRule.applyRules(context, qb);
+      this.applyRuleConnectingWithUser(alreadyHadAccessRule, qb);
     });
 
-    this.applyRules(context);
+    this.applyRuleConnectingWithUser(rule);
 
     return this;
   }
 
-  buildForType(type: DeltaType, context: SyncRequestContext) {
-    super.buildForType(type, context);
+  prepareForType(type: DeltaType) {
+    super.prepareForType(type);
 
-    this.applyImpactedWhere(context);
+    this.applyImpactedWhere();
 
-    return this.qb;
+    return this;
   }
 }

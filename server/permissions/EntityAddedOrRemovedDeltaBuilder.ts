@@ -7,10 +7,10 @@ import { ExistsDeltaQueryBuilder } from "./ExistsDeltaQueryBuilder";
 
 export class EntityAddedOrRemovedDeltaBuilder {
   constructor(
-    public change: EntityPointer,
+    public changed: EntityPointer,
     public context: SyncRequestContext
   ) {
-    this.change = change;
+    this.changed = changed;
     this.context = context;
   }
 
@@ -25,17 +25,17 @@ export class EntityAddedOrRemovedDeltaBuilder {
       })
       .filter(isNotNullish)
       .filter((rule) => {
-        return rule.getDoesDependOn(this.change.entity);
+        return rule.getDoesDependOn(this.changed.entity);
       });
   }
 
   buildForType(type: DeltaType, context: SyncRequestContext) {
     const queries = this.impactedRules
       .map((rule) => {
-        return new ExistsDeltaQueryBuilder(rule, this.change);
+        return new ExistsDeltaQueryBuilder(rule, this.context, this.changed);
       })
       .map((builder) => {
-        return builder.buildForType(type, context);
+        return builder.prepareForType(type).query;
       });
 
     const qb = this.db.queryBuilder();

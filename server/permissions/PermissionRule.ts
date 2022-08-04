@@ -88,18 +88,6 @@ export class PermissionRule {
     );
   }
 
-  query() {
-    return new PermissionQueryBuilder(this);
-  }
-
-  accessQuery() {
-    return new AccessQueryBuilder(this);
-  }
-
-  deltaQuery() {
-    return new DeltaQueryBuilder(this);
-  }
-
   get raw(): PermissionRuleInput<any> {
     const { $and, $or, dataRules, relationRules } = this;
 

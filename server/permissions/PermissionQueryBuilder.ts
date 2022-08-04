@@ -7,7 +7,6 @@ import {
   PermissionRule,
   PermissionRuleItem,
 } from "./PermissionRule";
-import { ValueRule } from "./ValueRule";
 
 type ApplyWhereCallback = (
   qb: QueryBuilder,
@@ -16,33 +15,34 @@ type ApplyWhereCallback = (
 
 export class PermissionQueryBuilder {
   protected qb: Knex.QueryBuilder;
-  constructor(public rule: PermissionRule) {
-    this.qb = this.db.queryBuilder().table(this.entity.name);
+  constructor(public context: SyncRequestContext) {
+    this.qb = this.db.queryBuilder();
+  }
+
+  get query() {
+    return this.qb;
+  }
+
+  reset() {
+    this.qb = this.db.queryBuilder();
+    return this;
+  }
+
+  getRaw(input: any) {
+    return this.db.raw("?", [input]);
   }
 
   get db() {
-    return this.rule.db;
+    return this.context.db;
   }
 
   get schema() {
-    return this.rule.schema;
+    return this.context.schema;
   }
 
-  get entity() {
-    return this.rule.entity;
-  }
-
-  get entityName() {
-    return this.entity.name;
-  }
-
-  protected getFieldSelector(field: string) {
-    return `${this.entity.name}.${field}`;
-  }
-
-  get joins() {
+  private getRuleJoins(ruleToAdd: PermissionRule) {
     const joins: PermissionJoinInfo[] = [];
-    for (const { rule } of this.rule) {
+    for (const { rule } of ruleToAdd) {
       const joinInfo = rule?.joinInfo;
 
       if (!joinInfo) continue;
@@ -53,14 +53,8 @@ export class PermissionQueryBuilder {
     return uniqBy(joins, (join) => JSON.stringify(join));
   }
 
-  applyWhere(callback: ApplyWhereCallback, qb = this.qb) {
-    this.qb = applyQueryBuilder(qb, this.rule, callback);
-
-    return this;
-  }
-
-  addJoins() {
-    const joins = this.joins;
+  applyRuleJoins(rule: PermissionRule) {
+    const joins = this.getRuleJoins(rule);
 
     for (const join of joins) {
       this.qb = this.qb.leftJoin(
@@ -74,28 +68,35 @@ export class PermissionQueryBuilder {
     return this;
   }
 
-  selectId() {
-    this.qb = this.qb.select(this.getFieldSelector(this.entity.idField));
+  limit(count: number) {
+    this.qb = this.qb.limit(count);
+    return this;
+  }
+
+  applyRule(rule: PermissionRule, callback: ApplyWhereCallback, qb = this.qb) {
+    this.qb = applyQueryBuilder(qb, rule, callback);
 
     return this;
   }
 
-  selectAllData() {
+  selectRuleEntityId(rule: PermissionRule) {
+    this.qb = this.qb.select(rule.idSelector);
+
+    return this;
+  }
+
+  selectRuleData(rule: PermissionRule) {
     this.qb = this.qb.select(
-      this.entity.allAttributeNames.map((attributeName) => {
-        return this.getFieldSelector(attributeName);
+      rule.entity.allAttributeNames.map((attributeName) => {
+        return `${rule.selector}.${attributeName}`;
       })
     );
 
     return this;
   }
 
-  applyRules(context: SyncRequestContext, qb = this.qb) {
-    this.applyWhere((qb, { value }) => {
-      if (!value) return;
-
-      value.applyToQuery(qb, context);
-    }, qb);
+  applyRuleFrom(rule: PermissionRule) {
+    this.qb = this.qb.from(rule.entity.name);
 
     return this;
   }
@@ -103,11 +104,6 @@ export class PermissionQueryBuilder {
   transacting(trx: Knex.Transaction) {
     this.qb = this.qb.transacting(trx);
     return this;
-  }
-
-  build(context: SyncRequestContext) {
-    this.addJoins();
-    return this.qb;
   }
 }
 

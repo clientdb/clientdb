@@ -15,7 +15,7 @@ import {
 import {
   Changes,
   pickAfterFromChanges,
-  pickBeforeFromChanges,
+  pickCurrentFromChanges,
 } from "@clientdb/server/utils/changes";
 import { debug } from "@clientdb/server/utils/logger";
 import { applyWhereTreeToQuery } from "../where/builder";
@@ -97,7 +97,7 @@ export function getUpdateDelta(
     throw new Error(`No read permission for ${entity}`);
   }
 
-  const dataBefore = pickBeforeFromChanges(changed.changes);
+  const dataBefore = pickCurrentFromChanges(changed.changes);
   const dataAfter = pickAfterFromChanges(changed.changes);
 
   const ruleBefore = getRuleWhereWithInjectedInput(

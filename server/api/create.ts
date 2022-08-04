@@ -4,10 +4,10 @@ import { EntityPointer } from "@clientdb/server/entity/pointer";
 import { unsafeAssertType } from "@clientdb/server/utils/assert";
 import { createLogger, logAll } from "@clientdb/server/utils/logger";
 import { UnauthorizedError } from "../error";
+import { AccessQueryBuilder } from "../permissions/AccessQueryBuilder";
 import { EntityAddedOrRemovedDeltaBuilder } from "../permissions/EntityAddedOrRemovedDeltaBuilder";
 import { explainQuery } from "../query/explain";
 // import { insertDeltaForChange } from "./delta";
-import { getHasUserAccessTo } from "./entity";
 
 const log = createLogger("Mutation");
 
@@ -15,10 +15,14 @@ export async function performCreate<T, D>(
   context: SyncRequestContext,
   input: EntityCreateChange<T, D>
 ) {
-  const { schema, db } = context;
+  const { schema, db, permissions } = context;
 
   const entityName = input.entity as any as string;
   const idField = schema.assertEntity(entityName).idField!;
+
+  const rule = permissions.assertPermissionRule(entityName, "create");
+
+  const accessQuery = new AccessQueryBuilder(rule, context);
 
   await db.transaction(async (tr) => {
     unsafeAssertType<"create">(input.type);
@@ -34,11 +38,7 @@ export async function performCreate<T, D>(
 
     const id = result[0][idField]!;
 
-    const createdEntityPointer: EntityPointer = { entity: entityName, id };
-
-    if (
-      !(await getHasUserAccessTo(tr, createdEntityPointer, context, "create"))
-    ) {
+    if (!(await accessQuery.canUserAccess(tr, id))) {
       throw new UnauthorizedError(`Not allowed to create ${entityName}`);
     }
 
