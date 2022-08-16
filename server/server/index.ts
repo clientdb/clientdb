@@ -56,6 +56,12 @@ export function createSyncServer<Schema = any>(
   }
 
   async function initialize() {
+    const res = await dbConnection.raw("set jit = off;");
+
+    await dbConnection.raw("alter database test set jit=on;");
+    await dbConnection.raw("set jit_above_cost = -1;");
+
+    console.log({ res });
     await bootstrapTables();
     await initializeSystemTables(schemaModel);
   }

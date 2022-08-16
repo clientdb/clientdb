@@ -64,11 +64,6 @@ export async function performUpdate<T, D>(
       return;
     }
 
-    const updateQuery = tr
-      .table(entityName)
-      .update(input.data)
-      .where(`${entityName}.${idField}`, "=", input.id);
-
     const updateDeltaQueryBuilder = new LostOrGainedAccessUpdateDeltaBuilder(
       context
     );
@@ -78,6 +73,11 @@ export async function performUpdate<T, D>(
       entity: entityName,
       id: input.id,
     });
+
+    const updateQuery = tr
+      .table(entityName)
+      .update(input.data)
+      .where(`${entityName}.${idField}`, "=", input.id);
 
     log.debug(updateQuery.toString());
 

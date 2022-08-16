@@ -2,6 +2,7 @@ import { SyncRequestContext } from "../context";
 import { EntityPointer } from "../entity/pointer";
 import { Transaction } from "../query/types";
 import { isNotNullish } from "../utils/nullish";
+import { timer } from "../utils/timer";
 import { DeltaType } from "./delta";
 import { ExistsDeltaQueryBuilder } from "./ExistsDeltaQueryBuilder";
 
@@ -48,14 +49,28 @@ export class EntityAddedOrRemovedDeltaBuilder {
   }
 
   async insert(tr: Transaction, type: DeltaType, context: SyncRequestContext) {
+    timer.buildaorrem;
     let getDeltaQuery = this.buildForType(type, context).transacting(tr);
 
+    getDeltaQuery.toString();
+
+    timer.stop;
+
+    timer.fetchAddedOrRemoved;
+
+    console.log(this.changed, getDeltaQuery.toString());
     const deltaResults = await getDeltaQuery;
+
+    timer.stop;
 
     if (!deltaResults.length) {
       return;
     }
 
-    await tr.table("sync").insert(deltaResults);
+    timer.insert;
+
+    await tr.table("sync").transacting(tr).insert(deltaResults);
+
+    timer.stop;
   }
 }

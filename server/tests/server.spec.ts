@@ -78,11 +78,18 @@ describe("server", () => {
   it.only("will not generate proper delta for changing team owner", async () => {
     const { server, ids } = await getTestServerWithData();
 
-    await server.admin.update(
-      "team",
-      ids.team.a,
-      { owner_id: ids.user.out },
-      { userId: ids.user.owner }
-    );
+    // await server.admin.update(
+    //   "team",
+    //   ids.team.a,
+    //   { owner_id: ids.user.out },
+    //   { userId: ids.user.owner }
+    // );
+
+    // await server.admin.update(
+    //   "team",
+    //   ids.team.a,
+    //   { owner_id: ids.user.owner },
+    //   { userId: ids.user.out }
+    // );
   });
 });

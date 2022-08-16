@@ -148,7 +148,7 @@ async function createRandomTeams(server: SyncServer<TestSchema>, n: number) {
 export async function createTestData(server: SyncServer<TestSchema>) {
   const uuid = createDeterministicUUID(1);
   //
-  // await createRandomTeams(server, 5);
+  // await createRandomTeams(server, 100);
 
   const {
     admin: { create },

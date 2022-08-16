@@ -10,6 +10,7 @@ async function guard(callback: () => any) {
 }
 
 export async function restartDb(db: Knex) {
+  await db.raw("alter database test set jit=on;");
   for (const entity of schema.entities) {
     if (!(await db.schema.hasTable(entity.name))) {
       continue;

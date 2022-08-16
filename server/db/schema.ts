@@ -8,6 +8,14 @@ function collectPermissionNeededIndices<Schema>(
 ) {
   const indices: Record<string, Set<string>> = {};
 
+  for (const entity of schema.entities) {
+    for (const relation of entity.relations) {
+      if (relation.type === "reference") {
+        addIndex(entity.name, relation.field);
+      }
+    }
+  }
+
   function addIndex(entity: string, field: string) {
     let entityIndices = indices[entity];
 
@@ -17,25 +25,6 @@ function collectPermissionNeededIndices<Schema>(
     }
 
     entityIndices.add(field);
-  }
-
-  for (const permissionEntity of permissions.entities) {
-    const readRule = permissions.getPermissionRule(
-      permissionEntity as keyof Schema,
-      "read"
-    );
-
-    if (!readRule) {
-      continue;
-    }
-
-    for (const { value } of readRule) {
-      if (!value?.referencedEntity) continue;
-
-      if (value.isIdField) continue;
-
-      addIndex(value.entity.name, value.field);
-    }
   }
 
   return indices;

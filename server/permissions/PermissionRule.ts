@@ -28,6 +28,8 @@ interface PermissionRuleConfig {
   parentInfo: PermissionRuleParentInfo | null;
   schema: EntitiesSchema;
   permissions: PermissionsRoot<any>;
+  prefix?: string;
+  filters?: PermissionFilters;
 }
 
 type LogicalConditionKind = "and" | "or";
@@ -66,10 +68,7 @@ export class PermissionRule {
   readonly input: PermissionRuleInput;
   readonly parentInfo: PermissionRuleParentInfo | null;
 
-  constructor(
-    private config: PermissionRuleConfig,
-    private filters?: PermissionFilters
-  ) {
+  constructor(private config: PermissionRuleConfig) {
     const { entity, input, parentInfo } = config;
 
     this.entity = entity;
@@ -113,6 +112,14 @@ export class PermissionRule {
     }
 
     return input;
+  }
+
+  get filters() {
+    return this.config.filters ?? {};
+  }
+
+  get prefix() {
+    return this.config.prefix ?? "";
   }
 
   get db() {
@@ -181,7 +188,7 @@ export class PermissionRule {
       throw new Error("Child rule needs either condition or schema position");
     }
 
-    return new PermissionRule(config, this.filters);
+    return new PermissionRule(config);
   }
 
   get $or(): PermissionRule[] {
@@ -260,6 +267,10 @@ export class PermissionRule {
 
   get schemaPath(): string[] {
     if (!this.parentInfo) {
+      if (this.prefix) {
+        return [this.prefix, this.entity.name];
+      }
+
       return [this.entity.name];
     }
 
@@ -374,18 +385,20 @@ export class PermissionRule {
     return dataRules;
   }
 
-  clone(filters?: PermissionFilters) {
-    return new PermissionRule(
-      {
-        ...this.config,
-        input: cloneDeep(this.input),
-      },
-      filters
-    );
+  clone(config?: Partial<PermissionRuleConfig>) {
+    return new PermissionRule({
+      ...this.config,
+      ...config,
+      input: cloneDeep(this.input),
+    });
+  }
+
+  addPrefix(prefix: string) {
+    return this.clone({ prefix });
   }
 
   filter(filters: PermissionFilters) {
-    return this.clone(filters);
+    return this.clone({ filters });
   }
 
   getDataRule(field: string): ValueRule<any> | null {

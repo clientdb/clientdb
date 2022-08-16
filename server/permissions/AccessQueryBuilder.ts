@@ -16,7 +16,7 @@ export class AccessQueryBuilder<T = any> extends PermissionQueryBuilder {
 
   reset() {
     super.reset();
-    this.applyRuleFrom(this.rule).applyRuleJoins(this.rule);
+    this.applyRuleFrom(this.rule);
     return this;
   }
 

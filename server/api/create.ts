@@ -7,6 +7,7 @@ import { UnauthorizedError } from "../error";
 import { AccessQueryBuilder } from "../permissions/AccessQueryBuilder";
 import { EntityAddedOrRemovedDeltaBuilder } from "../permissions/EntityAddedOrRemovedDeltaBuilder";
 import { explainQuery } from "../query/explain";
+import { timer } from "../utils/timer";
 // import { insertDeltaForChange } from "./delta";
 
 const log = createLogger("Mutation");
@@ -49,18 +50,8 @@ export async function performCreate<T, D>(
       );
 
       await deltaQuery.insert(tr, "put", context);
-
-      await explainQuery(
-        deltaQuery.buildForType("put", context).transacting(tr)
-      );
-
-      console.log(
-        "Delta of",
-        input,
-        deltaQuery.buildForType("put", context).toString()
-      );
     } catch (error) {
-      log.error(`Error inserting create delta for ${entityName}`, error);
+      log.error(`Error inserting create delta for ${entityName}`, input, error);
     }
 
     log.debug(`created delta of ${entityName}`, entityName, id);

@@ -19,6 +19,8 @@ export async function performMutation<T, D>(
 
   log.debug("Performing mutation", input);
 
+  console.time("aaa");
+
   try {
     switch (input.type) {
       case "remove": {
@@ -42,5 +44,8 @@ export async function performMutation<T, D>(
     }
 
     throw error;
+  } finally {
+    console.log(input);
+    console.timeEnd("aaa");
   }
 }

@@ -14,7 +14,7 @@ export class DeltaQueryBuilder extends PermissionQueryBuilder {
 
   reset() {
     super.reset();
-    this.qb = this.db.queryBuilder().table(this.entityName);
+    this.qb = this.db.queryBuilder().table(`${this.entityName}`);
     return this;
   }
 
@@ -41,6 +41,7 @@ export class DeltaQueryBuilder extends PermissionQueryBuilder {
 
     return {
       entityId,
+      entityIdRef: this.db.ref(entityId),
       allowedUserId,
       allowedUserIdRef: this.db.ref(allowedUserId),
       data: "data",
@@ -93,17 +94,52 @@ export class DeltaQueryBuilder extends PermissionQueryBuilder {
   private groupForUniqueDelta() {
     const { entityId, allowedUserId } = this.selectors;
     this.qb = this.qb.groupBy([entityId, allowedUserId]);
+
+    return this;
   }
 
   /**
    * Will require given entity to be part of query at any level of permission
    */
-  narrowToEntity({ entity, id }: EntityPointer) {
-    this.qb = this.qb.andWhere((qb) => {
-      for (const { rule, value } of this.rule) {
-        if (rule?.entity.name === entity) {
-          qb.orWhere(rule.idSelector, "=", id);
+  narrowToEntity(pointer: EntityPointer) {
+    const narrowRule = this.rule.addPrefix("narrow");
+    const isSelfPointing = pointer.entity === this.rule.entity.name;
+
+    this.qb = this.qb.whereExists((qb) => {
+      qb.from(`${narrowRule.entity.name} as ${narrowRule.selector}`);
+      qb = this.applyRuleJoins(narrowRule, qb);
+
+      qb.andWhere(
+        narrowRule.idSelector,
+        "=",
+        this.selectors.entityIdRef
+      ).andWhere((qb) => {
+        for (const { rule } of narrowRule) {
+          qb = qb.orWhere((qb) => {
+            if (rule?.entity.name === pointer.entity) {
+              qb = qb.andWhere(rule.idSelector, "=", pointer.id);
+            }
+
+            if (rule?.entity.name === this.rule.entity.name && isSelfPointing) {
+              qb = qb.andWhere(
+                rule.idSelector,
+                "=",
+                this.selectors.entityIdRef
+              );
+            }
+          });
         }
+      });
+    });
+
+    return this;
+  }
+
+  preNarrowToUser() {
+    return this;
+    this.applyRule(this.rule, (qb, { value }) => {
+      if (value?.isPointingToUser) {
+        qb.where(value.selector, "=", this.selectors.allowedUserIdRef);
       }
     });
 
@@ -111,10 +147,10 @@ export class DeltaQueryBuilder extends PermissionQueryBuilder {
   }
 
   prepareForType(type: DeltaType) {
-    this.applyRuleJoins(this.rule)
-      .applySelect(type)
+    this.applySelect(type)
       .crossJoinUsers()
-      .groupForUniqueDelta();
+      // .groupForUniqueDelta()
+      .preNarrowToUser();
 
     return this;
   }
@@ -130,4 +166,28 @@ export class DeltaQueryBuilder extends PermissionQueryBuilder {
 
     await tr.table("sync").insert(deltaResults);
   }
+}
+
+function getDoesRuleDirectlyIncludePointer(
+  rule: PermissionRule,
+  pointer: EntityPointer
+) {
+  if (rule?.entity.name === pointer.entity) {
+    return true;
+  }
+
+  return false;
+}
+
+function getDoesRuleIncludePointer(
+  ruleToCheck: PermissionRule,
+  pointer: EntityPointer
+) {
+  for (const { rule } of ruleToCheck) {
+    if (rule && getDoesRuleDirectlyIncludePointer(rule, pointer)) {
+      return true;
+    }
+  }
+
+  return false;
 }

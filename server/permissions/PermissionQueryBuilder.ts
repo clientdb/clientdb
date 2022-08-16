@@ -11,7 +11,7 @@ import {
 type ApplyWhereCallback = (
   qb: QueryBuilder,
   rulePart: PermissionRuleItem
-) => void;
+) => void | QueryBuilder | false;
 
 export class PermissionQueryBuilder {
   protected qb: Knex.QueryBuilder;
@@ -53,11 +53,11 @@ export class PermissionQueryBuilder {
     return uniqBy(joins, (join) => JSON.stringify(join));
   }
 
-  applyRuleJoins(rule: PermissionRule) {
+  applyRuleJoins(rule: PermissionRule, qb = this.qb) {
     const joins = this.getRuleJoins(rule);
 
     for (const join of joins) {
-      this.qb = this.qb.leftJoin(
+      qb = qb.leftJoin(
         `${join.table} as ${join.selector}`,
         `${join.on.left}`,
         "=",
@@ -65,7 +65,7 @@ export class PermissionQueryBuilder {
       );
     }
 
-    return this;
+    return qb;
   }
 
   limit(count: number) {
@@ -112,7 +112,7 @@ function applyQueryBuilder(
   rule: PermissionRule,
   callback: ApplyWhereCallback
 ) {
-  const { dataRules, relationRules, $or, $and } = rule;
+  const { dataRules, relationRules, $or, $and, db } = rule;
 
   if (rule.isRoot) {
     callback(qb, { rule });
@@ -123,9 +123,37 @@ function applyQueryBuilder(
   }
 
   for (const relationRule of relationRules) {
-    callback(qb, { rule: relationRule });
+    const joinInfo = relationRule.joinInfo!;
 
-    qb = applyQueryBuilder(qb, relationRule, callback);
+    qb = qb.whereExists((qb) => {
+      qb = qb
+        .select(qb.client.raw("?", [1]))
+        .from(db.ref(`${relationRule.entity.name} as ${relationRule.selector}`))
+        .where(db.ref(joinInfo.on.left), "=", db.ref(joinInfo.on.right));
+
+      const rawQuery = qb.toString();
+
+      qb = qb.andWhere((qb) => {
+        const result = callback(qb, { rule: relationRule });
+
+        if (result === false) {
+          // return;
+        }
+
+        qb = applyQueryBuilder(qb, relationRule, callback);
+      });
+
+      const rawQueryAfterApplying = qb.toString();
+
+      if (rawQuery === rawQueryAfterApplying) {
+        qb = clearQueryBuilder(qb);
+        qb.from(null as any);
+      }
+
+      // console.log(rawQuery, "\n", rawQueryAfterApplying);
+    });
+
+    // qb = applyQueryBuilder(qb, relationRule, callback);
   }
 
   qb = qb.andWhere((qb) => {
@@ -140,6 +168,51 @@ function applyQueryBuilder(
     qb = qb.andWhere((qb) => {
       qb = applyQueryBuilder(qb, andRule, callback);
     });
+  }
+
+  return qb;
+}
+
+type ClearStatements =
+  | "with"
+  // | "select"
+  // | "columns"
+  | "hintComments"
+  | "where"
+  | "union"
+  | "join"
+  | "group"
+  | "order"
+  | "having"
+  | "limit"
+  | "offset"
+  | "counter"
+  | "counters";
+
+const clearStatementsMap: Record<ClearStatements, true> = {
+  with: true,
+  // select: true,
+  // columns: true,
+  hintComments: true,
+  where: true,
+  union: true,
+  join: true,
+  group: true,
+  order: true,
+  having: true,
+  limit: true,
+  offset: true,
+  counter: true,
+  counters: true,
+};
+
+function clearQueryBuilder(qb: QueryBuilder) {
+  const statementsToClear = Object.keys(
+    clearStatementsMap
+  ) as ClearStatements[];
+
+  for (const statementToClear of statementsToClear) {
+    qb = qb.clear(statementToClear);
   }
 
   return qb;

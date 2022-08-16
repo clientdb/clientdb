@@ -352,7 +352,13 @@ const labelSchema: SchemaEntityInput = {
 };
 
 const canSeeLabel: Rule["label"] = {
-  $or: [{ is_public: true, team: teamMemberOrOwner }, { user_id: currentUser }],
+  $or: [
+    {
+      is_public: true,
+      team: teamMemberOrOwner,
+    },
+    { user_id: currentUser },
+  ],
 };
 
 const labelPermissions: Permissions["label"] = {

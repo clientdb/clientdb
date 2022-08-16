@@ -7,6 +7,8 @@ import { pickAfterFromChanges, pickCurrentFromChanges } from "../utils/changes";
 import { DeltaQueryBuilder } from "./DeltaQueryBuilder";
 import { PermissionRule } from "./PermissionRule";
 import { ValueRule } from "./ValueRule";
+import { timer } from "../utils/timer";
+import { explainQuery } from "../query/explain";
 
 export interface SingleUpdateDeltaQueryBuilderOptions<T> {
   changed: EntityChangesPointer<T>;
@@ -46,6 +48,7 @@ class UpdateLostAccessDeltaQueryBuilder<T> extends DeltaQueryBuilder {
   private applyLostAccessWhere(changed: EntityChangesPointer<T>) {
     const id = changed.id;
     const current = pickCurrentFromChanges(changed.changes);
+    const after = pickAfterFromChanges(changed.changes);
 
     const impactedRule = this.getImpactedRule(changed);
 
@@ -70,15 +73,14 @@ class UpdateLostAccessDeltaQueryBuilder<T> extends DeltaQueryBuilder {
         return value.applyToQuery(qb, this.context);
       }
 
+      const currentValue = current[value.field as keyof T] as any;
+      const afterValue = after[value.field as keyof T] as any;
+
       // Value is impacted
 
       // Impacted value targets user -
       if (value.isPointingToUser) {
-        return qb.where(
-          this.selectors.allowedUserIdRef,
-          "=",
-          current[value.field as keyof T] as any
-        );
+        return qb.where(this.selectors.allowedUserIdRef, "=", currentValue);
       }
 
       // It is static value and we check for current state - we can apply normally
@@ -110,7 +112,7 @@ class UpdateLostAccessDeltaQueryBuilder<T> extends DeltaQueryBuilder {
   }
 
   applyForChange(changed: EntityChangesPointer<T>) {
-    super.prepareForType("delete");
+    super.prepareForType("delete").narrowToEntity(changed);
     this.applyLostAccessWhere(changed);
 
     return this;
@@ -211,7 +213,7 @@ class UpdateGainedAccessDeltaQueryBuilder<T> extends DeltaQueryBuilder {
   }
 
   applyForChange(changed: EntityChangesPointer<T>) {
-    super.prepareForType("delete");
+    super.prepareForType("put").narrowToEntity(changed);
     this.applyGainedAccessWhere(changed);
 
     return this;
@@ -263,7 +265,6 @@ export class LostOrGainedAccessUpdateDeltaBuilder {
     const queries = this.getImpactedRules(changed).map((rule) => {
       const query = this.buildQueryForRule(rule, changed);
 
-      console.log(`delta for ${rule.entity.name}`, query.toString());
       return query;
     });
 
@@ -287,11 +288,15 @@ export class LostOrGainedAccessUpdateDeltaBuilder {
       return;
     }
 
-    console.log("del", query.toString());
+    timer.updateFetch;
+
+    await this.db.raw("alter database test set jit=on;");
+
+    await explainQuery(query);
 
     const deltaResults = await query;
 
-    console.log("delta update results", changed, deltaResults);
+    timer.stop;
 
     if (!deltaResults.length) {
       return;

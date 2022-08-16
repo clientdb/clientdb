@@ -68,11 +68,7 @@ export class ExistsDeltaQueryBuilder extends DeltaQueryBuilder {
       rule,
       (qb, { value }) => {
         if (value?.isPointingToUser) {
-          qb.where(
-            value.selector,
-            "=",
-            this.db.ref(this.selectors.allowedUserId)
-          );
+          qb.where(value.selector, "=", this.selectors.allowedUserIdRef);
         } else {
           value?.applyToQuery(qb, this.context);
         }
