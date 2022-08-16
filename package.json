@@ -10,7 +10,10 @@
   },
   "workspaces": [
     "core",
-    "engine",
+    "server",
+    "schema",
+    "cli",
+    "common",
     "docs"
   ],
   "dependencies": {
@@ -18,7 +21,7 @@
   },
   "scripts": {
     "core": "yarn workspace @clientdb/core",
-    "engine": "yarn workspace @clientdb/engine",
+    "server": "yarn workspace @clientdb/server",
     "docs": "yarn workspace @clientdb/docs"
   },
   "devDependencies": {
