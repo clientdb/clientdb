@@ -13,18 +13,24 @@ function isArrayMethodInlineCall(...args: any[]) {
   return true;
 }
 
+interface Options<T> extends CachedComputedOptions<T> {
+  equalCompareArgs?: boolean;
+}
+
 /**
  * Creates 'lazy computed', but with possibility of using multiple arguments
  */
 export function cachedComputed<A extends any[], T>(
   getter: (...args: A) => T,
-  options: CachedComputedOptions<T> = {}
+  options: Options<T> = {}
 ) {
   // For easier debugging - try to get name of getter function
   const getterName = getter.name || undefined;
 
   // TODO: cleanup map entries after lazy is disposed
-  const map = createDeepMap<CachedComputed<T>>();
+  const map = createDeepMap<CachedComputed<T>>({
+    checkEquality: options?.equalCompareArgs ?? false,
+  });
 
   function getComputedForArgs(...args: A) {
     return map.getOrCreate(args, () =>

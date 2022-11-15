@@ -8,3 +8,5 @@ export * from "./utils/cachedComputed";
 export * from "./utils/cachedComputedWithoutArgs";
 export * from "./context";
 export * from "./find";
+export * from "./events";
+export * from "./transaction";

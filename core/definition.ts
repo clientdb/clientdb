@@ -71,16 +71,16 @@ export interface EntityDefinition<Data, View> {
   ): EntityDefinition<Data, View>;
 }
 
-export interface EntityViewLinker<Data, View> {
+export interface EntityViewLinker<Data> {
   db: ClientDb;
-  updateSelf(data: Partial<Data>): EntityUpdatedEvent<Data, View>;
+  updateSelf(data: Partial<Data>): EntityUpdatedEvent<Data, {}>;
   cleanup: CleanupObject;
 }
 
-type EntityDefinitionGetView<Data, View> = (
+type EntityDefinitionGetView<Data, AddedView> = (
   item: Data,
-  linker: EntityViewLinker<Data, View>
-) => View;
+  linker: EntityViewLinker<Data>
+) => AddedView;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type EntityDataByDefinition<Def extends EntityDefinition<any, any>> =
@@ -114,11 +114,11 @@ export function defineEntity<Data extends {}, View extends {} = {}>(
       const sortedKeys = [...config.fields].sort();
       return getHash(sortedKeys.join(""));
     },
-    addView<View>(getView: EntityDefinitionGetView<Data, View>) {
-      return defineEntity<Data, View>({
+    addView<AddedView>(getView: EntityDefinitionGetView<Data, AddedView>) {
+      return defineEntity<Data, AddedView>({
         ...config,
         getView,
-      } as EntityConfig<Data, View>) as EntityDefinition<Data, View>;
+      } as EntityConfig<Data, AddedView>) as EntityDefinition<Data, AddedView>;
     },
     addRootFilter(validator) {
       return defineEntity({ ...config, rootFilter: validator });
