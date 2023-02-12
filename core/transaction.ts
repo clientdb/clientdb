@@ -17,7 +17,7 @@ import { typedKeys } from "./utils/object";
  * - undo means we want to undo the transaction even if it was successful - it means it will also need to be re-emitted and synced.
  */
 
-type Change = EntityChangeEvent<unknown, unknown>;
+export type Change = EntityChangeEvent<unknown, unknown>;
 type AnyEntity = Entity<unknown, unknown>;
 
 /**

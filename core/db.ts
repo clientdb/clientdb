@@ -7,7 +7,6 @@ import { assert } from "./utils/assert";
 import { createEntityClient } from "./client";
 import { DbContextInstance } from "./context";
 import { createCleanupObject } from "./utils/cleanup";
-import { IS_CLIENT } from "./utils/client";
 import { ClientDbEvents, ClientDbEventsEmmiter } from "./events";
 import { createEventsEmmiter } from "./utils/eventManager";
 
@@ -32,8 +31,6 @@ export function createClientDb(
   definitions: Array<EntityDefinition<any, any>>,
   { contexts }: ClientDbConfig = {}
 ): ClientDb {
-  assert(IS_CLIENT, "Client DB can only be created on client side");
-
   const clientsLookup = new Map<
     EntityDefinition<any, any>,
     EntityClient<any, any>

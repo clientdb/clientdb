@@ -1,6 +1,6 @@
-import { createClientDb, defineEntity, ClientDb } from "@clientdb/core";
+import { createClientDb, defineEntity } from "@clientdb/core";
 
-import { TestOwnerEntity, getDefaultCommonData } from "./utils";
+import { getDefaultCommonData, TestOwnerEntity } from "./utils";
 
 const created = jest.fn();
 const updated = jest.fn();

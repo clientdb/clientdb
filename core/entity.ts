@@ -105,10 +105,10 @@ export function createEntity<D, V>({
 
   const cleanupObject = createCleanupObject();
 
-  const viewLinker: EntityViewLinker<D, V> = {
+  const viewLinker: EntityViewLinker<D> = {
     db,
     updateSelf(data) {
-      return entity.update(data);
+      return entity.update(data) as EntityUpdatedEvent<D, unknown>;
     },
     cleanup: cleanupObject,
   };
@@ -116,7 +116,10 @@ export function createEntity<D, V>({
   const view = config.getView?.(observableData, viewLinker) ?? ({} as V);
 
   // Note: we dont want to add view as {...data, ...connections}. Connections might have getters so it would simply unwrap them.
-  const observableDataAndView = extendObservable(observableData, view);
+  const observableDataAndView = extendObservable(
+    observableData,
+    view as V & object
+  );
 
   const entityMethods: EntityMethods<D, V> = {
     definition,
